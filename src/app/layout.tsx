@@ -36,18 +36,18 @@ export default function RootLayout({
         {/* Dynamic Background */}
         <div className="fixed inset-0 -z-10 h-full w-full bg-white dark:bg-zinc-950 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(120,119,198,0.3),rgba(255,255,255,0))] dark:bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(120,119,198,0.15),rgba(255,255,255,0))]"></div>
         
-        <div className="flex w-full min-h-screen">
-          <Sidebar />
-          <div className="flex-1 flex flex-col min-w-0">
-            <Header />
-            <main className="flex-1 overflow-y-auto">
-              <InventoryProvider>
+        <InventoryProvider>
+          <div className="flex w-full min-h-screen">
+            <Sidebar />
+            <div className="flex-1 flex flex-col min-w-0">
+              <Header />
+              <main className="flex-1 overflow-y-auto">
                 {children}
-                <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} theme="colored" />
-              </InventoryProvider>
-            </main>
+              </main>
+            </div>
           </div>
-        </div>
+          <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} theme="colored" />
+        </InventoryProvider>
       </body>
     </html>
   );
