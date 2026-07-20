@@ -6,7 +6,7 @@ import {
   Save,
   Package,
   Tag,
-  DollarSign,
+  IndianRupee,
   Layers,
   AlertCircle,
 } from "lucide-react";
@@ -140,7 +140,7 @@ export default function NewProductPage() {
               {/* Pricing & Stock - Compact */}
               <div className="rounded-lg bg-muted/30 p-3 sm:p-4">
                 <div className="mb-3 flex items-center gap-2">
-                  <DollarSign className="h-3.5 w-3.5 text-primary" />
+                  <IndianRupee className="h-3.5 w-3.5 text-primary" />
                   <span className="text-xs font-medium">
                     Pricing & Inventory
                   </span>
@@ -148,11 +148,11 @@ export default function NewProductPage() {
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                   <div className="space-y-1">
                     <label className="text-[10px] font-medium text-muted-foreground">
-                      Unit Price ($) <span className="text-destructive">*</span>
+                      Unit Price (₹) <span className="text-destructive">*</span>
                     </label>
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
-                        $
+                        ₹
                       </span>
                       <input
                         type="number"
