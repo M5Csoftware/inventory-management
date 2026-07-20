@@ -33,22 +33,12 @@ export default function NewSupplierPage() {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [location, setLocation] = useState('');
-  const [taxId, setTaxId] = useState('');
-  const [website, setWebsite] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !contact || !email || !phone || !location) return;
 
-    await addSupplier({ 
-      name, 
-      contact, 
-      email, 
-      phone, 
-      location,
-      taxId: taxId || undefined,
-      website: website || undefined
-    });
+    await addSupplier({ name, contact, email, phone, location });
     router.push('/suppliers');
   };
 
@@ -198,8 +188,6 @@ export default function NewSupplierPage() {
                     </label>
                     <input
                       type="text"
-                      value={taxId}
-                      onChange={(e) => setTaxId(e.target.value)}
                       placeholder="e.g. 12-3456789"
                       className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all placeholder:text-muted-foreground/50 hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
                     />
@@ -210,8 +198,6 @@ export default function NewSupplierPage() {
                     </label>
                     <input
                       type="url"
-                      value={website}
-                      onChange={(e) => setWebsite(e.target.value)}
                       placeholder="e.g. https://apexsupplies.com"
                       className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all placeholder:text-muted-foreground/50 hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
                     />
