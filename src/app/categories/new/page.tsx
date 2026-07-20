@@ -1,15 +1,35 @@
-import Link from "next/link";
-import { ArrowLeft, FolderPlus, Tag, FileText, Plus, Save } from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+'use client';
+
+import { useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { ArrowLeft, FolderPlus, Tag, FileText, Plus, Save } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { useInventory } from '@/context/inventory-context';
 
 export default function NewCategoryPage() {
+  const { addCategory } = useInventory();
+  const router = useRouter();
+
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [parentCategory, setParentCategory] = useState('');
+  const [categoryCode, setCategoryCode] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name || !description) return;
+
+    await addCategory({ 
+      name, 
+      description,
+      parentCategory: parentCategory || undefined,
+      categoryCode: categoryCode || undefined
+    });
+    router.push('/categories');
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 p-4 sm:p-6">
       <div className="mx-auto max-w-full space-y-4">
@@ -61,7 +81,7 @@ export default function NewCategoryPage() {
           </CardHeader>
 
           <CardContent className="pt-4">
-            <form className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4">
               {/* Category Name */}
               <div className="space-y-1.5">
                 <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -70,6 +90,8 @@ export default function NewCategoryPage() {
                 </label>
                 <input
                   type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
                   placeholder="e.g. Hardware Components"
                   className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all placeholder:text-muted-foreground/50 hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
                   required
@@ -84,6 +106,8 @@ export default function NewCategoryPage() {
                 </label>
                 <textarea
                   rows={3}
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
                   placeholder="Describe what kinds of products belong in this category..."
                   className="w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 py-2 text-sm shadow-sm transition-all placeholder:text-muted-foreground/50 hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 resize-y dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
                   required
@@ -102,7 +126,11 @@ export default function NewCategoryPage() {
                     <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                       Parent Category
                     </label>
-                    <select className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22currentColor%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E')] bg-[length:16px] bg-[right_10px_center] bg-no-repeat hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500">
+                    <select 
+                      value={parentCategory}
+                      onChange={(e) => setParentCategory(e.target.value)}
+                      className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22currentColor%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E')] bg-[length:16px] bg-[right_10px_center] bg-no-repeat hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
+                    >
                       <option value="">None (Top Level)</option>
                       <option value="electronics">📱 Electronics</option>
                       <option value="furniture">🪑 Furniture</option>
@@ -116,6 +144,8 @@ export default function NewCategoryPage() {
                     </label>
                     <input
                       type="text"
+                      value={categoryCode}
+                      onChange={(e) => setCategoryCode(e.target.value)}
                       placeholder="e.g. CAT-HW-001"
                       className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 font-mono text-sm shadow-sm transition-all placeholder:text-muted-foreground/50 hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
                     />
@@ -153,8 +183,7 @@ export default function NewCategoryPage() {
             i
           </span>
           <span>
-            All fields marked with <span className="text-destructive">*</span>{" "}
-            are required
+            All fields marked with <span className="text-destructive">*</span> are required
           </span>
         </div>
       </div>
