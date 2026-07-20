@@ -14,19 +14,12 @@ export default function NewCategoryPage() {
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [parentCategory, setParentCategory] = useState('');
-  const [categoryCode, setCategoryCode] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !description) return;
 
-    await addCategory({ 
-      name, 
-      description,
-      parentCategory: parentCategory || undefined,
-      categoryCode: categoryCode || undefined
-    });
+    await addCategory({ name, description });
     router.push('/categories');
   };
 
@@ -126,11 +119,7 @@ export default function NewCategoryPage() {
                     <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                       Parent Category
                     </label>
-                    <select 
-                      value={parentCategory}
-                      onChange={(e) => setParentCategory(e.target.value)}
-                      className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22currentColor%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E')] bg-[length:16px] bg-[right_10px_center] bg-no-repeat hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
-                    >
+                    <select className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22currentColor%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E')] bg-[length:16px] bg-[right_10px_center] bg-no-repeat hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500">
                       <option value="">None (Top Level)</option>
                       <option value="electronics">📱 Electronics</option>
                       <option value="furniture">🪑 Furniture</option>
@@ -144,8 +133,6 @@ export default function NewCategoryPage() {
                     </label>
                     <input
                       type="text"
-                      value={categoryCode}
-                      onChange={(e) => setCategoryCode(e.target.value)}
                       placeholder="e.g. CAT-HW-001"
                       className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 font-mono text-sm shadow-sm transition-all placeholder:text-muted-foreground/50 hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
                     />
