@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { toast } from 'react-toastify';
 
 export interface Product {
   id: string;
@@ -10,6 +11,11 @@ export interface Product {
   stock: number;
   threshold: number;
   supplier: string;
+  sku?: string;
+  description?: string;
+  status?: string;
+  weight?: number;
+  dimensions?: string;
 }
 
 export interface Transaction {
@@ -26,6 +32,8 @@ export interface Transaction {
 export interface Category {
   name: string;
   description: string;
+  parentCategory?: string;
+  categoryCode?: string;
 }
 
 export interface Supplier {
@@ -34,6 +42,8 @@ export interface Supplier {
   email: string;
   phone: string;
   location: string;
+  taxId?: string;
+  website?: string;
 }
 
 interface InventoryContextType {
@@ -52,6 +62,9 @@ interface InventoryContextType {
     notes?: string
   ) => Promise<boolean>;
   deleteProduct: (id: string) => Promise<void>;
+  updateProduct: (id: string, product: Partial<Product>) => Promise<void>;
+  deleteCategory: (name: string) => Promise<void>;
+  deleteSupplier: (name: string) => Promise<void>;
 }
 
 const InventoryContext = createContext<InventoryContextType | undefined>(undefined);
@@ -104,10 +117,14 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
       });
       const data = await res.json();
       if (data.success) {
-        setProducts((prev) => [data.data, ...prev]);
+        await fetchData();
+        toast.success('Product added successfully!');
+      } else {
+        toast.error(data.message || 'Failed to add product.');
       }
     } catch (error) {
       console.error('Failed to add product:', error);
+      toast.error('Network error while adding product.');
     }
   };
 
@@ -121,9 +138,13 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
       const data = await res.json();
       if (data.success) {
         setCategories((prev) => [...prev, data.data]);
+        toast.success('Category added successfully!');
+      } else {
+        toast.error(data.message || 'Failed to add category.');
       }
     } catch (error) {
       console.error('Failed to add category:', error);
+      toast.error('Network error while adding category.');
     }
   };
 
@@ -137,9 +158,13 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
       const data = await res.json();
       if (data.success) {
         setSuppliers((prev) => [...prev, data.data]);
+        toast.success('Supplier added successfully!');
+      } else {
+        toast.error(data.message || 'Failed to add supplier.');
       }
     } catch (error) {
       console.error('Failed to add supplier:', error);
+      toast.error('Network error while adding supplier.');
     }
   };
 
@@ -152,9 +177,51 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
       const data = await res.json();
       if (data.success) {
         setProducts((prev) => prev.filter((p) => p.id !== id));
+        toast.success('Product deleted successfully!');
+      } else {
+        toast.error(data.message || 'Failed to delete product.');
       }
     } catch (error) {
       console.error('Failed to delete product:', error);
+      toast.error('Network error while deleting product.');
+    }
+  };
+
+  const deleteCategory = async (name: string) => {
+    try {
+      const res = await fetch(`${API_BASE}/categories/${encodeURIComponent(name)}`, {
+        method: 'DELETE',
+        headers: DB_HEADER,
+      });
+      const data = await res.json();
+      if (data.success) {
+        setCategories((prev) => prev.filter((c) => c.name !== name));
+        toast.success('Category deleted successfully!');
+      } else {
+        toast.error(data.message || 'Failed to delete category.');
+      }
+    } catch (error) {
+      console.error('Failed to delete category:', error);
+      toast.error('Network error while deleting category.');
+    }
+  };
+
+  const deleteSupplier = async (name: string) => {
+    try {
+      const res = await fetch(`${API_BASE}/suppliers/${encodeURIComponent(name)}`, {
+        method: 'DELETE',
+        headers: DB_HEADER,
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSuppliers((prev) => prev.filter((s) => s.name !== name));
+        toast.success('Supplier deleted successfully!');
+      } else {
+        toast.error(data.message || 'Failed to delete supplier.');
+      }
+    } catch (error) {
+      console.error('Failed to delete supplier:', error);
+      toast.error('Network error while deleting supplier.');
     }
   };
 
@@ -173,14 +240,37 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
       });
       const data = await res.json();
       if (data.success) {
-        // Refetch all to keep products stock and transaction list in sync
         await fetchData();
+        toast.success(`${type} recorded successfully!`);
         return true;
+      } else {
+        toast.error(data.message || `Failed to record ${type}.`);
       }
     } catch (error) {
       console.error('Failed to record stock transaction:', error);
+      toast.error('Network error while recording transaction.');
     }
     return false;
+  };
+
+  const updateProduct = async (id: string, updatedProduct: Partial<Product>) => {
+    try {
+      const res = await fetch(`${API_BASE}/products/${id}`, {
+        method: 'PUT',
+        headers: DB_HEADER,
+        body: JSON.stringify(updatedProduct),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setProducts((prev) => prev.map((p) => p.id === id ? data.data : p));
+        toast.success('Product updated successfully!');
+      } else {
+        toast.error(data.message || 'Failed to update product.');
+      }
+    } catch (error) {
+      console.error('Failed to update product:', error);
+      toast.error('Network error while updating product.');
+    }
   };
 
   return (
@@ -195,6 +285,9 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
         addSupplier,
         recordTransaction,
         deleteProduct,
+        updateProduct,
+        deleteCategory,
+        deleteSupplier,
       }}
     >
       {children}
