@@ -101,15 +101,15 @@ export function Sidebar() {
                   href={item.subItems[0].href}
                   onClick={() => toggleSubMenu(item.label)}
                   className={cn(
-                    "flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm font-medium transition-all text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                    "flex w-full items-center justify-between rounded-lg px-3 py-2 text-base font-medium transition-all text-muted-foreground hover:bg-accent hover:text-accent-foreground",
                     hasActiveChild && "text-foreground font-semibold"
                   )}
                 >
                   <div className="flex items-center gap-3">
-                    <Icon className="h-4 w-4" />
+                    <Icon className="h-5 w-5" />
                     <span>{item.label}</span>
                   </div>
-                  {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                  {isExpanded ? <ChevronDown className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
                 </Link>
                 {isExpanded && (
                   <div className="pl-6 space-y-1 mt-1 border-l ml-5 border-border">
@@ -121,13 +121,13 @@ export function Sidebar() {
                           key={sub.href}
                           href={sub.href}
                           className={cn(
-                            "flex items-center gap-3 rounded-lg px-3 py-1.5 text-xs font-medium transition-all",
+                            "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all",
                             isActive
                               ? "bg-primary/10 text-primary font-semibold"
                               : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
                           )}
                         >
-                          <SubIcon className="h-3 w-3" />
+                          <SubIcon className="h-4 w-4" />
                           <span>{sub.label}</span>
                         </Link>
                       );
@@ -145,13 +145,13 @@ export function Sidebar() {
               key={item.label}
               href={item.href || '#'}
               className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all",
+                "flex items-center gap-3 rounded-lg px-3 py-2 text-base font-medium transition-all",
                 isActive
                   ? "bg-primary/10 text-primary font-semibold"
                   : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
               )}
             >
-              <Icon className="h-4 w-4" />
+              <Icon className="h-5 w-5" />
               <span>{item.label}</span>
             </Link>
           );
@@ -161,13 +161,13 @@ export function Sidebar() {
         <Link
           href="/settings"
           className={cn(
-            "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all",
+            "flex items-center gap-3 rounded-lg px-3 py-2 text-base font-medium transition-all",
             pathname === '/settings'
               ? "bg-primary/10 text-primary font-semibold"
               : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
           )}
         >
-          <Settings className="h-4 w-4" />
+          <Settings className="h-5 w-5" />
           <span>Settings</span>
         </Link>
       </div>
