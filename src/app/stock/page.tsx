@@ -104,13 +104,13 @@ export default function StockPage() {
                     <td className="p-4 align-middle font-medium">{tx.product}</td>
                     <td className="p-4 align-middle">
                       <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                        tx.type === 'Stock In' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-blue-500/10 text-blue-500'
+                        tx.type === 'Stock In' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'
                       }`}>
                         {tx.type}
                       </span>
                     </td>
                     <td className={`p-4 align-middle font-semibold ${
-                      tx.type === 'Stock In' ? 'text-emerald-500' : 'text-blue-500'
+                      tx.type === 'Stock In' ? 'text-emerald-500' : 'text-red-500'
                     }`}>{tx.quantity}</td>
                     <td className="p-4 align-middle text-muted-foreground">{tx.location}</td>
                     <td className="p-4 align-middle">
