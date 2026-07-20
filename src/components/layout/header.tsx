@@ -21,7 +21,7 @@ export function Header() {
           <Bell className="h-5 w-5" />
           <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-primary shadow-[0_0_8px_rgba(var(--primary),0.8)]"></span>
         </Button>
-        <div className="h-8 w-8 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 ring-2 ring-background border border-border"></div>
+        <div className="h-8 w-8 rounded-full bg-gradient-to-tr from-red-500 to-rose-600 ring-2 ring-background border border-border"></div>
       </div>
     </header>
   );
