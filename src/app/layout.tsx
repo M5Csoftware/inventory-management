@@ -4,6 +4,8 @@ import "./globals.css";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
 import { InventoryProvider } from "@/context/inventory-context";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -41,6 +43,7 @@ export default function RootLayout({
             <main className="flex-1 overflow-y-auto">
               <InventoryProvider>
                 {children}
+                <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} theme="colored" />
               </InventoryProvider>
             </main>
           </div>

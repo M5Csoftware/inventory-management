@@ -4,10 +4,10 @@ import Link from 'next/link';
 import { FolderPlus, Package, Edit2, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { useInventory } from '@/context/inventory-context';
+import { useInventory, Category, Product } from '@/context/inventory-context';
 
 export default function CategoriesPage() {
-  const { categories, products } = useInventory();
+  const { categories, products, deleteCategory } = useInventory();
 
   return (
     <div className="p-6 sm:p-8 space-y-8">
@@ -24,13 +24,13 @@ export default function CategoriesPage() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
-        {categories.map((category) => {
+        {categories.map((category: Category) => {
           const categoryProducts = products.filter(
-            (p) => p.category.toLowerCase() === category.name.toLowerCase()
+            (p: Product) => p.category.toLowerCase() === category.name.toLowerCase()
           );
           
           const totalValuation = categoryProducts.reduce(
-            (acc, curr) => acc + curr.price * curr.stock,
+            (acc: number, curr: Product) => acc + curr.price * curr.stock,
             0
           );
 
@@ -61,7 +61,12 @@ export default function CategoriesPage() {
                   <Button variant="ghost" size="sm" className="h-8 text-xs text-muted-foreground hover:text-foreground">
                     <Edit2 className="mr-1.5 h-3.5 w-3.5" /> Edit
                   </Button>
-                  <Button variant="ghost" size="sm" className="h-8 text-xs text-destructive hover:bg-destructive/10">
+                  <Button 
+                    onClick={() => deleteCategory(category.name)}
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-8 text-xs text-destructive hover:bg-destructive/10"
+                  >
                     <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Delete
                   </Button>
                 </div>

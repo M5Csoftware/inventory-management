@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Package, LayoutDashboard, Box, Truck, Users, FileText, Settings, ChevronDown, ChevronRight, PlusCircle, List } from 'lucide-react';
+import { Package, LayoutDashboard, Box, Truck, Users, FileText, Settings, ChevronDown, ChevronRight, PlusCircle, List, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface SubNavItem {
@@ -71,6 +71,8 @@ export function Sidebar() {
     });
     return initialState;
   });
+
+  if (pathname === '/login') return null;
 
   const toggleSubMenu = (label: string) => {
     setOpenSubMenus(prev => ({
@@ -157,7 +159,7 @@ export function Sidebar() {
           );
         })}
       </nav>
-      <div className="p-4 border-t">
+      <div className="p-4 border-t space-y-2">
         <Link
           href="/settings"
           className={cn(
@@ -169,6 +171,13 @@ export function Sidebar() {
         >
           <Settings className="h-5 w-5" />
           <span>Settings</span>
+        </Link>
+        <Link
+          href="/login"
+          className="flex items-center gap-3 rounded-lg px-3 py-2 text-base font-medium transition-all text-muted-foreground hover:bg-red-500/10 hover:text-red-500"
+        >
+          <LogOut className="h-5 w-5" />
+          <span>Log out</span>
         </Link>
       </div>
     </aside>

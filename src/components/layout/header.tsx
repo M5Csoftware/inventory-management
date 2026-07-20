@@ -2,8 +2,12 @@
 
 import { Bell, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { usePathname } from 'next/navigation';
 
 export function Header() {
+  const pathname = usePathname();
+  if (pathname === '/login') return null;
+
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background/50 backdrop-blur-xl px-6">
       <div className="flex items-center gap-4">

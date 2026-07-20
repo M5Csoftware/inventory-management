@@ -1,4 +1,8 @@
-import Link from "next/link";
+'use client';
+
+import { useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   ArrowLeft,
   UserPlus,
@@ -9,17 +13,35 @@ import {
   MapPin,
   Plus,
   Save,
-} from "lucide-react";
+} from 'lucide-react';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+} from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { useInventory } from '@/context/inventory-context';
 
 export default function NewSupplierPage() {
+  const { addSupplier } = useInventory();
+  const router = useRouter();
+
+  const [name, setName] = useState('');
+  const [contact, setContact] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [location, setLocation] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name || !contact || !email || !phone || !location) return;
+
+    await addSupplier({ name, contact, email, phone, location });
+    router.push('/suppliers');
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 p-4 sm:p-6">
       <div className="mx-auto max-w-full space-y-4">
@@ -71,17 +93,18 @@ export default function NewSupplierPage() {
           </CardHeader>
 
           <CardContent className="pt-4">
-            <form className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4">
               {/* Company & Contact Names */}
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-1.5">
                   <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                     <Building2 className="h-3 w-3" />
-                    Supplier Company Name{" "}
-                    <span className="text-destructive">*</span>
+                    Supplier Company Name <span className="text-destructive">*</span>
                   </label>
                   <input
                     type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
                     placeholder="e.g. Apex Industrial Supplies"
                     className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all placeholder:text-muted-foreground/50 hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
                     required
@@ -90,11 +113,12 @@ export default function NewSupplierPage() {
                 <div className="space-y-1.5">
                   <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                     <User className="h-3 w-3" />
-                    Primary Contact Name{" "}
-                    <span className="text-destructive">*</span>
+                    Primary Contact Name <span className="text-destructive">*</span>
                   </label>
                   <input
                     type="text"
+                    value={contact}
+                    onChange={(e) => setContact(e.target.value)}
                     placeholder="e.g. Jane Doe"
                     className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all placeholder:text-muted-foreground/50 hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
                     required
@@ -111,6 +135,8 @@ export default function NewSupplierPage() {
                   </label>
                   <input
                     type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                     placeholder="e.g. contact@apexsupplies.com"
                     className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all placeholder:text-muted-foreground/50 hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
                     required
@@ -123,6 +149,8 @@ export default function NewSupplierPage() {
                   </label>
                   <input
                     type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
                     placeholder="e.g. +1 (555) 019-2834"
                     className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all placeholder:text-muted-foreground/50 hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
                     required
@@ -134,11 +162,12 @@ export default function NewSupplierPage() {
               <div className="space-y-1.5">
                 <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                   <MapPin className="h-3 w-3" />
-                  Corporate Office Address{" "}
-                  <span className="text-destructive">*</span>
+                  Corporate Office Address <span className="text-destructive">*</span>
                 </label>
                 <input
                   type="text"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
                   placeholder="e.g. 100 Main St, Suite 400, Seattle, WA"
                   className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all placeholder:text-muted-foreground/50 hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
                   required
@@ -206,8 +235,7 @@ export default function NewSupplierPage() {
             i
           </span>
           <span>
-            All fields marked with <span className="text-destructive">*</span>{" "}
-            are required
+            All fields marked with <span className="text-destructive">*</span> are required
           </span>
         </div>
       </div>

@@ -5,13 +5,13 @@ import Link from 'next/link';
 import { Plus, Search, Edit2, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { useInventory } from '@/context/inventory-context';
+import { useInventory, Product } from '@/context/inventory-context';
 
 export default function ProductsPage() {
   const { products, deleteProduct } = useInventory();
   const [searchTerm, setSearchTerm] = useState('');
 
-  const filteredProducts = products.filter((product) =>
+  const filteredProducts = products.filter((product: Product) =>
     product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     product.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
     product.category.toLowerCase().includes(searchTerm.toLowerCase())
@@ -68,7 +68,7 @@ export default function ProductsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredProducts.map((product) => (
+                  {filteredProducts.map((product: Product) => (
                     <tr key={product.id} className="border-b transition-colors hover:bg-muted/50">
                       <td className="p-4 align-middle font-medium font-mono text-xs">{product.id}</td>
                       <td className="p-4 align-middle font-medium">{product.name}</td>
@@ -83,9 +83,11 @@ export default function ProductsPage() {
                       </td>
                       <td className="p-4 align-middle text-muted-foreground">{product.supplier}</td>
                       <td className="p-4 align-middle text-right space-x-1">
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
-                          <Edit2 className="h-4 w-4" />
-                        </Button>
+                        <Link href={`/products/edit/${product.id}`}>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
+                            <Edit2 className="h-4 w-4" />
+                          </Button>
+                        </Link>
                         <Button
                           onClick={() => deleteProduct(product.id)}
                           variant="ghost"
