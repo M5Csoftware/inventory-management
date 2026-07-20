@@ -160,11 +160,11 @@ export default function ReportsPage() {
                       <td className="p-4 align-middle text-muted-foreground text-xs">Today, 09:15 AM</td>
                       <td className="p-4 align-middle font-medium">USB-C Fast Charger</td>
                       <td className="p-4 align-middle">
-                        <span className="inline-flex items-center text-blue-500 text-xs font-semibold gap-1">
+                        <span className="inline-flex items-center text-red-500 text-xs font-semibold gap-1">
                           <ArrowDownRight className="h-3.5 w-3.5" /> Outflow
                         </span>
                       </td>
-                      <td className="p-4 align-middle font-semibold text-blue-500">-5</td>
+                      <td className="p-4 align-middle font-semibold text-red-500">-5</td>
                     </tr>
                   </tbody>
                 </table>

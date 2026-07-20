@@ -39,10 +39,10 @@ export default function Dashboard() {
         </Card>
 
         <Card className="group relative overflow-hidden bg-background/60 backdrop-blur-sm border-border/50 shadow-sm transition-all hover:shadow-md hover:border-primary/30">
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-transparent opacity-0 transition-opacity group-hover:opacity-100"></div>
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 transition-opacity group-hover:opacity-100"></div>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Active Shipments</CardTitle>
-            <div className="p-2 rounded-md bg-blue-500/10 text-blue-500 ring-1 ring-blue-500/20">
+            <div className="p-2 rounded-md bg-primary/10 text-primary ring-1 ring-primary/20">
               <Truck className="h-4 w-4" />
             </div>
           </CardHeader>
@@ -103,9 +103,9 @@ export default function Dashboard() {
           <CardContent>
             <div className="space-y-6">
               {[
-                { id: '1024', event: 'Shipment dispatched', loc: 'Warehouse A', time: '10 mins ago', icon: Truck, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+                { id: '1024', event: 'Shipment dispatched', loc: 'Warehouse A', time: '10 mins ago', icon: Truck, color: 'text-primary', bg: 'bg-primary/10' },
                 { id: '1025', event: 'Low stock alert', loc: 'Gaming Monitors', time: '1 hour ago', icon: AlertCircle, color: 'text-destructive', bg: 'bg-destructive/10' },
-                { id: '1026', event: 'Inventory updated', loc: 'Headphones', time: '2 hours ago', icon: Package, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+                { id: '1026', event: 'Inventory updated', loc: 'Headphones', time: '2 hours ago', icon: Package, color: 'text-primary', bg: 'bg-primary/10' },
                 { id: '1027', event: 'New supplier added', loc: 'Tech Solutions Inc.', time: '5 hours ago', icon: Users, color: 'text-primary', bg: 'bg-primary/10' },
               ].map((item, i) => (
                 <div key={i} className="flex items-center group cursor-pointer">
@@ -134,9 +134,9 @@ export default function Dashboard() {
             <div className="space-y-6">
               {[
                 { name: 'Electronics', percent: 45, color: 'bg-primary' },
-                { name: 'Apparel', percent: 30, color: 'bg-blue-500' },
-                { name: 'Home & Garden', percent: 15, color: 'bg-emerald-500' },
-                { name: 'Automotive', percent: 10, color: 'bg-amber-500' },
+                { name: 'Apparel', percent: 30, color: 'bg-red-500' },
+                { name: 'Home & Garden', percent: 15, color: 'bg-red-400' },
+                { name: 'Automotive', percent: 10, color: 'bg-red-300' },
               ].map((cat, i) => (
                 <div key={i} className="group">
                   <div className="flex justify-between mb-2">
