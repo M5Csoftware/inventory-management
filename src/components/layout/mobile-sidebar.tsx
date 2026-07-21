@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Package, Settings, ChevronDown, ChevronRight, LogOut, X, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { navItems, NavItem, SubNavItem } from './sidebar';
@@ -14,6 +14,14 @@ interface MobileSidebarProps {
 
 export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    onClose();
+    router.replace('/login');
+  };
   
   const [openSubMenus, setOpenSubMenus] = useState<Record<string, boolean>>(() => {
     const initialState: Record<string, boolean> = {};
@@ -166,14 +174,13 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
             <Users className="h-5 w-5" />
             <span>Manage Roles</span>
           </Link>
-          <Link
-            href="/login"
-            onClick={onClose}
-            className="flex items-center gap-3 rounded-lg px-3 py-2 text-base font-medium transition-all text-muted-foreground hover:bg-red-500/10 hover:text-red-500"
+          <button
+            onClick={handleLogout}
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-base font-medium transition-all text-muted-foreground hover:bg-red-500/10 hover:text-red-500"
           >
             <LogOut className="h-5 w-5" />
             <span>Log out</span>
-          </Link>
+          </button>
         </div>
       </aside>
     </>
