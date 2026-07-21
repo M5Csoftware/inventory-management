@@ -14,6 +14,9 @@ export interface Product {
   sku?: string;
   description?: string;
   status?: string;
+  uomValue?: number;
+  uom?: string;
+  packaging?: string;
   weight?: number;
   dimensions?: string;
 }
