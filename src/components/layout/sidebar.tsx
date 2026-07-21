@@ -2,24 +2,24 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Package, LayoutDashboard, Box, Truck, Users, FileText, Settings, ChevronDown, ChevronRight, PlusCircle, List, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-interface SubNavItem {
+export interface SubNavItem {
   href: string;
   label: string;
   icon: any;
 }
 
-interface NavItem {
+export interface NavItem {
   label: string;
   href?: string;
   icon: any;
   subItems?: SubNavItem[];
 }
 
-const navItems: NavItem[] = [
+export const navItems: NavItem[] = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
   {
     label: 'Products',
@@ -59,6 +59,13 @@ const navItems: NavItem[] = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+  
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    router.replace('/login');
+  };
   
   // Track open states of submenus. By default, keep active section open.
   const [openSubMenus, setOpenSubMenus] = useState<Record<string, boolean>>(() => {
@@ -173,12 +180,24 @@ export function Sidebar() {
           <span>Settings</span>
         </Link>
         <Link
-          href="/login"
-          className="flex items-center gap-3 rounded-lg px-3 py-2 text-base font-medium transition-all text-muted-foreground hover:bg-red-500/10 hover:text-red-500"
+          href="/manage-roles"
+          className={cn(
+            "flex items-center gap-3 rounded-lg px-3 py-2 text-base font-medium transition-all",
+            pathname === '/manage-roles'
+              ? "bg-primary/10 text-primary font-semibold"
+              : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+          )}
+        >
+          <Users className="h-5 w-5" />
+          <span>Manage Roles</span>
+        </Link>
+        <button
+          onClick={handleLogout}
+          className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-base font-medium transition-all text-muted-foreground hover:bg-red-500/10 hover:text-red-500"
         >
           <LogOut className="h-5 w-5" />
           <span>Log out</span>
-        </Link>
+        </button>
       </div>
     </aside>
   );

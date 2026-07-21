@@ -1,11 +1,12 @@
 'use client';
 
-import { Bell, Search, AlertTriangle, Package } from 'lucide-react';
+import { Bell, Search, AlertTriangle, Package, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { usePathname } from 'next/navigation';
 import { useInventory } from '@/context/inventory-context';
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
+import { MobileSidebar } from './mobile-sidebar';
 
 export function Header() {
   const pathname = usePathname();
@@ -18,6 +19,7 @@ function HeaderInner() {
   const pathname = usePathname();
   const { products } = useInventory();
   const [open, setOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const popoverRef = useRef<HTMLDivElement>(null);
 
   // Derive low-stock list directly from context (no extra state needed)
@@ -38,11 +40,22 @@ function HeaderInner() {
   if (pathname === '/login') return null;
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background/50 backdrop-blur-xl px-6">
-      {/* Search */}
-      <div className="flex items-center gap-4">
-        <div className="relative hidden sm:block">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+    <>
+      <MobileSidebar isOpen={isMobileMenuOpen} onClose={() => setIsMobileMenuOpen(false)} />
+      <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background/50 backdrop-blur-xl px-4 md:px-6">
+        {/* Mobile Hamburger & Search */}
+        <div className="flex items-center gap-2 md:gap-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="md:hidden text-muted-foreground hover:text-foreground"
+            onClick={() => setIsMobileMenuOpen(true)}
+          >
+            <Menu className="h-5 w-5" />
+          </Button>
+
+          <div className="relative hidden sm:block">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <input
             type="search"
             placeholder="Search inventory..."
@@ -155,6 +168,7 @@ function HeaderInner() {
         {/* Avatar */}
         <div className="h-8 w-8 rounded-full bg-gradient-to-tr from-red-500 to-rose-600 ring-2 ring-background border border-border" />
       </div>
-    </header>
+      </header>
+    </>
   );
 }

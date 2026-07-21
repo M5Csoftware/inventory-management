@@ -1,41 +1,72 @@
 'use client';
 
 import Link from 'next/link';
-import { Package, Truck, Activity, AlertCircle, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { Package, Truck, AlertCircle, IndianRupee } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useInventory } from '@/context/inventory-context';
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Legend,
+  BarChart,
+  Bar
+} from 'recharts';
 
 export default function Dashboard() {
   const { products, transactions, categories } = useInventory();
 
-  // Calculate metrics
+  // Metrics
   const totalProducts = products.length;
-  
-  // Total units in stock
   const totalStockUnits = products.reduce((acc, curr) => acc + curr.stock, 0);
-
-  // Low stock alerts
   const lowStockAlerts = products.filter((p) => p.stock <= p.threshold).length;
+  const totalInventoryValue = products.reduce((acc, curr) => acc + (curr.stock * curr.price), 0);
 
-  // Category counts
-  const categorySummary = categories.map((cat) => {
-    const count = products.filter((p) => p.category.toLowerCase() === cat.name.toLowerCase()).length;
-    const totalQty = products.filter((p) => p.category.toLowerCase() === cat.name.toLowerCase()).reduce((acc, p) => acc + p.stock, 0);
-    return { name: cat.name, count, totalQty };
-  });
+  // Category Distribution (Value)
+  const categoryData = categories.map((cat) => {
+    const value = products
+      .filter((p) => (p.category || '').toLowerCase() === (cat.name || '').toLowerCase())
+      .reduce((acc, p) => acc + ((p.stock || 0) * (p.price || 0)), 0);
+    return { name: cat.name || 'Unknown', value };
+  }).filter(c => c.value > 0);
 
-  const totalCatQty = categorySummary.reduce((acc, curr) => acc + curr.totalQty, 0) || 1;
+  const COLORS = ['#8b5cf6', '#3b82f6', '#10b981', '#f59e0b', '#ec4899', '#6366f1'];
 
-  // Recent transactions
-  const recentTransactions = transactions.slice(0, 4);
+  // Stock Movement Data (Grouped by Date)
+  const transactionsByDate = transactions.reduce((acc: any, curr) => {
+    const date = curr.date.split(' ')[0]; // yyyy-mm-dd
+    if (!acc[date]) {
+      acc[date] = { date, 'Stock In': 0, 'Stock Out': 0 };
+    }
+    if (curr.type === 'Stock In') {
+      acc[date]['Stock In'] += curr.quantity;
+    } else {
+      acc[date]['Stock Out'] += curr.quantity;
+    }
+    return acc;
+  }, {});
+  
+  const movementData = Object.values(transactionsByDate)
+    .sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime())
+    .slice(-14);
+
+  const recentTransactions = transactions.slice(0, 5);
 
   return (
-    <div className="p-6 sm:p-8 space-y-8">
+    <div className="p-6 sm:p-8 space-y-8 animate-in fade-in duration-500">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight font-sans">Overview</h1>
-          <p className="text-muted-foreground mt-1">Here is the latest data for your inventory.</p>
+          <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-br from-foreground to-muted-foreground bg-clip-text text-transparent">Overview</h1>
+          <p className="text-muted-foreground mt-1">Crucial inventory insights at a glance.</p>
         </div>
         <div className="flex gap-3">
           <Link href="/reports">
@@ -51,153 +82,231 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* Top 4 Metric Cards */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="group relative overflow-hidden bg-background/60 backdrop-blur-sm border-border/50 shadow-sm transition-all hover:shadow-md hover:border-primary/30">
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 transition-opacity group-hover:opacity-100"></div>
+        <Card className="group relative overflow-hidden bg-gradient-to-br from-card to-card/50 backdrop-blur-xl border-border/50 shadow-sm transition-all hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1 duration-300">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"></div>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Unique Products</CardTitle>
-            <div className="p-2 rounded-md bg-primary/10 text-primary ring-1 ring-primary/20">
+            <CardTitle className="text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors">Total Inventory Value</CardTitle>
+            <div className="p-2 rounded-xl bg-primary/10 text-primary ring-1 ring-primary/20 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3">
+              <IndianRupee className="h-4 w-4" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold tracking-tight font-mono group-hover:text-primary transition-colors">₹{totalInventoryValue.toLocaleString('en-IN')}</div>
+            <p className="text-xs text-muted-foreground mt-1">Total worth of current stock</p>
+          </CardContent>
+        </Card>
+
+        <Card className="group relative overflow-hidden bg-gradient-to-br from-card to-card/50 backdrop-blur-xl border-border/50 shadow-sm transition-all hover:shadow-xl hover:shadow-blue-500/5 hover:-translate-y-1 duration-300">
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"></div>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors">Unique Products</CardTitle>
+            <div className="p-2 rounded-xl bg-blue-500/10 text-blue-500 ring-1 ring-blue-500/20 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-3">
               <Package className="h-4 w-4" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold tracking-tight">{totalProducts}</div>
-            <p className="text-xs text-muted-foreground mt-1">Items cataloged in system</p>
+            <div className="text-3xl font-bold tracking-tight group-hover:text-blue-500 transition-colors">{totalProducts}</div>
+            <p className="text-xs text-muted-foreground mt-1">Active SKUs cataloged</p>
           </CardContent>
         </Card>
 
-        <Card className="group relative overflow-hidden bg-background/60 backdrop-blur-sm border-border/50 shadow-sm transition-all hover:shadow-md hover:border-primary/30">
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-transparent opacity-0 transition-opacity group-hover:opacity-100"></div>
+        <Card className="group relative overflow-hidden bg-gradient-to-br from-card to-card/50 backdrop-blur-xl border-border/50 shadow-sm transition-all hover:shadow-xl hover:shadow-emerald-500/5 hover:-translate-y-1 duration-300">
+          <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"></div>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Stock Units</CardTitle>
-            <div className="p-2 rounded-md bg-blue-500/10 text-blue-500 ring-1 ring-blue-500/20">
+            <CardTitle className="text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors">Total Stock Units</CardTitle>
+            <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-500 ring-1 ring-emerald-500/20 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3">
               <Truck className="h-4 w-4" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold tracking-tight">{totalStockUnits}</div>
-            <p className="text-xs text-muted-foreground mt-1">Total physical items tracked</p>
+            <div className="text-3xl font-bold tracking-tight group-hover:text-emerald-500 transition-colors">{totalStockUnits}</div>
+            <p className="text-xs text-muted-foreground mt-1">Physical items in warehouse</p>
           </CardContent>
         </Card>
 
-        <Card className="group relative overflow-hidden bg-background/60 backdrop-blur-sm border-border/50 shadow-sm transition-all hover:shadow-md hover:border-destructive/30">
-          <div className="absolute inset-0 bg-gradient-to-br from-destructive/5 via-transparent to-transparent opacity-0 transition-opacity group-hover:opacity-100"></div>
+        <Card className="group relative overflow-hidden bg-gradient-to-br from-card to-card/50 backdrop-blur-xl border-border/50 shadow-sm transition-all hover:shadow-xl hover:shadow-destructive/5 hover:-translate-y-1 duration-300">
+          <div className="absolute inset-0 bg-gradient-to-br from-destructive/10 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"></div>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Low Stock Alerts</CardTitle>
-            <div className="p-2 rounded-md bg-destructive/10 text-destructive ring-1 ring-destructive/20 relative">
+            <CardTitle className="text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors">Low Stock Alerts</CardTitle>
+            <div className="p-2 rounded-xl bg-destructive/10 text-destructive ring-1 ring-destructive/20 relative transition-transform duration-300 group-hover:scale-110">
               <AlertCircle className="h-4 w-4" />
               {lowStockAlerts > 0 && (
-                <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-destructive animate-pulse"></span>
+                <span className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-destructive animate-pulse ring-2 ring-card"></span>
               )}
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold tracking-tight text-destructive">{lowStockAlerts}</div>
-            <p className="text-xs text-muted-foreground mt-1">Requires immediate attention</p>
-          </CardContent>
-        </Card>
-
-        <Card className="group relative overflow-hidden bg-gradient-to-br from-primary/10 via-primary/5 to-background border-primary/20 shadow-md transition-all hover:shadow-lg hover:shadow-primary/10">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-primary">System Health</CardTitle>
-            <div className="p-2 rounded-md bg-primary/20 text-primary">
-              <Activity className="h-4 w-4" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold tracking-tight text-primary">99.9%</div>
-            <p className="text-xs text-primary/85 mt-1">All systems operational</p>
+            <div className="text-3xl font-bold tracking-tight text-destructive group-hover:scale-105 transform origin-left transition-transform">{lowStockAlerts}</div>
+            <p className="text-xs text-muted-foreground mt-1">Items below minimum threshold</p>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7">
-        <Card className="col-span-4 bg-background/60 backdrop-blur-sm shadow-sm border-border/50">
-          <CardHeader className="pb-4">
+      {/* Charts Section */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        
+        {/* Category Value Distribution */}
+        <Card className="bg-card/50 backdrop-blur-xl shadow-lg border-border/50 transition-all hover:shadow-xl hover:border-primary/20">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent">Valuation by Category</CardTitle>
+            <CardDescription>Capital distribution.</CardDescription>
+          </CardHeader>
+          <CardContent className="h-[240px]">
+            {categoryData.length === 0 ? (
+              <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+                No category data available.
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={categoryData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={55}
+                    outerRadius={80}
+                    paddingAngle={3}
+                    dataKey="value"
+                    stroke="none"
+                  >
+                    {categoryData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    formatter={(value: number) => [`₹${value.toLocaleString('en-IN')}`, 'Value']}
+                    contentStyle={{ backgroundColor: 'hsl(var(--background))', borderColor: 'hsl(var(--border))', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Stock Movement Trend */}
+        <Card className="bg-card/50 backdrop-blur-xl shadow-lg border-border/50 transition-all hover:shadow-xl hover:border-primary/20">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg bg-gradient-to-r from-emerald-500 to-blue-500 bg-clip-text text-transparent">Stock Flow</CardTitle>
+            <CardDescription>Daily in vs out.</CardDescription>
+          </CardHeader>
+          <CardContent className="h-[240px] pt-4">
+            {movementData.length === 0 ? (
+              <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+                No movement data.
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={movementData} margin={{ top: 0, right: 0, left: -25, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" opacity={0.5} />
+                  <XAxis dataKey="date" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(val) => val.split('-')[2]} />
+                  <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} tickMargin={8} />
+                  <Tooltip 
+                    cursor={{ fill: 'hsl(var(--muted)/0.4)' }}
+                    contentStyle={{ backgroundColor: 'hsl(var(--background))', borderColor: 'hsl(var(--border))', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                  />
+                  <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} iconType="circle" />
+                  <Bar dataKey="Stock In" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={30} />
+                  <Bar dataKey="Stock Out" fill="#ef4444" radius={[4, 4, 0, 0]} maxBarSize={30} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Low Stock Items List */}
+        <Card className="bg-card/50 backdrop-blur-xl shadow-lg border-border/50 transition-all hover:shadow-xl hover:border-destructive/20 flex flex-col">
+          <CardHeader className="pb-2 flex-shrink-0 border-b border-border/50 mb-2">
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="text-lg">Recent Activity</CardTitle>
-                <CardDescription>Latest movements in your inventory.</CardDescription>
+                <CardTitle className="text-lg bg-gradient-to-r from-red-500 to-orange-500 bg-clip-text text-transparent">Attention Required</CardTitle>
+                <CardDescription>Items below stock threshold.</CardDescription>
               </div>
-              <Link href="/stock">
-                <Button variant="ghost" size="sm" className="text-xs">View All</Button>
-              </Link>
+              <div className="bg-destructive/10 text-destructive px-2 py-1 rounded-md text-xs font-bold">
+                {lowStockAlerts}
+              </div>
             </div>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-6">
-              {recentTransactions.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-6">No recent transactions recorded.</p>
-              ) : (
-                recentTransactions.map((item, i) => (
-                  <div key={i} className="flex items-center group cursor-pointer">
-                    <div className={`p-2 rounded-full mr-4 ring-1 ring-inset transition-transform group-hover:scale-110 ${
-                      item.type === 'Stock In'
-                        ? 'bg-emerald-500/10 text-emerald-500 ring-emerald-500/20'
-                        : 'bg-blue-500/10 text-blue-500 ring-blue-500/20'
-                    }`}>
-                      {item.type === 'Stock In' ? <Truck className="h-4 w-4" /> : <Package className="h-4 w-4" />}
+          <CardContent className="h-[230px] overflow-y-auto pr-2 space-y-3 pt-2">
+            {products.filter((p) => p.stock <= p.threshold).length === 0 ? (
+              <div className="flex h-full items-center justify-center text-sm text-muted-foreground text-center">
+                All stock levels look good!
+              </div>
+            ) : (
+              products.filter((p) => p.stock <= p.threshold).slice(0, 5).map((p) => (
+                <div key={p.id} className="flex items-center justify-between p-2 rounded-lg bg-background/50 border border-border/30 hover:border-border transition-colors">
+                  <div className="flex items-center gap-3 overflow-hidden">
+                    <div className="h-8 w-8 rounded-full bg-destructive/10 flex items-center justify-center text-destructive flex-shrink-0">
+                      <AlertCircle className="h-4 w-4" />
                     </div>
-                    <div className="flex-1 space-y-1">
-                      <p className="text-sm font-medium leading-none group-hover:text-primary transition-colors">
-                        {item.type === 'Stock In' ? 'Received' : 'Dispatched'} {item.productName}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {item.reasonOrLocation} <span className="mx-1">•</span> Qty: {item.quantity}
-                      </p>
+                    <div className="truncate">
+                      <p className="text-sm font-semibold truncate">{p.name}</p>
+                      <p className="text-xs text-muted-foreground truncate">{p.category}</p>
                     </div>
-                    <div className="text-xs font-medium text-muted-foreground">{item.date}</div>
                   </div>
-                ))
-              )}
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card className="col-span-3 bg-background/60 backdrop-blur-sm shadow-sm border-border/50">
-          <CardHeader className="pb-4">
-            <CardTitle className="text-lg">Top Categories</CardTitle>
-            <CardDescription>Inventory distribution by category.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-6">
-              {categorySummary.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-6">No categories defined.</p>
-              ) : (
-                categorySummary.map((cat, i) => {
-                  const percent = Math.round((cat.totalQty / totalCatQty) * 100) || 0;
-                  const colors = [
-                    'bg-primary',
-                    'bg-blue-500',
-                    'bg-emerald-500',
-                    'bg-amber-500',
-                  ];
-                  return (
-                    <div key={i} className="group">
-                      <div className="flex justify-between mb-2">
-                        <span className="text-sm font-medium group-hover:text-primary transition-colors">{cat.name}</span>
-                        <span className="text-sm text-muted-foreground font-mono">{percent}%</span>
-                      </div>
-                      <div className="w-full bg-secondary/50 rounded-full h-2.5 overflow-hidden ring-1 ring-inset ring-border/50">
-                        <div className={`${colors[i % colors.length]} h-2.5 rounded-full transition-all duration-1000 ease-out`} style={{ width: `${percent}%` }}></div>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-            <div className="mt-8 p-4 rounded-xl bg-muted/50 border border-border/50 flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium">Generate Report</p>
-                <p className="text-xs text-muted-foreground mt-0.5">Get detailed category breakdown</p>
-              </div>
-              <Link href="/reports">
-                <Button variant="secondary" size="sm" className="shadow-sm">Create</Button>
-              </Link>
-            </div>
+                  <div className="text-right flex-shrink-0 ml-2">
+                    <p className="text-sm font-bold text-destructive">{p.stock}</p>
+                    <p className="text-[10px] text-muted-foreground">/ {p.threshold}</p>
+                  </div>
+                </div>
+              ))
+            )}
           </CardContent>
         </Card>
       </div>
+
+      {/* Recent Activity (Bottom) */}
+      <Card className="bg-card/50 backdrop-blur-xl shadow-lg border-border/50">
+        <CardHeader className="flex flex-row items-center justify-between pb-4 border-b border-border/50">
+          <div>
+            <CardTitle className="text-lg">Recent Activity</CardTitle>
+            <CardDescription>Latest movements in your inventory.</CardDescription>
+          </div>
+          <Link href="/stock">
+            <Button variant="secondary" size="sm" className="text-xs rounded-lg hover:shadow-md transition-shadow">View All</Button>
+          </Link>
+        </CardHeader>
+        <CardContent className="pt-6">
+          <div className="space-y-6">
+            {recentTransactions.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-10 opacity-70">
+                <Truck className="h-10 w-10 text-muted-foreground mb-3" />
+                <p className="text-sm text-muted-foreground font-medium">No recent transactions recorded.</p>
+              </div>
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {recentTransactions.map((item, i) => (
+                  <div key={i} className="group flex items-center p-4 bg-background/40 rounded-2xl hover:bg-muted/50 transition-all border border-border/40 hover:border-border hover:shadow-md">
+                    <div className={`p-3 rounded-xl mr-4 shadow-sm transition-transform duration-300 group-hover:scale-110 ${
+                      item.type === 'Stock In'
+                        ? 'bg-emerald-500 text-white'
+                        : 'bg-red-500 text-white'
+                    }`}>
+                      {item.type === 'Stock In' ? <Truck className="h-5 w-5" /> : <Package className="h-5 w-5" />}
+                    </div>
+                    <div className="flex-1 space-y-1 overflow-hidden">
+                      <p className="text-sm font-bold leading-none truncate group-hover:text-primary transition-colors">
+                        {item.productName}
+                      </p>
+                      <div className="flex items-center text-xs text-muted-foreground mt-1">
+                        <span className={`font-medium ${item.type === 'Stock In' ? 'text-emerald-500/80' : 'text-red-500/80'}`}>
+                          {item.type}
+                        </span> 
+                        <span className="mx-1.5 opacity-50">•</span> 
+                        <span className="font-mono bg-muted px-1.5 py-0.5 rounded-md">Qty: {item.quantity}</span>
+                      </div>
+                    </div>
+                    <div className="text-xs font-semibold text-muted-foreground whitespace-nowrap ml-3 bg-background px-2 py-1 rounded-lg border border-border/50 shadow-sm">
+                      {new Date(item.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
