@@ -183,7 +183,7 @@ export default function ReportsPage() {
                         <Pie data={categoryData} cx="50%" cy="50%" innerRadius={60} outerRadius={85} paddingAngle={2} dataKey="value" stroke="none">
                           {categoryData.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
                         </Pie>
-                        <Tooltip formatter={(value: number) => [`₹${value.toLocaleString('en-IN')}`, 'Value']} contentStyle={{ borderRadius: '12px', border: '1px solid hsl(var(--border))' }} />
+                        <Tooltip formatter={(value) => [`₹${(Number(value) || 0).toLocaleString('en-IN')}`, 'Value']} contentStyle={{ borderRadius: '12px', border: '1px solid hsl(var(--border))' }} />
                         <Legend />
                       </PieChart>
                     </ResponsiveContainer>
