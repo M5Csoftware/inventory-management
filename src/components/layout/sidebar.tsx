@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Package, LayoutDashboard, Box, Truck, Users, FileText, Settings, ChevronDown, ChevronRight, PlusCircle, List, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -59,6 +59,13 @@ export const navItems: NavItem[] = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+  
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    router.replace('/login');
+  };
   
   // Track open states of submenus. By default, keep active section open.
   const [openSubMenus, setOpenSubMenus] = useState<Record<string, boolean>>(() => {
@@ -184,13 +191,13 @@ export function Sidebar() {
           <Users className="h-5 w-5" />
           <span>Manage Roles</span>
         </Link>
-        <Link
-          href="/login"
-          className="flex items-center gap-3 rounded-lg px-3 py-2 text-base font-medium transition-all text-muted-foreground hover:bg-red-500/10 hover:text-red-500"
+        <button
+          onClick={handleLogout}
+          className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-base font-medium transition-all text-muted-foreground hover:bg-red-500/10 hover:text-red-500"
         >
           <LogOut className="h-5 w-5" />
           <span>Log out</span>
-        </Link>
+        </button>
       </div>
     </aside>
   );
