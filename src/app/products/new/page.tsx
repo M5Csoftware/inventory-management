@@ -59,8 +59,6 @@ export default function NewProductPage() {
     e.preventDefault();
     if (!name || !price || !stock || !category || !supplier) return;
 
-    const dimensionStr = (length && width && height) ? `${length} x ${width} x ${height}` : undefined;
-
     await addProduct({
       name,
       category,
