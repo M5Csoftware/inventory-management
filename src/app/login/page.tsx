@@ -16,8 +16,10 @@ import { Button } from "@/components/ui/button";
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/inventory";
 
+import { useAuth } from "@/context/auth-context";
+
 export default function LoginPage() {
-  const router = useRouter();
+  const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -46,9 +48,7 @@ export default function LoginPage() {
         return;
       }
 
-      localStorage.setItem("token", result.data.token);
-      localStorage.setItem("user", JSON.stringify(result.data.user));
-      router.push("/");
+      login(result.data.token, result.data.user);
     } catch (err) {
       setError("Something went wrong. Please try again.");
     } finally {
