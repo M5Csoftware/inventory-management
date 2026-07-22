@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { Package, Settings, ChevronDown, ChevronRight, LogOut, X, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { navItems, NavItem, SubNavItem } from './sidebar';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface MobileSidebarProps {
   isOpen: boolean;
@@ -97,11 +98,27 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
                       <Icon className="h-5 w-5" />
                       <span>{item.label}</span>
                     </div>
-                    {isExpanded ? <ChevronDown className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
+                    {isExpanded ? (
+                      <motion.div layoutId={`icon-m-${item.label}`} className="h-5 w-5">
+                        <ChevronDown className="h-5 w-5" />
+                      </motion.div>
+                    ) : (
+                      <motion.div layoutId={`icon-m-${item.label}`} className="h-5 w-5">
+                        <ChevronRight className="h-5 w-5" />
+                      </motion.div>
+                    )}
                   </button>
-                  {isExpanded && (
-                    <div className="pl-6 space-y-1 mt-1 border-l ml-5 border-border">
-                      {item.subItems.map((sub) => {
+                  <AnimatePresence initial={false}>
+                    {isExpanded && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2, ease: "easeInOut" }}
+                        className="overflow-hidden"
+                      >
+                        <div className="pl-6 space-y-1 mt-1 border-l ml-5 border-border">
+                          {item.subItems.map((sub) => {
                         const SubIcon = sub.icon;
                         const isActive = pathname === sub.href;
                         return (
@@ -122,9 +139,11 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
                         );
                       })}
                     </div>
-                  )}
-                </div>
-              );
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          );
             }
 
             const isActive = pathname === item.href;
