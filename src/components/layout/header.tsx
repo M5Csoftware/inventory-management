@@ -142,7 +142,7 @@ function HeaderInner() {
                           </p>
                           <div className="mt-1 flex items-center gap-2">
                             <span className="inline-flex items-center rounded-full bg-destructive/10 px-2 py-0.5 text-xs font-semibold text-destructive">
-                              {product.stock} left
+                              {getStock(product)} left
                             </span>
                             <span className="text-xs text-muted-foreground">
                               Min: {product.threshold}
