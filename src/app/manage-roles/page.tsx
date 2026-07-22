@@ -111,13 +111,13 @@ export default function ManageRolesPage() {
 
   const openCreateModal = () => {
     setModalMode('create');
-    setFormData({ id: '', name: '', email: '', password: '', role: 'stock_manager' });
+    setFormData({ id: '', name: '', email: '', password: '', role: 'stock_manager', branch: 'Ahmedabad' });
     setIsModalOpen(true);
   };
 
   const openEditModal = (user: User) => {
     setModalMode('edit');
-    setFormData({ id: user.id, name: user.name, email: user.email, password: '', role: user.role });
+    setFormData({ id: user.id, name: user.name, email: user.email, password: '', role: user.role, branch: user.branch ?? '' });
     setIsModalOpen(true);
   };
 
@@ -125,7 +125,7 @@ export default function ManageRolesPage() {
     <div className="p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-br from-foreground to-muted-foreground bg-clip-text text-transparent">
+          <h1 className="text-4xl font-bold tracking-tight bg-linear-to-br from-foreground to-muted-foreground bg-clip-text text-transparent">
             Manage Roles
           </h1>
           <p className="text-muted-foreground mt-2">
