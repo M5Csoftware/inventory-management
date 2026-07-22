@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Package, Truck, AlertCircle, IndianRupee } from 'lucide-react';
+import { Package, Truck, AlertCircle, IndianRupee, ShoppingCart } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useInventory } from '@/context/inventory-context';
@@ -23,7 +23,7 @@ import {
 } from 'recharts';
 
 export default function Dashboard() {
-  const { products, transactions, categories } = useInventory();
+  const { products, transactions, categories, orders } = useInventory();
   const [stockFlowDays, setStockFlowDays] = useState(7);
 
   // Metrics
@@ -31,6 +31,7 @@ export default function Dashboard() {
   const totalStockUnits = products.reduce((acc, curr) => acc + curr.stock, 0);
   const lowStockAlerts = products.filter((p) => p.stock <= p.threshold).length;
   const totalInventoryValue = products.reduce((acc, curr) => acc + (curr.stock * curr.price), 0);
+  const activeOrdersCount = orders ? orders.filter(o => o.status === 'Pending' || o.status === 'Processing').length : 0;
 
   // Category Distribution (Value)
   const categoryData = categories.map((cat) => {
@@ -91,8 +92,8 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Top 4 Metric Cards */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+      {/* Top 5 Metric Cards */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         <Card className="group relative overflow-hidden bg-gradient-to-br from-card to-card/50 backdrop-blur-xl border-border/50 shadow-sm transition-all hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1 duration-300">
           <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"></div>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -149,6 +150,20 @@ export default function Dashboard() {
           <CardContent>
             <div className="text-3xl font-bold tracking-tight text-destructive group-hover:scale-105 transform origin-left transition-transform">{lowStockAlerts}</div>
             <p className="text-xs text-muted-foreground mt-1">Items below minimum threshold</p>
+          </CardContent>
+        </Card>
+
+        <Card className="group relative overflow-hidden bg-gradient-to-br from-card to-card/50 backdrop-blur-xl border-border/50 shadow-sm transition-all hover:shadow-xl hover:shadow-amber-500/5 hover:-translate-y-1 duration-300">
+          <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"></div>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors">Active Orders</CardTitle>
+            <div className="p-2 rounded-xl bg-amber-500/10 text-amber-500 ring-1 ring-amber-500/20 transition-transform duration-300 group-hover:scale-110">
+              <ShoppingCart className="h-4 w-4" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold tracking-tight group-hover:text-amber-500 transition-colors">{activeOrdersCount}</div>
+            <p className="text-xs text-muted-foreground mt-1">Orders in progress</p>
           </CardContent>
         </Card>
       </div>
