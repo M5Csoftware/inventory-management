@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Package, LayoutDashboard, Box, Truck, Users, FileText, Settings, ChevronDown, ChevronRight, PlusCircle, List, LogOut, ShoppingCart } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
 export interface SubNavItem {
@@ -36,6 +37,7 @@ export const navItems: NavItem[] = [
       { href: '/stock', label: 'Current Stock', icon: List },
       { href: '/stock/in', label: 'Stock In (Add)', icon: PlusCircle },
       { href: '/stock/out', label: 'Stock Out (Remove)', icon: PlusCircle },
+      { href: '/stock/assets', label: 'Assets (Assigned)', icon: List },
     ]
   },
   {
@@ -126,11 +128,27 @@ export function Sidebar() {
                     <Icon className="h-5 w-5" />
                     <span>{item.label}</span>
                   </div>
-                  {isExpanded ? <ChevronDown className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
+                  {isExpanded ? (
+                    <motion.div layoutId={`icon-${item.label}`} className="h-5 w-5">
+                      <ChevronDown className="h-5 w-5" />
+                    </motion.div>
+                  ) : (
+                    <motion.div layoutId={`icon-${item.label}`} className="h-5 w-5">
+                      <ChevronRight className="h-5 w-5" />
+                    </motion.div>
+                  )}
                 </Link>
-                {isExpanded && (
-                  <div className="pl-6 space-y-1 mt-1 border-l ml-5 border-border">
-                    {item.subItems.map((sub) => {
+                <AnimatePresence initial={false}>
+                  {isExpanded && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.2, ease: "easeInOut" }}
+                      className="overflow-hidden"
+                    >
+                      <div className="pl-6 space-y-1 mt-1 border-l ml-5 border-border">
+                        {item.subItems.map((sub) => {
                       const SubIcon = sub.icon;
                       const isActive = pathname === sub.href;
                       return (
@@ -150,9 +168,11 @@ export function Sidebar() {
                       );
                     })}
                   </div>
-                )}
-              </div>
-            );
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        );
           }
 
           // Item with no children (like Dashboard, Reports)
