@@ -11,6 +11,7 @@ import {
   Plus,
   Save,
   AlertCircle,
+  User,
 } from "lucide-react";
 import {
   Card,
@@ -30,6 +31,7 @@ export default function StockOutPage() {
   const [productId, setProductId] = useState('');
   const [quantity, setQuantity] = useState('');
   const [reason, setReason] = useState('Customer Order / Sale');
+  const [handedTo, setHandedTo] = useState('');
   const [notes, setNotes] = useState('');
 
   // Default selection when products load
@@ -43,12 +45,14 @@ export default function StockOutPage() {
     e.preventDefault();
     if (!productId || !quantity || !reason) return;
 
+    const finalNotes = handedTo ? `Handed to: ${handedTo}\n${notes}` : notes;
+
     const success = await recordTransaction(
       productId,
       'Stock Out',
       parseInt(quantity),
       reason,
-      notes || undefined
+      finalNotes || undefined
     );
 
     if (success) {
@@ -137,8 +141,8 @@ export default function StockOutPage() {
                   </select>
                 </div>
 
-                {/* Dispatched Quantity & Reason */}
-                <div className="grid gap-4 md:grid-cols-2">
+                {/* Dispatched Quantity, Reason, & Handed To */}
+                <div className="grid gap-4 md:grid-cols-3">
                   <div className="space-y-1.5">
                     <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                       Dispatched Quantity <span className="text-destructive">*</span>
@@ -167,6 +171,19 @@ export default function StockOutPage() {
                       <option value="Return to Supplier">🔄 Return to Supplier</option>
                       <option value="Internal Usage">🏢 Internal Usage</option>
                     </select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      <User className="h-3 w-3" />
+                      Handed To
+                    </label>
+                    <input
+                      type="text"
+                      value={handedTo}
+                      onChange={(e) => setHandedTo(e.target.value)}
+                      placeholder="Name of person receiving"
+                      className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all placeholder:text-muted-foreground/50 hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
+                    />
                   </div>
                 </div>
 
