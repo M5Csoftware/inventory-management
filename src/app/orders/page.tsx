@@ -12,9 +12,11 @@ import autoTable from 'jspdf-autotable';
 import { Input } from '@/components/ui/input';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { toast } from 'react-toastify';
+import { useAutoAnimate } from '@formkit/auto-animate/react';
 
 export default function OrdersPage() {
   const router = useRouter();
+  const [animationParent] = useAutoAnimate();
   const { orders, updateOrderStatus, deleteOrder, recordTransaction } = useInventory();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'active' | 'past'>('all');
@@ -225,7 +227,7 @@ export default function OrdersPage() {
                   <th className="px-6 py-4 font-medium text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border/50">
+              <tbody ref={animationParent} className="divide-y divide-border/50">
                 {filteredOrders.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="px-6 py-12 text-center text-muted-foreground">
