@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Package, LayoutDashboard, Box, Truck, Users, FileText, Settings, ChevronDown, ChevronRight, PlusCircle, List, LogOut } from 'lucide-react';
+import { Package, LayoutDashboard, Box, Truck, Users, FileText, Settings, ChevronDown, ChevronRight, PlusCircle, List, LogOut, ShoppingCart } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export interface SubNavItem {
@@ -52,6 +52,14 @@ export const navItems: NavItem[] = [
     subItems: [
       { href: '/suppliers', label: 'All Suppliers', icon: List },
       { href: '/suppliers/new', label: 'Add Supplier', icon: PlusCircle },
+    ]
+  },
+  {
+    label: 'Orders',
+    icon: ShoppingCart,
+    subItems: [
+      { href: '/orders', label: 'All Orders', icon: List },
+      { href: '/orders/new', label: 'Generate Order', icon: PlusCircle },
     ]
   },
   { href: '/reports', label: 'Reports', icon: FileText },

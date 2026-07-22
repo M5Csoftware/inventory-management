@@ -49,11 +49,32 @@ export interface Supplier {
   website?: string;
 }
 
+export interface OrderItem {
+  productId: string;
+  name: string;
+  quantity: number;
+  price: number;
+}
+
+export interface Order {
+  id: string;
+  supplier: string;
+  items: OrderItem[];
+  status: 'Pending' | 'Processing' | 'Completed' | 'Cancelled';
+  totalAmount: number;
+  createdAt?: string;
+}
+
 interface InventoryContextType {
   products: Product[];
   transactions: Transaction[];
   categories: Category[];
   suppliers: Supplier[];
+  orders: Order[];
+  addOrder: (order: Omit<Order, 'id' | 'createdAt'>) => Promise<void>;
+  updateOrder: (id: string, orderData: Partial<Order>) => Promise<void>;
+  updateOrderStatus: (id: string, status: Order['status']) => Promise<void>;
+  deleteOrder: (id: string) => Promise<void>;
   addProduct: (product: Omit<Product, 'id'>) => Promise<void>;
   addCategory: (category: Category) => Promise<void>;
   addSupplier: (supplier: Supplier) => Promise<void>;
@@ -80,28 +101,32 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
 
   // Fetch initial data
   const fetchData = async () => {
     try {
-      const [prodRes, txRes, catRes, supRes] = await Promise.all([
+      const [prodRes, txRes, catRes, supRes, ordRes] = await Promise.all([
         fetch(`${API_BASE}/products`, { headers: DB_HEADER }),
         fetch(`${API_BASE}/transactions`, { headers: DB_HEADER }),
         fetch(`${API_BASE}/categories`, { headers: DB_HEADER }),
         fetch(`${API_BASE}/suppliers`, { headers: DB_HEADER }),
+        fetch(`${API_BASE}/orders`, { headers: DB_HEADER }),
       ]);
 
-      const [prods, txs, cats, sups] = await Promise.all([
+      const [prods, txs, cats, sups, ords] = await Promise.all([
         prodRes.json(),
         txRes.json(),
         catRes.json(),
         supRes.json(),
+        ordRes.json(),
       ]);
 
       if (prods.success) setProducts(prods.data);
       if (txs.success) setTransactions(txs.data);
       if (cats.success) setCategories(cats.data);
       if (sups.success) setSuppliers(sups.data);
+      if (ords.success) setOrders(ords.data);
     } catch (error) {
       console.error('Failed to load inventory data from backend:', error);
     }
@@ -276,6 +301,84 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const addOrder = async (order: Omit<Order, 'id' | 'createdAt'>) => {
+    try {
+      const res = await fetch(`${API_BASE}/orders`, {
+        method: 'POST',
+        headers: DB_HEADER,
+        body: JSON.stringify(order),
+      });
+      const data = await res.json();
+      if (data.success) {
+        await fetchData();
+        toast.success('Order created successfully!');
+      } else {
+        toast.error(data.message || 'Failed to create order.');
+      }
+    } catch (error) {
+      console.error('Failed to create order:', error);
+      toast.error('Network error while creating order.');
+    }
+  };
+
+  const updateOrder = async (id: string, orderData: Partial<Order>) => {
+    try {
+      const res = await fetch(`${API_BASE}/orders/${id}`, {
+        method: 'PUT',
+        headers: DB_HEADER,
+        body: JSON.stringify(orderData),
+      });
+      const data = await res.json();
+      if (data.success) {
+        await fetchData();
+        toast.success('Order updated successfully!');
+      } else {
+        toast.error(data.message || 'Failed to update order.');
+      }
+    } catch (error) {
+      console.error('Failed to update order:', error);
+      toast.error('Network error while updating order.');
+    }
+  };
+
+  const updateOrderStatus = async (id: string, status: Order['status']) => {
+    try {
+      const res = await fetch(`${API_BASE}/orders/${id}`, {
+        method: 'PUT',
+        headers: DB_HEADER,
+        body: JSON.stringify({ status }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        await fetchData();
+        toast.success('Order status updated!');
+      } else {
+        toast.error(data.message || 'Failed to update order.');
+      }
+    } catch (error) {
+      console.error('Failed to update order:', error);
+      toast.error('Network error while updating order.');
+    }
+  };
+
+  const deleteOrder = async (id: string) => {
+    try {
+      const res = await fetch(`${API_BASE}/orders/${id}`, {
+        method: 'DELETE',
+        headers: DB_HEADER,
+      });
+      if (res.ok) {
+        await fetchData();
+        toast.success('Order deleted successfully!');
+      } else {
+        toast.error('Failed to delete order.');
+      }
+    } catch (error) {
+      console.error('Failed to delete order:', error);
+      toast.error('Network error while deleting order.');
+    }
+  };
+
   return (
     <InventoryContext.Provider
       value={{
@@ -283,14 +386,19 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
         transactions,
         categories,
         suppliers,
+        orders,
         addProduct,
         addCategory,
         addSupplier,
+        addOrder,
         recordTransaction,
         deleteProduct,
         updateProduct,
         deleteCategory,
         deleteSupplier,
+        updateOrder,
+        updateOrderStatus,
+        deleteOrder,
       }}
     >
       {children}
