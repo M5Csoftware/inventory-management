@@ -7,7 +7,16 @@ import { Button } from '@/components/ui/button';
 import { useInventory, Category, Product } from '@/context/inventory-context';
 
 export default function CategoriesPage() {
-  const { categories, products, deleteCategory } = useInventory();
+  const { categories, products, deleteCategory, activeBranch } = useInventory();
+
+  const getStock = (p: any) => {
+    if (!p.stock) return 0;
+    if (typeof p.stock === 'number') return p.stock;
+    if (activeBranch === 'All') {
+      return Object.values(p.stock as Record<string, number>).reduce((acc, curr) => acc + (curr || 0), 0);
+    }
+    return (p.stock as Record<string, number>)[activeBranch] || 0;
+  };
 
   return (
     <div className="p-6 sm:p-8 space-y-8">
@@ -30,7 +39,7 @@ export default function CategoriesPage() {
           );
           
           const totalValuation = categoryProducts.reduce(
-            (acc: number, curr: Product) => acc + curr.price * curr.stock,
+            (acc: number, curr: Product) => acc + curr.price * getStock(curr),
             0
           );
 

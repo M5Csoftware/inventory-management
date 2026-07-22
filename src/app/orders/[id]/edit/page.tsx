@@ -13,9 +13,9 @@ import { toast } from 'react-toastify';
 
 export default function EditOrderPage() {
   const router = useRouter();
-  const params = useParams();
-  const { id } = params as { id: string };
-  const { suppliers, products, orders, updateOrder } = useInventory();
+  const params = useParams<{ id: string }>();
+  const id = params?.id;
+  const { orders, suppliers, products, updateOrder, activeBranch } = useInventory();
   
   const [supplier, setSupplier] = useState('');
   const [status, setStatus] = useState<'Pending' | 'Processing' | 'Completed' | 'Cancelled'>('Pending');
@@ -167,7 +167,7 @@ export default function EditOrderPage() {
                       >
                         <option value="">Select Product...</option>
                         {products.map((p) => (
-                          <option key={p.id} value={p.id}>{p.name} (Stock: {p.stock})</option>
+                          <option key={p.id} value={p.id}>{p.name} (Stock: {activeBranch === 'All' ? Object.values(p.stock || {}).reduce((a, b) => a + b, 0) : p.stock?.[activeBranch] || 0})</option>
                         ))}
                       </select>
                     </div>

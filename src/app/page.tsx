@@ -24,21 +24,30 @@ import {
 } from 'recharts';
 
 export default function Dashboard() {
-  const { products, transactions, categories, orders } = useInventory();
+  const { products, transactions, categories, orders, activeBranch } = useInventory();
   const [stockFlowDays, setStockFlowDays] = useState(7);
+
+  const getStock = (p: any) => {
+    if (!p.stock) return 0;
+    if (typeof p.stock === 'number') return p.stock;
+    if (activeBranch === 'All') {
+      return Object.values(p.stock as Record<string, number>).reduce((acc, curr) => acc + (curr || 0), 0);
+    }
+    return (p.stock as Record<string, number>)[activeBranch] || 0;
+  };
 
   // Metrics
   const totalProducts = products.length;
-  const totalStockUnits = products.reduce((acc, curr) => acc + curr.stock, 0);
-  const lowStockAlerts = products.filter((p) => p.stock <= p.threshold).length;
-  const totalInventoryValue = products.reduce((acc, curr) => acc + (curr.stock * curr.price), 0);
+  const totalStockUnits = products.reduce((acc, curr) => acc + getStock(curr), 0);
+  const lowStockAlerts = products.filter((p) => getStock(p) <= p.threshold).length;
+  const totalInventoryValue = products.reduce((acc, curr) => acc + (getStock(curr) * curr.price), 0);
   const activeOrdersCount = orders ? orders.filter(o => o.status === 'Pending' || o.status === 'Processing').length : 0;
 
   // Category Distribution (Value)
   const categoryData = categories.map((cat) => {
     const value = products
       .filter((p) => (p.category || '').toLowerCase() === (cat.name || '').toLowerCase())
-      .reduce((acc, p) => acc + ((p.stock || 0) * (p.price || 0)), 0);
+      .reduce((acc, p) => acc + (getStock(p) * (p.price || 0)), 0);
     return { name: cat.name || 'Unknown', value };
   }).filter(c => c.value > 0);
 
@@ -251,25 +260,18 @@ export default function Dashboard() {
             </div>
           </CardHeader>
           <CardContent className="h-[230px] overflow-y-auto pr-2 space-y-3 pt-2">
-            {products.filter((p) => p.stock <= p.threshold).length === 0 ? (
-              <div className="flex h-full items-center justify-center text-sm text-muted-foreground text-center">
-                All stock levels look good!
-              </div>
+            {products.filter((p) => getStock(p) <= p.threshold).length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">All stock levels are healthy.</p>
             ) : (
-              products.filter((p) => p.stock <= p.threshold).slice(0, 5).map((p) => (
-                <div key={p.id} className="flex items-center justify-between p-2 rounded-lg bg-background/50 border border-border/30 hover:border-border transition-colors">
-                  <div className="flex items-center gap-3 overflow-hidden">
-                    <div className="h-8 w-8 rounded-full bg-destructive/10 flex items-center justify-center text-destructive flex-shrink-0">
-                      <AlertCircle className="h-4 w-4" />
-                    </div>
-                    <div className="truncate">
-                      <p className="text-sm font-semibold truncate">{p.name}</p>
-                      <p className="text-xs text-muted-foreground truncate">{p.category}</p>
-                    </div>
+              products.filter((p) => getStock(p) <= p.threshold).slice(0, 5).map((p) => (
+                <div key={p.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/40 hover:bg-muted/60 transition-colors">
+                  <div className="space-y-0.5">
+                    <p className="text-sm font-medium leading-none">{p.name}</p>
+                    <p className="text-xs text-muted-foreground">Threshold: {p.threshold} units</p>
                   </div>
-                  <div className="text-right flex-shrink-0 ml-2">
-                    <p className="text-sm font-bold text-destructive">{p.stock}</p>
-                    <p className="text-[10px] text-muted-foreground">/ {p.threshold}</p>
+                  <div className="text-right">
+                    <p className="text-sm font-bold text-destructive">{getStock(p)}</p>
+                    <p className="text-[10px] text-muted-foreground">Remaining</p>
                   </div>
                 </div>
               ))

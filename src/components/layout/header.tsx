@@ -17,13 +17,22 @@ export function Header() {
 
 function HeaderInner() {
   const pathname = usePathname();
-  const { products } = useInventory();
+  const { products, activeBranch } = useInventory();
   const [open, setOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const popoverRef = useRef<HTMLDivElement>(null);
 
+  const getStock = (p: any) => {
+    if (!p.stock) return 0;
+    if (typeof p.stock === 'number') return p.stock;
+    if (activeBranch === 'All') {
+      return Object.values(p.stock as Record<string, number>).reduce((acc, curr) => acc + (curr || 0), 0);
+    }
+    return (p.stock as Record<string, number>)[activeBranch] || 0;
+  };
+
   // Derive low-stock list directly from context (no extra state needed)
-  const lowStockProducts = products.filter((p) => p.stock <= p.threshold);
+  const lowStockProducts = products.filter((p) => getStock(p) <= p.threshold);
   const alertCount = lowStockProducts.length;
 
   // Close popover when clicking outside

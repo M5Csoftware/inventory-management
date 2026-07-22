@@ -8,8 +8,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Laptop, User, FileText, Package } from 'lucide-react';
 
-export default function AssignAssetPage() {
-  const { products, assignAsset } = useInventory();
+export default function NewAssetAssignmentPage() {
+  const { products, assignAsset, activeBranch } = useInventory();
   const router = useRouter();
 
   const [productId, setProductId] = useState('');
@@ -106,7 +106,7 @@ export default function AssignAssetPage() {
                   >
                     {products.map((prod: Product) => (
                       <option key={prod.id} value={prod.id}>
-                        {prod.name} (Available: {prod.stock} units)
+                        {prod.name} (Available: {activeBranch === 'All' ? Object.values(prod.stock || {}).reduce((a, b) => a + b, 0) : prod.stock?.[activeBranch] || 0} units)
                       </option>
                     ))}
                   </select>

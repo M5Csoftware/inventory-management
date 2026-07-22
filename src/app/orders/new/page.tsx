@@ -12,7 +12,7 @@ import Link from 'next/link';
 
 export default function NewOrderPage() {
   const router = useRouter();
-  const { suppliers, products, addOrder } = useInventory();
+  const { suppliers, products, addOrder, activeBranch } = useInventory();
   
   const [supplier, setSupplier] = useState('');
   const [items, setItems] = useState([{ productId: '', name: '', quantity: 1, price: 0 }]);
@@ -128,7 +128,7 @@ export default function NewOrderPage() {
                       >
                         <option value="">Select Product...</option>
                         {products.map((p) => (
-                          <option key={p.id} value={p.id}>{p.name} (Stock: {p.stock})</option>
+                          <option key={p.id} value={p.id}>{p.name} (Stock: {activeBranch === 'All' ? Object.values(p.stock || {}).reduce((a, b) => a + b, 0) : p.stock?.[activeBranch] || 0})</option>
                         ))}
                       </select>
                     </div>
