@@ -133,7 +133,7 @@ export default function ReportsPage() {
           <div className="flex gap-2 items-center">
             <DatePicker
               selected={startDate}
-              onChange={(date) => setStartDate(date)}
+              onChange={(date: Date | null) => setStartDate(date)}
               selectsStart
               startDate={startDate}
               endDate={endDate}
@@ -142,11 +142,11 @@ export default function ReportsPage() {
             />
             <DatePicker
               selected={endDate}
-              onChange={(date) => setEndDate(date)}
+              onChange={(date: Date | null) => setEndDate(date)}
               selectsEnd
               startDate={startDate}
               endDate={endDate}
-              minDate={startDate}
+              minDate={startDate ?? undefined}
               placeholderText="End"
               className="w-full px-3 py-2 bg-background border border-border rounded"
             />
