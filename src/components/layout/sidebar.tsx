@@ -137,7 +137,7 @@ export function Sidebar() {
         )}
       </div>
 
-      <nav className="flex-1 space-y-1 p-4 overflow-y-auto">
+      <nav className="flex-1 space-y-1 p-4 overflow-y-auto hide-scrollbar">
         {navItems.map((item) => {
           const Icon = item.icon;
           
