@@ -25,7 +25,7 @@ import { Button } from "@/components/ui/button";
 import { useInventory, Category, Supplier } from '@/context/inventory-context';
 
 export default function NewProductPage() {
-  const { addProduct, categories, suppliers } = useInventory();
+  const { addProduct, categories, suppliers, activeBranch } = useInventory();
   const router = useRouter();
 
   // Form states
@@ -59,11 +59,19 @@ export default function NewProductPage() {
     e.preventDefault();
     if (!name || !price || !stock || !category || !supplier) return;
 
+    const targetBranch = activeBranch === 'All' ? 'Delhi' : activeBranch;
+    const initialStockMap = {
+      Ahmedabad: targetBranch === 'Ahmedabad' ? parseInt(stock || '0') : 0,
+      Ludhiana: targetBranch === 'Ludhiana' ? parseInt(stock || '0') : 0,
+      Delhi: targetBranch === 'Delhi' ? parseInt(stock || '0') : 0,
+      Mumbai: targetBranch === 'Mumbai' ? parseInt(stock || '0') : 0,
+    };
+
     await addProduct({
       name,
       category,
       price: parseFloat(price),
-      stock: parseInt(stock),
+      stock: initialStockMap,
       threshold: parseInt(threshold || '10'),
       supplier,
       sku: sku || undefined,

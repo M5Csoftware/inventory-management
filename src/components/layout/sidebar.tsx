@@ -4,7 +4,9 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Package, LayoutDashboard, Box, Truck, Users, FileText, Settings, ChevronDown, ChevronRight, PlusCircle, List, LogOut, ShoppingCart } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { useInventory } from '@/context/inventory-context';
 
 export interface SubNavItem {
   href: string;
@@ -36,6 +38,8 @@ export const navItems: NavItem[] = [
       { href: '/stock', label: 'Current Stock', icon: List },
       { href: '/stock/in', label: 'Stock In (Add)', icon: PlusCircle },
       { href: '/stock/out', label: 'Stock Out (Remove)', icon: PlusCircle },
+      { href: '/stock/transfer', label: 'Transfer Stock', icon: Truck },
+      { href: '/stock/assets', label: 'Assets (Assigned)', icon: List },
     ]
   },
   {
@@ -68,6 +72,7 @@ export const navItems: NavItem[] = [
 export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
+  const { activeBranch, setActiveBranch } = useInventory();
   
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -104,6 +109,28 @@ export function Sidebar() {
         </div>
         <span className="text-lg font-bold tracking-tight">M5C Logistics</span>
       </div>
+      
+      {/* Branch Selector */}
+      <div className="px-4 py-3 border-b">
+        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1 block">
+          Current Branch
+        </label>
+        <div className="relative">
+          <select 
+            value={activeBranch}
+            onChange={(e) => setActiveBranch(e.target.value)}
+            className="w-full h-9 bg-accent/50 border border-border/50 text-foreground text-sm rounded-md px-3 appearance-none focus:outline-none focus:ring-1 focus:ring-primary/50 transition-colors cursor-pointer"
+          >
+            <option value="All">🌐 All Branches</option>
+            <option value="Ahmedabad">📍 Ahmedabad</option>
+            <option value="Ludhiana">📍 Ludhiana</option>
+            <option value="Delhi">📍 Delhi</option>
+            <option value="Mumbai">📍 Mumbai</option>
+          </select>
+          <ChevronDown className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
+        </div>
+      </div>
+
       <nav className="flex-1 space-y-1 p-4 overflow-y-auto">
         {navItems.map((item) => {
           const Icon = item.icon;
@@ -126,11 +153,27 @@ export function Sidebar() {
                     <Icon className="h-5 w-5" />
                     <span>{item.label}</span>
                   </div>
-                  {isExpanded ? <ChevronDown className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
+                  {isExpanded ? (
+                    <motion.div layoutId={`icon-${item.label}`} className="h-5 w-5">
+                      <ChevronDown className="h-5 w-5" />
+                    </motion.div>
+                  ) : (
+                    <motion.div layoutId={`icon-${item.label}`} className="h-5 w-5">
+                      <ChevronRight className="h-5 w-5" />
+                    </motion.div>
+                  )}
                 </Link>
-                {isExpanded && (
-                  <div className="pl-6 space-y-1 mt-1 border-l ml-5 border-border">
-                    {item.subItems.map((sub) => {
+                <AnimatePresence initial={false}>
+                  {isExpanded && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.2, ease: "easeInOut" }}
+                      className="overflow-hidden"
+                    >
+                      <div className="pl-6 space-y-1 mt-1 border-l ml-5 border-border">
+                        {item.subItems.map((sub) => {
                       const SubIcon = sub.icon;
                       const isActive = pathname === sub.href;
                       return (
@@ -150,9 +193,11 @@ export function Sidebar() {
                       );
                     })}
                   </div>
-                )}
-              </div>
-            );
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        );
           }
 
           // Item with no children (like Dashboard, Reports)

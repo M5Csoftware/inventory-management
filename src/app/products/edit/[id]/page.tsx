@@ -25,7 +25,7 @@ import { Button } from "@/components/ui/button";
 import { useInventory, Category, Supplier, Product } from '@/context/inventory-context';
 
 export default function EditProductPage() {
-  const { products, updateProduct, categories, suppliers } = useInventory();
+  const { products, updateProduct, categories, suppliers, activeBranch } = useInventory();
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const id = params?.id;
@@ -56,7 +56,12 @@ export default function EditProductPage() {
       setSupplier(product.supplier);
       setDescription(product.description || '');
       setPrice(product.price.toString());
-      setStock(product.stock.toString());
+      const currentStock = typeof product.stock === 'number' 
+        ? product.stock 
+        : (activeBranch === 'All' 
+            ? Object.values(product.stock || {}).reduce((a, b) => a + b, 0)
+            : (product.stock?.[activeBranch] || 0));
+      setStock(currentStock.toString());
       setThreshold(product.threshold.toString());
       setStatus(product.status || 'active');
       setWeight(product.weight?.toString() || '');
@@ -78,11 +83,16 @@ export default function EditProductPage() {
 
     const dimensionStr = (length && width && height) ? `${length} x ${width} x ${height}` : undefined;
 
+    const targetBranch = activeBranch === 'All' ? 'Delhi' : activeBranch;
+    const updatedStockMap = typeof product.stock === 'object' && product.stock !== null
+      ? { ...product.stock, [targetBranch]: parseInt(stock || '0') }
+      : { Ahmedabad: 0, Ludhiana: 0, Delhi: parseInt(stock || '0'), Mumbai: 0 };
+
     await updateProduct(product.id, {
       name,
       category,
       price: parseFloat(price),
-      stock: parseInt(stock),
+      stock: updatedStockMap,
       threshold: parseInt(threshold || '10'),
       supplier,
       sku: sku || undefined,

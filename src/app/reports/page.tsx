@@ -23,20 +23,29 @@ import {
 import * as XLSX from 'xlsx';
 
 export default function ReportsPage() {
-  const { products, transactions, categories } = useInventory();
+  const { products, transactions, categories, activeBranch } = useInventory();
   const [activeTab, setActiveTab] = useState<'inventory' | 'movement' | 'low-stock'>('inventory');
 
+  const getStock = (p: any) => {
+    if (!p.stock) return 0;
+    if (typeof p.stock === 'number') return p.stock;
+    if (activeBranch === 'All') {
+      return Object.values(p.stock as Record<string, number>).reduce((acc, curr) => acc + (curr || 0), 0);
+    }
+    return (p.stock as Record<string, number>)[activeBranch] || 0;
+  };
+
   // Compute reports metrics
-  const totalStockValuation = products.reduce((acc, curr) => acc + curr.price * curr.stock, 0);
+  const totalStockValuation = products.reduce((acc, curr) => acc + curr.price * getStock(curr), 0);
   const totalSKUs = products.length;
 
-  const lowStockItems = products.filter((p) => p.stock <= p.threshold);
+  const lowStockItems = products.filter((p) => getStock(p) <= p.threshold);
 
   // Prepare Chart Data
   const categoryData = categories.map((cat) => {
     const value = products
       .filter((p) => (p.category || '').toLowerCase() === (cat.name || '').toLowerCase())
-      .reduce((acc, p) => acc + ((p.stock || 0) * (p.price || 0)), 0);
+      .reduce((acc, p) => acc + (getStock(p) * (p.price || 0)), 0);
     return { name: cat.name || 'Unknown', value };
   }).filter(c => c.value > 0);
 
@@ -61,9 +70,9 @@ export default function ReportsPage() {
       const data = products.map(p => ({
         'Product Name': p.name,
         'Category': p.category,
-        'Stock': p.stock,
+        'Stock': getStock(p),
         'Unit Value (INR)': p.price,
-        'Total Value (INR)': p.price * p.stock,
+        'Total Value (INR)': p.price * getStock(p),
       }));
       ws = XLSX.utils.json_to_sheet(data);
       filename = 'Current_Inventory_Report.xlsx';
@@ -80,7 +89,7 @@ export default function ReportsPage() {
     } else if (activeTab === 'low-stock') {
       const data = lowStockItems.map(p => ({
         'Product': p.name,
-        'Current Stock': p.stock,
+        'Current Stock': getStock(p),
         'Threshold': p.threshold,
         'Supplier': p.supplier
       }));
@@ -207,8 +216,8 @@ export default function ReportsPage() {
                           <tr key={product.id} className="border-b border-border/40 transition-colors hover:bg-muted/30">
                             <td className="p-4 px-6 align-middle font-medium">{product.name}</td>
                             <td className="p-4 align-middle text-muted-foreground text-xs">{product.category}</td>
-                            <td className="p-4 align-middle font-medium">{product.stock}</td>
-                            <td className="p-4 px-6 align-middle font-mono font-semibold text-right">₹{(product.price * product.stock).toLocaleString('en-IN')}</td>
+                            <td className="p-4 align-middle font-medium">{getStock(product)}</td>
+                            <td className="p-4 px-6 align-middle font-mono font-semibold text-right">₹{(product.price * getStock(product)).toLocaleString('en-IN')}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -339,7 +348,7 @@ export default function ReportsPage() {
                       {lowStockItems.map((product) => (
                         <tr key={product.id} className="border-b border-border/40 transition-colors hover:bg-destructive/5">
                           <td className="p-4 px-6 align-middle font-semibold">{product.name}</td>
-                          <td className="p-4 align-middle font-bold text-destructive text-lg">{product.stock}</td>
+                          <td className="p-4 align-middle font-bold text-destructive text-lg">{getStock(product)}</td>
                           <td className="p-4 align-middle text-muted-foreground font-mono">{product.threshold}</td>
                           <td className="p-4 align-middle text-muted-foreground text-xs">{product.supplier}</td>
                           <td className="p-4 px-6 align-middle text-right">

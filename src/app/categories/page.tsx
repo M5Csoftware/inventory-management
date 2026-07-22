@@ -7,7 +7,16 @@ import { Button } from '@/components/ui/button';
 import { useInventory, Category, Product } from '@/context/inventory-context';
 
 export default function CategoriesPage() {
-  const { categories, products, deleteCategory } = useInventory();
+  const { categories, products, deleteCategory, activeBranch } = useInventory();
+
+  const getStock = (p: any) => {
+    if (!p.stock) return 0;
+    if (typeof p.stock === 'number') return p.stock;
+    if (activeBranch === 'All') {
+      return Object.values(p.stock as Record<string, number>).reduce((acc, curr) => acc + (curr || 0), 0);
+    }
+    return (p.stock as Record<string, number>)[activeBranch] || 0;
+  };
 
   return (
     <div className="p-6 sm:p-8 space-y-8">
@@ -30,23 +39,30 @@ export default function CategoriesPage() {
           );
           
           const totalValuation = categoryProducts.reduce(
-            (acc: number, curr: Product) => acc + curr.price * curr.stock,
+            (acc: number, curr: Product) => acc + curr.price * getStock(curr),
             0
           );
 
           return (
             <Card key={category.name} className="group relative overflow-hidden bg-background/60 backdrop-blur-sm border-border/50 shadow-sm transition-all hover:shadow-md hover:border-primary/30">
-              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 transition-opacity group-hover:opacity-100"></div>
-              <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-4">
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 transition-opacity group-hover:opacity-100"></div>
+              <CardHeader className="relative flex flex-row items-start justify-between space-y-0 pb-4">
                 <div className="space-y-1">
-                  <CardTitle className="text-xl group-hover:text-primary transition-colors">{category.name}</CardTitle>
+                  <div className="flex items-center gap-2">
+                    <CardTitle className="text-xl group-hover:text-primary transition-colors">{category.name}</CardTitle>
+                    {category.isAsset && (
+                      <span className="inline-flex items-center rounded-full bg-blue-500/10 px-2 py-0.5 text-xs font-medium text-blue-600 ring-1 ring-inset ring-blue-500/20">
+                        Asset
+                      </span>
+                    )}
+                  </div>
                   <CardDescription className="line-clamp-2 mt-1">{category.description}</CardDescription>
                 </div>
                 <div className="p-2 rounded-lg bg-primary/10 text-primary ring-1 ring-primary/20">
                   <Package className="h-5 w-5" />
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="relative">
                 <div className="flex justify-between items-center border-t pt-4 border-border/50 text-sm">
                   <div className="space-y-0.5">
                     <span className="text-muted-foreground block text-xs">Total Products</span>
@@ -58,9 +74,11 @@ export default function CategoriesPage() {
                   </div>
                 </div>
                 <div className="flex justify-end gap-1 mt-4 border-t pt-3 border-border/50">
-                  <Button variant="ghost" size="sm" className="h-8 text-xs text-muted-foreground hover:text-foreground">
-                    <Edit2 className="mr-1.5 h-3.5 w-3.5" /> Edit
-                  </Button>
+                  <Link href={`/categories/edit/${encodeURIComponent(category.name)}`}>
+                    <Button variant="ghost" size="sm" className="h-8 text-xs text-muted-foreground hover:text-foreground">
+                      <Edit2 className="mr-1.5 h-3.5 w-3.5" /> Edit
+                    </Button>
+                  </Link>
                   <Button 
                     onClick={() => deleteCategory(category.name)}
                     variant="ghost" 
