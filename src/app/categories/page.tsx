@@ -58,9 +58,11 @@ export default function CategoriesPage() {
                   </div>
                 </div>
                 <div className="flex justify-end gap-1 mt-4 border-t pt-3 border-border/50">
-                  <Button variant="ghost" size="sm" className="h-8 text-xs text-muted-foreground hover:text-foreground">
-                    <Edit2 className="mr-1.5 h-3.5 w-3.5" /> Edit
-                  </Button>
+                  <Link href={`/categories/edit/${encodeURIComponent(category.name)}`}>
+                    <Button variant="ghost" size="sm" className="h-8 text-xs text-muted-foreground hover:text-foreground">
+                      <Edit2 className="mr-1.5 h-3.5 w-3.5" /> Edit
+                    </Button>
+                  </Link>
                   <Button 
                     onClick={() => deleteCategory(category.name)}
                     variant="ghost" 
