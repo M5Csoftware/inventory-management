@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { Package, Truck, AlertCircle, IndianRupee } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -23,6 +24,7 @@ import {
 
 export default function Dashboard() {
   const { products, transactions, categories } = useInventory();
+  const [stockFlowDays, setStockFlowDays] = useState(7);
 
   // Metrics
   const totalProducts = products.length;
@@ -54,9 +56,16 @@ export default function Dashboard() {
     return acc;
   }, {});
   
-  const movementData = Object.values(transactionsByDate)
-    .sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime())
-    .slice(-14);
+  // Generate last N days array
+  const lastNDays = Array.from({ length: stockFlowDays }).map((_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - ((stockFlowDays - 1) - i));
+    return d.toISOString().split('T')[0];
+  });
+
+  const movementData = lastNDays.map(date => {
+    return transactionsByDate[date] || { date, 'Stock In': 0, 'Stock Out': 0 };
+  });
 
   const recentTransactions = transactions.slice(0, 5);
 
@@ -145,7 +154,7 @@ export default function Dashboard() {
       </div>
 
       {/* Charts Section */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
         
         {/* Category Value Distribution */}
         <Card className="bg-card/50 backdrop-blur-xl shadow-lg border-border/50 transition-all hover:shadow-xl hover:border-primary/20">
@@ -169,6 +178,7 @@ export default function Dashboard() {
                     outerRadius={80}
                     paddingAngle={3}
                     dataKey="value"
+                    nameKey="name"
                     stroke="none"
                   >
                     {categoryData.map((entry, index) => (
@@ -179,37 +189,11 @@ export default function Dashboard() {
                     formatter={(value) => [`₹${(Number(value) || 0).toLocaleString('en-IN')}`, 'Value']}
                     contentStyle={{ backgroundColor: 'hsl(var(--background))', borderColor: 'hsl(var(--border))', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
                   />
-                </PieChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Stock Movement Trend */}
-        <Card className="bg-card/50 backdrop-blur-xl shadow-lg border-border/50 transition-all hover:shadow-xl hover:border-primary/20">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg bg-gradient-to-r from-emerald-500 to-blue-500 bg-clip-text text-transparent">Stock Flow</CardTitle>
-            <CardDescription>Daily in vs out.</CardDescription>
-          </CardHeader>
-          <CardContent className="h-[240px] pt-4">
-            {movementData.length === 0 ? (
-              <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-                No movement data.
-              </div>
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={movementData} margin={{ top: 0, right: 0, left: -25, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" opacity={0.5} />
-                  <XAxis dataKey="date" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(val) => val.split('-')[2]} />
-                  <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} tickMargin={8} />
-                  <Tooltip 
-                    cursor={{ fill: 'hsl(var(--muted)/0.4)' }}
-                    contentStyle={{ backgroundColor: 'hsl(var(--background))', borderColor: 'hsl(var(--border))', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                  <Legend 
+                    wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} 
+                    iconType="circle" 
                   />
-                  <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} iconType="circle" />
-                  <Bar dataKey="Stock In" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={30} />
-                  <Bar dataKey="Stock Out" fill="#ef4444" radius={[4, 4, 0, 0]} maxBarSize={30} />
-                </BarChart>
+                </PieChart>
               </ResponsiveContainer>
             )}
           </CardContent>
@@ -251,6 +235,64 @@ export default function Dashboard() {
                   </div>
                 </div>
               ))
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Stock Movement Trend */}
+        <Card className="bg-card/50 backdrop-blur-xl shadow-lg border-border/50 transition-all hover:shadow-xl hover:border-primary/20 lg:col-span-2">
+          <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
+            <div>
+              <CardTitle className="text-lg bg-gradient-to-r from-emerald-500 to-blue-500 bg-clip-text text-transparent">Stock Flow</CardTitle>
+              <CardDescription>Daily in vs out.</CardDescription>
+            </div>
+            <div className="flex gap-2">
+              <Button 
+                variant={stockFlowDays === 7 ? "default" : "outline"} 
+                size="sm" 
+                onClick={() => setStockFlowDays(7)}
+                className="text-xs h-7 px-2"
+              >
+                7D
+              </Button>
+              <Button 
+                variant={stockFlowDays === 15 ? "default" : "outline"} 
+                size="sm" 
+                onClick={() => setStockFlowDays(15)}
+                className="text-xs h-7 px-2"
+              >
+                15D
+              </Button>
+              <Button 
+                variant={stockFlowDays === 30 ? "default" : "outline"} 
+                size="sm" 
+                onClick={() => setStockFlowDays(30)}
+                className="text-xs h-7 px-2"
+              >
+                30D
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="h-[240px] pt-4">
+            {movementData.length === 0 ? (
+              <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+                No movement data.
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={movementData} margin={{ top: 20, right: 20, left: -25, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={true} horizontal={true} stroke="#94a3b8" opacity={0.2} />
+                  <XAxis dataKey="date" tick={{ fontSize: 10 }} tickLine={true} axisLine={true} tickMargin={12} tickFormatter={(val) => val.split('-')[2]} />
+                  <YAxis tick={{ fontSize: 10 }} tickLine={true} axisLine={true} tickMargin={8} />
+                  <Tooltip 
+                    cursor={false}
+                    contentStyle={{ backgroundColor: 'hsl(var(--background))', borderColor: 'hsl(var(--border))', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                  />
+                  <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} iconType="circle" />
+                  <Bar dataKey="Stock In" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={30} />
+                  <Bar dataKey="Stock Out" fill="#ef4444" radius={[4, 4, 0, 0]} maxBarSize={30} />
+                </BarChart>
+              </ResponsiveContainer>
             )}
           </CardContent>
         </Card>
