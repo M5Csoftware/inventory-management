@@ -256,7 +256,14 @@ export default function OrdersPage() {
                         </span>
                       </td>
                       <td className="px-6 py-4 text-center">
-                        {order.status !== 'Completed' && order.status !== 'Cancelled' && (
+                        {order.status === 'Completed' ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+                            <CheckCircle className="h-3 w-3" />
+                            Added to Stock
+                          </span>
+                        ) : order.status === 'Cancelled' ? (
+                          <span className="text-xs text-muted-foreground">-</span>
+                        ) : (
                           <Button 
                             variant="outline" 
                             size="sm" 

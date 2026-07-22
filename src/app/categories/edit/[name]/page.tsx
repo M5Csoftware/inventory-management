@@ -16,6 +16,7 @@ export default function EditCategoryPage() {
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [isAsset, setIsAsset] = useState(false);
 
   useEffect(() => {
     if (decodedName && categories.length > 0) {
@@ -23,6 +24,7 @@ export default function EditCategoryPage() {
       if (category) {
         setName(category.name);
         setDescription(category.description);
+        setIsAsset(category.isAsset || false);
       }
     }
   }, [decodedName, categories]);
@@ -31,7 +33,7 @@ export default function EditCategoryPage() {
     e.preventDefault();
     if (!name || !description) return;
 
-    await updateCategory(decodedName, { name, description });
+    await updateCategory(decodedName, { name, description, isAsset });
     router.push('/categories');
   };
 
@@ -113,6 +115,28 @@ export default function EditCategoryPage() {
                   className="w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 py-2 text-sm shadow-sm transition-all placeholder:text-muted-foreground/50 hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 resize-y dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
                   required
                 />
+              </div>
+
+              {/* Optional Fields - New Section */}
+              <div className="rounded-lg bg-muted/30 p-3 sm:p-4">
+                <div className="mt-2 flex items-center space-x-2">
+                  <input 
+                    type="checkbox" 
+                    id="isAsset" 
+                    checked={isAsset}
+                    onChange={(e) => setIsAsset(e.target.checked)}
+                    className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                  />
+                  <label 
+                    htmlFor="isAsset" 
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                  >
+                    This is an asset category
+                    <p className="text-[10px] text-muted-foreground mt-0.5">
+                      Check this box if items in this category are non-exhaustible assets (like laptops or furniture) instead of consumable stock.
+                    </p>
+                  </label>
+                </div>
               </div>
 
               {/* Action Buttons - Compact */}

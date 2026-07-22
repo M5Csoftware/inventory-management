@@ -8,7 +8,7 @@ export interface Product {
   name: string;
   category: string;
   price: number;
-  stock: number;
+  stock: Record<string, number>;
   threshold: number;
   supplier: string;
   sku?: string;
@@ -35,6 +35,7 @@ export interface Transaction {
 export interface Category {
   name: string;
   description: string;
+  isAsset?: boolean;
   parentCategory?: string;
   categoryCode?: string;
 }
@@ -78,6 +79,8 @@ export interface AssetAssignment {
 }
 
 interface InventoryContextType {
+  activeBranch: string;
+  setActiveBranch: (branch: string) => void;
   products: Product[];
   transactions: Transaction[];
   categories: Category[];
@@ -98,10 +101,17 @@ interface InventoryContextType {
     reasonOrLocation: string,
     notes?: string
   ) => Promise<boolean>;
+  transferStock: (
+    productId: string,
+    quantity: number,
+    toBranch: string,
+    notes?: string
+  ) => Promise<boolean>;
   deleteProduct: (id: string) => Promise<void>;
   updateProduct: (id: string, product: Partial<Product>) => Promise<void>;
   updateCategory: (name: string, category: Partial<Category>) => Promise<void>;
   deleteCategory: (name: string) => Promise<void>;
+  updateSupplier: (name: string, supplier: Partial<Supplier>) => Promise<void>;
   deleteSupplier: (name: string) => Promise<void>;
   assignAsset: (asset: Omit<AssetAssignment, 'id' | 'assignedDate' | 'status' | 'returnedDate'>) => Promise<boolean>;
   returnAsset: (id: string) => Promise<boolean>;
@@ -111,8 +121,10 @@ const InventoryContext = createContext<InventoryContextType | undefined>(undefin
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/inventory';
 const DB_HEADER = { 'x-database': 'm5c-inventory', 'Content-Type': 'application/json' };
+const NO_BODY_HEADER = { 'x-database': 'm5c-inventory' };
 
 export function InventoryProvider({ children }: { children: React.ReactNode }) {
+  const [activeBranch, setActiveBranch] = useState('Delhi'); // Default branch
   const [products, setProducts] = useState<Product[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -123,13 +135,14 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
   // Fetch initial data
   const fetchData = async () => {
     try {
+      const branchQuery = activeBranch !== 'All' ? `?branch=${activeBranch}` : '';
       const [prodRes, txRes, catRes, supRes, ordRes, astsRes] = await Promise.all([
-        fetch(`${API_BASE}/products`, { headers: DB_HEADER }),
-        fetch(`${API_BASE}/transactions`, { headers: DB_HEADER }),
-        fetch(`${API_BASE}/categories`, { headers: DB_HEADER }),
-        fetch(`${API_BASE}/suppliers`, { headers: DB_HEADER }),
-        fetch(`${API_BASE}/orders`, { headers: DB_HEADER }),
-        fetch(`${API_BASE}/assets`, { headers: DB_HEADER }),
+        fetch(`${API_BASE}/products`, { headers: NO_BODY_HEADER }),
+        fetch(`${API_BASE}/transactions${branchQuery}`, { headers: NO_BODY_HEADER }),
+        fetch(`${API_BASE}/categories`, { headers: NO_BODY_HEADER }),
+        fetch(`${API_BASE}/suppliers`, { headers: NO_BODY_HEADER }),
+        fetch(`${API_BASE}/orders${branchQuery}`, { headers: NO_BODY_HEADER }),
+        fetch(`${API_BASE}/assets${branchQuery}`, { headers: NO_BODY_HEADER }),
       ]);
 
       const [prods, txs, cats, sups, ords, asts] = await Promise.all([
@@ -154,7 +167,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [activeBranch]);
 
   const addProduct = async (newProduct: Omit<Product, 'id'>) => {
     try {
@@ -220,7 +233,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
     try {
       const res = await fetch(`${API_BASE}/products/${id}`, {
         method: 'DELETE',
-        headers: DB_HEADER,
+        headers: NO_BODY_HEADER,
       });
       const data = await res.json();
       if (data.success) {
@@ -259,7 +272,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
     try {
       const res = await fetch(`${API_BASE}/categories/${encodeURIComponent(name)}`, {
         method: 'DELETE',
-        headers: DB_HEADER,
+        headers: NO_BODY_HEADER,
       });
       const data = await res.json();
       if (data.success) {
@@ -274,11 +287,31 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const updateSupplier = async (name: string, updatedSupplier: Partial<Supplier>) => {
+    try {
+      const res = await fetch(`${API_BASE}/suppliers/${encodeURIComponent(name)}`, {
+        method: 'PUT',
+        headers: DB_HEADER,
+        body: JSON.stringify(updatedSupplier),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSuppliers((prev) => prev.map((s) => s.name === name ? data.data : s));
+        toast.success('Supplier updated successfully!');
+      } else {
+        toast.error(data.message || 'Failed to update supplier.');
+      }
+    } catch (error) {
+      console.error('Failed to update supplier:', error);
+      toast.error('Network error while updating supplier.');
+    }
+  };
+
   const deleteSupplier = async (name: string) => {
     try {
       const res = await fetch(`${API_BASE}/suppliers/${encodeURIComponent(name)}`, {
         method: 'DELETE',
-        headers: DB_HEADER,
+        headers: NO_BODY_HEADER,
       });
       const data = await res.json();
       if (data.success) {
@@ -300,11 +333,22 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
     reasonOrLocation: string,
     notes?: string
   ): Promise<boolean> => {
+    if (activeBranch === 'All') {
+      toast.error('Please select a specific branch to record transactions.');
+      return false;
+    }
     try {
       const res = await fetch(`${API_BASE}/transactions`, {
         method: 'POST',
         headers: DB_HEADER,
-        body: JSON.stringify({ productId, type, quantity, reasonOrLocation, notes }),
+        body: JSON.stringify({
+          productId,
+          type,
+          quantity,
+          reasonOrLocation,
+          notes,
+          branch: activeBranch
+        }),
       });
       const data = await res.json();
       if (data.success) {
@@ -341,12 +385,58 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const transferStock = async (
+    productId: string,
+    quantity: number,
+    toBranch: string,
+    notes?: string
+  ): Promise<boolean> => {
+    if (activeBranch === 'All') {
+      toast.error('Please select a source branch for the transfer.');
+      return false;
+    }
+    if (activeBranch === toBranch) {
+      toast.error('Cannot transfer to the same branch.');
+      return false;
+    }
+    try {
+      const res = await fetch(`${API_BASE}/transactions/transfer`, {
+        method: 'POST',
+        headers: DB_HEADER,
+        body: JSON.stringify({
+          productId,
+          quantity,
+          fromBranch: activeBranch,
+          toBranch,
+          notes,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        await fetchData();
+        toast.success('Stock transferred successfully!');
+        return true;
+      } else {
+        toast.error(data.message || 'Failed to transfer stock.');
+        return false;
+      }
+    } catch (error) {
+      console.error('Failed to transfer stock:', error);
+      toast.error('Network error while transferring stock.');
+      return false;
+    }
+  };
+
   const addOrder = async (order: Omit<Order, 'id' | 'createdAt'>) => {
+    if (activeBranch === 'All') {
+      toast.error('Please select a specific branch to create orders.');
+      return;
+    }
     try {
       const res = await fetch(`${API_BASE}/orders`, {
         method: 'POST',
         headers: DB_HEADER,
-        body: JSON.stringify(order),
+        body: JSON.stringify({ ...order, branch: activeBranch }),
       });
       const data = await res.json();
       if (data.success) {
@@ -405,7 +495,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
     try {
       const res = await fetch(`${API_BASE}/orders/${id}`, {
         method: 'DELETE',
-        headers: DB_HEADER,
+        headers: NO_BODY_HEADER,
       });
       if (res.ok) {
         await fetchData();
@@ -420,11 +510,15 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
   };
 
   const assignAsset = async (asset: Omit<AssetAssignment, 'id' | 'assignedDate' | 'status' | 'returnedDate'>) => {
+    if (activeBranch === 'All') {
+      toast.error('Please select a specific branch to assign assets.');
+      return false;
+    }
     try {
       const res = await fetch(`${API_BASE}/assets`, {
         method: 'POST',
         headers: DB_HEADER,
-        body: JSON.stringify(asset),
+        body: JSON.stringify({ ...asset, branch: activeBranch }),
       });
       const data = await res.json();
       if (data.success) {
@@ -445,7 +539,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
     try {
       const res = await fetch(`${API_BASE}/assets/${id}/return`, {
         method: 'PUT',
-        headers: DB_HEADER,
+        headers: NO_BODY_HEADER,
       });
       const data = await res.json();
       if (data.success) {
@@ -465,6 +559,8 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
   return (
     <InventoryContext.Provider
       value={{
+        activeBranch,
+        setActiveBranch,
         products,
         transactions,
         categories,
@@ -475,10 +571,12 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
         addSupplier,
         addOrder,
         recordTransaction,
+        transferStock,
         deleteProduct,
         updateProduct,
         updateCategory,
         deleteCategory,
+        updateSupplier,
         deleteSupplier,
         updateOrder,
         updateOrderStatus,

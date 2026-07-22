@@ -14,12 +14,13 @@ export default function NewCategoryPage() {
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [isAsset, setIsAsset] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !description) return;
 
-    await addCategory({ name, description });
+    await addCategory({ name, description, isAsset });
     router.push('/categories');
   };
 
@@ -137,6 +138,25 @@ export default function NewCategoryPage() {
                       className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 font-mono text-sm shadow-sm transition-all placeholder:text-muted-foreground/50 hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
                     />
                   </div>
+                </div>
+
+                <div className="mt-4 flex items-center space-x-2 border-t border-border/50 pt-4">
+                  <input 
+                    type="checkbox" 
+                    id="isAsset" 
+                    checked={isAsset}
+                    onChange={(e) => setIsAsset(e.target.checked)}
+                    className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                  />
+                  <label 
+                    htmlFor="isAsset" 
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                  >
+                    This is an asset category
+                    <p className="text-[10px] text-muted-foreground mt-0.5">
+                      Check this box if items in this category are non-exhaustible assets (like laptops or furniture) instead of consumable stock.
+                    </p>
+                  </label>
                 </div>
               </div>
 

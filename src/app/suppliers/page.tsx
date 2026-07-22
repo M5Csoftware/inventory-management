@@ -65,9 +65,11 @@ export default function SuppliersPage() {
                   <div className="flex justify-between items-center border-t pt-4 border-border/50 text-xs">
                     <span className="font-semibold text-primary">{linkedProductsCount} products linked</span>
                     <div className="flex gap-1">
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
-                        <Edit2 className="h-4 w-4" />
-                      </Button>
+                      <Link href={`/suppliers/edit/${encodeURIComponent(supplier.name)}`}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
+                      </Link>
                       <Button 
                         onClick={() => deleteSupplier(supplier.name)}
                         variant="ghost" 

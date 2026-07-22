@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 import { useInventory } from '@/context/inventory-context';
 
 export default function StockPage() {
-  const { transactions, products, categories } = useInventory();
+  const { transactions, products, categories, activeBranch } = useInventory();
   const [activeTab, setActiveTab] = useState<'current' | 'transactions'>('current');
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('All');
@@ -251,9 +251,9 @@ export default function StockPage() {
                         </td>
                         <td className="p-4 align-middle text-right">
                           <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${
-                            p.stock <= p.threshold ? 'bg-destructive/10 text-destructive' : 'bg-primary/10 text-primary'
+                            (activeBranch === 'All' ? Object.values(p.stock).reduce((a, b) => a + b, 0) : p.stock[activeBranch] || 0) <= p.threshold ? 'bg-destructive/10 text-destructive' : 'bg-primary/10 text-primary'
                           }`}>
-                            {p.stock} {p.packaging || 'units'}
+                            {activeBranch === 'All' ? Object.values(p.stock).reduce((a, b) => a + b, 0) : p.stock[activeBranch] || 0} {p.packaging || 'units'}
                           </span>
                         </td>
                       </tr>

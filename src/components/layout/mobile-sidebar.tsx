@@ -3,10 +3,11 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Package, Settings, ChevronDown, ChevronRight, LogOut, X, Users } from 'lucide-react';
+import { Package, Settings, ChevronDown, ChevronRight, LogOut, X, Users, Truck, PlusCircle, List } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { navItems, NavItem, SubNavItem } from './sidebar';
+import { navItems } from './sidebar';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useInventory } from '@/context/inventory-context';
 
 interface MobileSidebarProps {
   isOpen: boolean;
@@ -16,6 +17,7 @@ interface MobileSidebarProps {
 export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const { activeBranch, setActiveBranch } = useInventory();
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -75,6 +77,27 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
           >
             <X className="h-5 w-5" />
           </button>
+        </div>
+        
+        {/* Branch Selector */}
+        <div className="px-6 py-4 border-b border-border/10">
+          <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2 block">
+            Current Branch
+          </label>
+          <div className="relative">
+            <select 
+              value={activeBranch}
+              onChange={(e) => setActiveBranch(e.target.value)}
+              className="w-full h-10 bg-accent/50 border border-border/50 text-foreground text-sm rounded-xl px-4 appearance-none focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all cursor-pointer shadow-sm"
+            >
+              <option value="All">🌐 All Branches</option>
+              <option value="Ahmedabad">📍 Ahmedabad</option>
+              <option value="Ludhiana">📍 Ludhiana</option>
+              <option value="Delhi">📍 Delhi</option>
+              <option value="Mumbai">📍 Mumbai</option>
+            </select>
+            <ChevronDown className="absolute right-4 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
+          </div>
         </div>
         
         <nav className="flex-1 space-y-1 p-4 overflow-y-auto">

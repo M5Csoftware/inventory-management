@@ -24,7 +24,7 @@ import { Button } from "@/components/ui/button";
 import { useInventory, Product } from '@/context/inventory-context';
 
 export default function StockOutPage() {
-  const { products, recordTransaction } = useInventory();
+  const { products, categories, recordTransaction, activeBranch } = useInventory();
   const router = useRouter();
 
   // Form states
@@ -34,12 +34,18 @@ export default function StockOutPage() {
   const [handedTo, setHandedTo] = useState('');
   const [notes, setNotes] = useState('');
 
+  // Filter out products that belong to an asset category
+  const nonAssetProducts = products.filter((prod) => {
+    const category = categories.find((c) => c.name.toLowerCase() === prod.category.toLowerCase());
+    return !category?.isAsset;
+  });
+
   // Default selection when products load
   useEffect(() => {
-    if (products.length > 0 && !productId) {
-      setProductId(products[0].id);
+    if (nonAssetProducts.length > 0 && !productId) {
+      setProductId(nonAssetProducts[0].id);
     }
-  }, [products, productId]);
+  }, [nonAssetProducts, productId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -91,10 +97,10 @@ export default function StockOutPage() {
           </div>
         </div>
 
-        {products.length === 0 ? (
+        {nonAssetProducts.length === 0 ? (
           <Card className="border border-border/50 bg-background/60 backdrop-blur-sm p-8 text-center space-y-4 max-w-lg mx-auto">
             <p className="text-sm text-muted-foreground">
-              You must have at least one product created before recording inventory transactions.
+              You must have at least one consumable product (non-asset) created before recording stock out transactions.
             </p>
             <Link href="/products/new">
               <Button size="sm">Create Product</Button>
@@ -133,9 +139,9 @@ export default function StockOutPage() {
                     onChange={(e) => setProductId(e.target.value)}
                     className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22currentColor%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E')] bg-[length:16px] bg-[right_10px_center] bg-no-repeat hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
                   >
-                    {products.map((prod: Product) => (
+                    {nonAssetProducts.map((prod: Product) => (
                       <option key={prod.id} value={prod.id}>
-                        {prod.name} (Current: {prod.stock} units)
+                        {prod.name} (Current: {activeBranch === 'All' ? Object.values(prod.stock).reduce((a, b) => a + b, 0) : prod.stock[activeBranch] || 0} units)
                       </option>
                     ))}
                   </select>

@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { useInventory, Product } from '@/context/inventory-context';
 
 export default function ProductsPage() {
-  const { products, deleteProduct } = useInventory();
+  const { products, deleteProduct, activeBranch } = useInventory();
   const [searchTerm, setSearchTerm] = useState('');
 
   const filteredProducts = products.filter((product: Product) =>
@@ -76,9 +76,15 @@ export default function ProductsPage() {
                       <td className="p-4 align-middle font-mono">₹{product.price.toLocaleString('en-IN')}</td>
                       <td className="p-4 align-middle">
                         <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-semibold ${
-                          product.stock <= product.threshold ? 'bg-destructive/10 text-destructive animate-pulse' : 'bg-emerald-500/10 text-emerald-500'
+                          (activeBranch === 'All' 
+                            ? Object.values(product.stock).reduce((a, b) => a + b, 0) 
+                            : product.stock[activeBranch] || 0) <= product.threshold 
+                            ? 'bg-destructive/10 text-destructive animate-pulse' 
+                            : 'bg-emerald-500/10 text-emerald-500'
                         }`}>
-                          {product.stock} units
+                          {activeBranch === 'All' 
+                            ? Object.values(product.stock).reduce((a, b) => a + b, 0) 
+                            : product.stock[activeBranch] || 0} units
                         </span>
                       </td>
                       <td className="p-4 align-middle text-muted-foreground">{product.supplier}</td>
