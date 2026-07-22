@@ -9,6 +9,7 @@ interface User {
   name: string;
   email: string;
   role: string;
+  branch?: string;
   lastLogin?: string;
 }
 
@@ -24,7 +25,8 @@ export default function ManageRolesPage() {
     name: '',
     email: '',
     password: '',
-    role: 'stock_manager'
+    role: 'stock_manager',
+    branch: 'Ahmedabad'
   });
 
   const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/inventory';
@@ -144,16 +146,17 @@ export default function ManageRolesPage() {
           <table className="w-full text-sm text-left">
             <thead className="text-xs uppercase bg-muted/50 text-muted-foreground border-b border-border/50">
               <tr>
-                <th className="px-6 py-4 font-semibold">User Details</th>
-                <th className="px-6 py-4 font-semibold">Role</th>
-                <th className="px-6 py-4 font-semibold">Last Login</th>
+                  <th className="text-left font-semibold p-4 text-muted-foreground w-1/4">User Details</th>
+                  <th className="text-left font-semibold p-4 text-muted-foreground w-1/6">Role</th>
+                  <th className="text-left font-semibold p-4 text-muted-foreground w-1/6">Branch</th>
+                  <th className="text-left font-semibold p-4 text-muted-foreground w-1/4">Last Login</th>
                 <th className="px-6 py-4 font-semibold text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/50">
               {loading ? (
                 <tr>
-                  <td colSpan={4} className="px-6 py-8 text-center text-muted-foreground">
+                  <td colSpan={5} className="px-6 py-8 text-center text-muted-foreground">
                     <div className="flex items-center justify-center gap-2">
                       <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                       Loading users...
@@ -162,7 +165,7 @@ export default function ManageRolesPage() {
                 </tr>
               ) : users.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-6 py-8 text-center text-muted-foreground">
+                  <td colSpan={5} className="px-6 py-8 text-center text-muted-foreground">
                     No users found.
                   </td>
                 </tr>
@@ -180,14 +183,18 @@ export default function ManageRolesPage() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
-                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${
-                        user.role === 'admin' 
-                          ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' 
-                          : 'bg-green-500/10 text-green-500 border-green-500/20'
-                      }`}>
-                        {user.role === 'admin' ? <Shield className="w-3.5 h-3.5" /> : <UserCog className="w-3.5 h-3.5" />}
-                        {user.role === 'admin' ? 'Admin' : 'Stock Manager'}
+                    <td className="p-4">
+                      <div className="flex items-center gap-2">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          user.role === 'admin' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
+                        }`}>
+                          {user.role === 'admin' ? 'Admin' : 'Stock Manager'}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="p-4">
+                      <span className="text-sm font-medium text-muted-foreground">
+                        {user.role === 'admin' && user.id === 'master' ? '🌐 All Branches' : `🏭 ${user.branch || 'Unknown'}`}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-muted-foreground">
@@ -283,10 +290,24 @@ export default function ManageRolesPage() {
                   onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                   className="w-full px-4 py-2 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
                 >
-                  <option value="stock_manager">Stock Checker In/Out Manager</option>
+                  <option value="stock_manager">Stock Manager</option>
                   <option value="admin">Admin</option>
                 </select>
               </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Assigned Branch</label>
+                  <select
+                    value={formData.branch}
+                    onChange={(e) => setFormData({ ...formData, branch: e.target.value })}
+                    className="w-full px-4 py-2 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                  >
+                    <option value="Ahmedabad">Ahmedabad</option>
+                    <option value="Ludhiana">Ludhiana</option>
+                    <option value="Delhi">Delhi</option>
+                    <option value="Mumbai">Mumbai</option>
+                  </select>
+                </div>
 
               <div className="pt-4 flex gap-3">
                 <button

@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
+import { useAuth } from './auth-context';
 
 export interface Product {
   id: string;
@@ -124,7 +125,16 @@ const DB_HEADER = { 'x-database': 'm5c-inventory', 'Content-Type': 'application/
 const NO_BODY_HEADER = { 'x-database': 'm5c-inventory' };
 
 export function InventoryProvider({ children }: { children: React.ReactNode }) {
-  const [activeBranch, setActiveBranch] = useState('Delhi'); // Default branch
+  const { user } = useAuth();
+  const [activeBranch, setActiveBranch] = useState<string>('Ahmedabad');
+
+  // Synchronize activeBranch with user's assigned branch on mount/change
+  useEffect(() => {
+    if (user?.branch) {
+      setActiveBranch(user.branch);
+    }
+  }, [user?.branch]);
+
   const [products, setProducts] = useState<Product[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -134,10 +144,12 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
 
   // Fetch initial data
   const fetchData = async () => {
+    if (!user) return; // Don't fetch until user is loaded
+
     try {
       const branchQuery = activeBranch !== 'All' ? `?branch=${activeBranch}` : '';
       const [prodRes, txRes, catRes, supRes, ordRes, astsRes] = await Promise.all([
-        fetch(`${API_BASE}/products`, { headers: NO_BODY_HEADER }),
+        fetch(`${API_BASE}/products${branchQuery}`, { headers: NO_BODY_HEADER }),
         fetch(`${API_BASE}/transactions${branchQuery}`, { headers: NO_BODY_HEADER }),
         fetch(`${API_BASE}/categories`, { headers: NO_BODY_HEADER }),
         fetch(`${API_BASE}/suppliers`, { headers: NO_BODY_HEADER }),
@@ -167,14 +179,14 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     fetchData();
-  }, [activeBranch]);
+  }, [activeBranch, user]);
 
   const addProduct = async (newProduct: Omit<Product, 'id'>) => {
     try {
       const res = await fetch(`${API_BASE}/products`, {
         method: 'POST',
         headers: DB_HEADER,
-        body: JSON.stringify(newProduct),
+        body: JSON.stringify({ ...newProduct, branch: activeBranch !== 'All' ? activeBranch : 'Delhi' }),
       });
       const data = await res.json();
       if (data.success) {
@@ -333,10 +345,6 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
     reasonOrLocation: string,
     notes?: string
   ): Promise<boolean> => {
-    if (activeBranch === 'All') {
-      toast.error('Please select a specific branch to record transactions.');
-      return false;
-    }
     try {
       const res = await fetch(`${API_BASE}/transactions`, {
         method: 'POST',
@@ -391,10 +399,6 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
     toBranch: string,
     notes?: string
   ): Promise<boolean> => {
-    if (activeBranch === 'All') {
-      toast.error('Please select a source branch for the transfer.');
-      return false;
-    }
     if (activeBranch === toBranch) {
       toast.error('Cannot transfer to the same branch.');
       return false;
@@ -428,10 +432,6 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
   };
 
   const addOrder = async (order: Omit<Order, 'id' | 'createdAt'>) => {
-    if (activeBranch === 'All') {
-      toast.error('Please select a specific branch to create orders.');
-      return;
-    }
     try {
       const res = await fetch(`${API_BASE}/orders`, {
         method: 'POST',
@@ -510,10 +510,6 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
   };
 
   const assignAsset = async (asset: Omit<AssetAssignment, 'id' | 'assignedDate' | 'status' | 'returnedDate'>) => {
-    if (activeBranch === 'All') {
-      toast.error('Please select a specific branch to assign assets.');
-      return false;
-    }
     try {
       const res = await fetch(`${API_BASE}/assets`, {
         method: 'POST',

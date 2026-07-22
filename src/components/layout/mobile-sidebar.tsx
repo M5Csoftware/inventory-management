@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { navItems } from './sidebar';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useInventory } from '@/context/inventory-context';
+import { useAuth } from '@/context/auth-context';
 
 interface MobileSidebarProps {
   isOpen: boolean;
@@ -18,12 +19,11 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { activeBranch, setActiveBranch } = useInventory();
+  const { user, logout } = useAuth();
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
     onClose();
-    router.replace('/login');
+    logout();
   };
   
   const [openSubMenus, setOpenSubMenus] = useState<Record<string, boolean>>(() => {
@@ -84,20 +84,26 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
           <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2 block">
             Current Branch
           </label>
-          <div className="relative">
-            <select 
-              value={activeBranch}
-              onChange={(e) => setActiveBranch(e.target.value)}
-              className="w-full h-10 bg-accent/50 border border-border/50 text-foreground text-sm rounded-xl px-4 appearance-none focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all cursor-pointer shadow-sm"
-            >
-              <option value="All">🌐 All Branches</option>
-              <option value="Ahmedabad">📍 Ahmedabad</option>
-              <option value="Ludhiana">📍 Ludhiana</option>
-              <option value="Delhi">📍 Delhi</option>
-              <option value="Mumbai">📍 Mumbai</option>
-            </select>
-            <ChevronDown className="absolute right-4 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
-          </div>
+          {user?.role === 'admin' ? (
+            <div className="relative">
+              <select 
+                value={activeBranch}
+                onChange={(e) => setActiveBranch(e.target.value)}
+                className="w-full h-10 bg-accent/50 border border-border/50 text-foreground text-sm rounded-xl px-4 appearance-none focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all cursor-pointer shadow-sm"
+              >
+                <option value="All">🌐 All Branches</option>
+                <option value="Ahmedabad">🏭 Ahmedabad</option>
+                <option value="Ludhiana">🏭 Ludhiana</option>
+                <option value="Delhi">🏭 Delhi</option>
+                <option value="Mumbai">🏭 Mumbai</option>
+              </select>
+              <ChevronDown className="absolute right-4 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
+            </div>
+          ) : (
+            <div className="w-full h-10 bg-accent/30 border border-border/30 text-foreground text-sm rounded-xl px-4 flex items-center shadow-sm">
+              🏭 {activeBranch}
+            </div>
+          )}
         </div>
         
         <nav className="flex-1 space-y-1 p-4 overflow-y-auto">
