@@ -319,7 +319,7 @@ export default function OrdersPage() {
         }}
         title="Delete Purchase Order"
         description="Are you sure you want to delete this purchase order? This record will be permanently removed."
-        itemName={orderToDelete ? `Order #${orderToDelete.id} (${orderToDelete.supplierName})` : ''}
+        itemName={orderToDelete ? `Order #${orderToDelete.id} (${orderToDelete.supplier})` : ''}
       />
     </div>
   );
