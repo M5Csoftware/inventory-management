@@ -35,6 +35,7 @@ export default function EditSupplierPage() {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [location, setLocation] = useState('');
+  const [branch, setBranch] = useState('Delhi');
   const [taxId, setTaxId] = useState('');
   const [website, setWebsite] = useState('');
 
@@ -47,6 +48,7 @@ export default function EditSupplierPage() {
         setEmail(supplier.email);
         setPhone(supplier.phone);
         setLocation(supplier.location);
+        setBranch(supplier.branch || 'Delhi');
         setTaxId(supplier.taxId || '');
         setWebsite(supplier.website || '');
       }
@@ -57,7 +59,7 @@ export default function EditSupplierPage() {
     e.preventDefault();
     if (!name || !contact || !email || !phone || !location) return;
 
-    await updateSupplier(decodedName, { name, contact, email, phone, location, taxId, website });
+    await updateSupplier(decodedName, { name, contact, email, phone, location, branch, taxId, website });
     router.push('/suppliers');
   };
 
@@ -187,6 +189,22 @@ export default function EditSupplierPage() {
                   className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all placeholder:text-muted-foreground/50 hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
                   required
                 />
+                <div className="space-y-1.5">
+                  <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    Branch <span className="text-destructive">*</span>
+                  </label>
+                  <select
+                    value={branch}
+                    onChange={(e) => setBranch(e.target.value)}
+                    className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
+                    required
+                  >
+                    <option value="Delhi">Delhi (HO)</option>
+                    <option value="Ahmedabad">Ahmedabad</option>
+                    <option value="Ludhiana">Ludhiana</option>
+                    <option value="Mumbai">Mumbai</option>
+                  </select>
+                </div>
               </div>
 
               {/* Additional Info - Optional */}
