@@ -47,6 +47,7 @@ export interface Supplier {
   email: string;
   phone: string;
   location: string;
+  branch?: string;
   taxId?: string;
   website?: string;
 }
