@@ -1,13 +1,16 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { FolderPlus, Package, Edit2, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useInventory, Category, Product } from '@/context/inventory-context';
+import { ConfirmDeleteModal } from '@/components/confirm-delete-modal';
 
 export default function CategoriesPage() {
   const { categories, products, deleteCategory, activeBranch } = useInventory();
+  const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
 
   const getStock = (p: any) => {
     if (!p.stock) return 0;
@@ -80,7 +83,7 @@ export default function CategoriesPage() {
                     </Button>
                   </Link>
                   <Button 
-                    onClick={() => deleteCategory(category.name)}
+                    onClick={() => setCategoryToDelete(category.name)}
                     variant="ghost" 
                     size="sm" 
                     className="h-8 text-xs text-destructive hover:bg-destructive/10"
@@ -93,6 +96,19 @@ export default function CategoriesPage() {
           );
         })}
       </div>
+
+      <ConfirmDeleteModal
+        isOpen={categoryToDelete !== null}
+        onClose={() => setCategoryToDelete(null)}
+        onConfirm={async () => {
+          if (categoryToDelete) {
+            await deleteCategory(categoryToDelete);
+          }
+        }}
+        title="Delete Category"
+        description="Are you sure you want to delete this category? Products under this category will need category updates."
+        itemName={categoryToDelete || ''}
+      />
     </div>
   );
 }
