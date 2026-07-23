@@ -81,22 +81,22 @@ export default function Dashboard() {
   const recentTransactions = transactions.slice(0, 5);
 
   return (
-    <div className="p-6 sm:p-8 space-y-8 animate-in fade-in duration-500">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8 animate-in fade-in duration-500">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-br from-foreground to-muted-foreground bg-clip-text text-transparent">Overview</h1>
-          <p className="text-muted-foreground mt-1">Crucial inventory insights at a glance.</p>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight bg-gradient-to-br from-foreground to-muted-foreground bg-clip-text text-transparent">Overview</h1>
+          <p className="text-sm text-muted-foreground mt-1">Crucial inventory insights at a glance.</p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex gap-2 sm:gap-3">
           <Link href="/reports">
-            <Button variant="outline" className="hidden sm:flex bg-background/50 backdrop-blur-sm border-dashed">
+            <Button variant="outline" size="sm" className="bg-background/50 backdrop-blur-sm border-dashed text-xs sm:text-sm">
               View Reports
             </Button>
           </Link>
           <Link href="/products/new">
-            <Button className="shadow-lg shadow-primary/20 transition-all hover:shadow-primary/40 hover:-translate-y-0.5">
-              <Package className="mr-2 h-4 w-4" /> Add Product
+            <Button size="sm" className="shadow-lg shadow-primary/20 transition-all hover:shadow-primary/40 hover:-translate-y-0.5 text-xs sm:text-sm">
+              <Package className="mr-1.5 h-3.5 w-3.5 sm:h-4 sm:w-4" /> Add Product
             </Button>
           </Link>
         </div>
@@ -104,7 +104,7 @@ export default function Dashboard() {
 
       {/* Top 5 Metric Cards */}
       <motion.div 
-        className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5"
+        className="grid gap-3 sm:gap-4 grid-cols-2 md:grid-cols-3 xl:grid-cols-5"
         initial="hidden"
         animate="visible"
         variants={{
@@ -201,7 +201,7 @@ export default function Dashboard() {
       </motion.div>
 
       {/* Charts Section */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
+      <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2">
         
         {/* Category Value Distribution */}
         <Card className="bg-card/50 backdrop-blur-xl shadow-lg border-border/50 transition-all hover:shadow-xl hover:border-primary/20">
@@ -280,7 +280,7 @@ export default function Dashboard() {
         </Card>
 
         {/* Stock Movement Trend */}
-        <Card className="bg-card/50 backdrop-blur-xl shadow-lg border-border/50 transition-all hover:shadow-xl hover:border-primary/20 lg:col-span-2">
+        <Card className="bg-card/50 backdrop-blur-xl shadow-lg border-border/50 transition-all hover:shadow-xl hover:border-primary/20 md:col-span-2">
           <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
             <div>
               <CardTitle className="text-lg bg-gradient-to-r from-emerald-500 to-blue-500 bg-clip-text text-transparent">Stock Flow</CardTitle>
@@ -357,7 +357,7 @@ export default function Dashboard() {
                 <p className="text-sm text-muted-foreground font-medium">No recent transactions recorded.</p>
               </div>
             ) : (
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                 {recentTransactions.map((item, i) => (
                   <div key={i} className="group flex items-center p-4 bg-background/40 rounded-2xl hover:bg-muted/50 transition-all border border-border/40 hover:border-border hover:shadow-md">
                     <div className={`p-3 rounded-xl mr-4 shadow-sm transition-transform duration-300 group-hover:scale-110 ${
