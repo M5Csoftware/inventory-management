@@ -20,14 +20,14 @@ export default function ProductsPage() {
   );
 
   return (
-    <div className="p-6 sm:p-8 space-y-8">
-      <div className="flex items-center justify-between">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Products</h1>
-          <p className="text-muted-foreground mt-1">Manage and edit your product directory.</p>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Products</h1>
+          <p className="text-sm text-muted-foreground mt-1">Manage and edit your product directory.</p>
         </div>
         <Link href="/products/new">
-          <Button className="shadow-lg shadow-primary/20 transition-all hover:shadow-primary/40 hover:-translate-y-0.5">
+          <Button size="sm" className="shadow-lg shadow-primary/20 transition-all hover:shadow-primary/40 hover:-translate-y-0.5 w-full sm:w-auto">
             <Plus className="mr-2 h-4 w-4" /> Add Product
           </Button>
         </Link>
@@ -53,7 +53,7 @@ export default function ProductsPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="relative w-full overflow-auto">
+          <div className="relative w-full overflow-x-auto rounded-md">
             {filteredProducts.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-6">No products found matching your criteria.</p>
             ) : (
