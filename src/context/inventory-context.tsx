@@ -2,13 +2,14 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
+import { useAuth } from './auth-context';
 
 export interface Product {
   id: string;
   name: string;
   category: string;
   price: number;
-  stock: number;
+  stock: Record<string, number>;
   threshold: number;
   supplier: string;
   sku?: string;
@@ -35,6 +36,7 @@ export interface Transaction {
 export interface Category {
   name: string;
   description: string;
+  isAsset?: boolean;
   parentCategory?: string;
   categoryCode?: string;
 }
@@ -45,15 +47,52 @@ export interface Supplier {
   email: string;
   phone: string;
   location: string;
+  branch?: string;
   taxId?: string;
   website?: string;
 }
 
+export interface OrderItem {
+  productId: string;
+  name: string;
+  quantity: number;
+  price: number;
+}
+
+export interface Order {
+  id: string;
+  supplier: string;
+  items: OrderItem[];
+  status: 'Pending' | 'Processing' | 'Completed' | 'Cancelled';
+  totalAmount: number;
+  createdAt?: string;
+}
+
+export interface AssetAssignment {
+  id: string;
+  productId: string;
+  productName: string;
+  assignedTo: string;
+  assignedDate: string;
+  returnedDate?: string;
+  status: 'Assigned' | 'Returned';
+  quantity: number;
+  notes?: string;
+}
+
 interface InventoryContextType {
+  activeBranch: string;
+  setActiveBranch: (branch: string) => void;
   products: Product[];
   transactions: Transaction[];
   categories: Category[];
   suppliers: Supplier[];
+  orders: Order[];
+  assets: AssetAssignment[];
+  addOrder: (order: Omit<Order, 'id' | 'createdAt'>) => Promise<void>;
+  updateOrder: (id: string, orderData: Partial<Order>) => Promise<void>;
+  updateOrderStatus: (id: string, status: Order['status']) => Promise<void>;
+  deleteOrder: (id: string) => Promise<void>;
   addProduct: (product: Omit<Product, 'id'>) => Promise<void>;
   addCategory: (category: Category) => Promise<void>;
   addSupplier: (supplier: Supplier) => Promise<void>;
@@ -64,44 +103,76 @@ interface InventoryContextType {
     reasonOrLocation: string,
     notes?: string
   ) => Promise<boolean>;
+  transferStock: (
+    productId: string,
+    quantity: number,
+    toBranch: string,
+    notes?: string
+  ) => Promise<boolean>;
   deleteProduct: (id: string) => Promise<void>;
   updateProduct: (id: string, product: Partial<Product>) => Promise<void>;
+  updateCategory: (name: string, category: Partial<Category>) => Promise<void>;
   deleteCategory: (name: string) => Promise<void>;
+  updateSupplier: (name: string, supplier: Partial<Supplier>) => Promise<void>;
   deleteSupplier: (name: string) => Promise<void>;
+  assignAsset: (asset: Omit<AssetAssignment, 'id' | 'assignedDate' | 'status' | 'returnedDate'>) => Promise<boolean>;
+  returnAsset: (id: string) => Promise<boolean>;
 }
 
 const InventoryContext = createContext<InventoryContextType | undefined>(undefined);
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/inventory';
 const DB_HEADER = { 'x-database': 'm5c-inventory', 'Content-Type': 'application/json' };
+const NO_BODY_HEADER = { 'x-database': 'm5c-inventory' };
 
 export function InventoryProvider({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
+  const [activeBranch, setActiveBranch] = useState<string>('Ahmedabad');
+
+  // Synchronize activeBranch with user's assigned branch on mount/change
+  useEffect(() => {
+    if (user?.branch) {
+      setActiveBranch(user.branch);
+    }
+  }, [user?.branch]);
+
   const [products, setProducts] = useState<Product[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [assets, setAssets] = useState<AssetAssignment[]>([]);
 
   // Fetch initial data
   const fetchData = async () => {
+    if (!user) return; // Don't fetch until user is loaded
+
     try {
-      const [prodRes, txRes, catRes, supRes] = await Promise.all([
-        fetch(`${API_BASE}/products`, { headers: DB_HEADER }),
-        fetch(`${API_BASE}/transactions`, { headers: DB_HEADER }),
-        fetch(`${API_BASE}/categories`, { headers: DB_HEADER }),
-        fetch(`${API_BASE}/suppliers`, { headers: DB_HEADER }),
+      const branchQuery = activeBranch !== 'All' ? `?branch=${activeBranch}` : '';
+      const [prodRes, txRes, catRes, supRes, ordRes, astsRes] = await Promise.all([
+        fetch(`${API_BASE}/products${branchQuery}`, { headers: NO_BODY_HEADER }),
+        fetch(`${API_BASE}/transactions${branchQuery}`, { headers: NO_BODY_HEADER }),
+        fetch(`${API_BASE}/categories`, { headers: NO_BODY_HEADER }),
+        fetch(`${API_BASE}/suppliers`, { headers: NO_BODY_HEADER }),
+        fetch(`${API_BASE}/orders${branchQuery}`, { headers: NO_BODY_HEADER }),
+        fetch(`${API_BASE}/assets${branchQuery}`, { headers: NO_BODY_HEADER }),
       ]);
 
-      const [prods, txs, cats, sups] = await Promise.all([
+      const [prods, txs, cats, sups, ords, asts] = await Promise.all([
         prodRes.json(),
         txRes.json(),
         catRes.json(),
         supRes.json(),
+        ordRes.json(),
+        astsRes.json(),
       ]);
 
       if (prods.success) setProducts(prods.data);
       if (txs.success) setTransactions(txs.data);
       if (cats.success) setCategories(cats.data);
       if (sups.success) setSuppliers(sups.data);
+      if (ords.success) setOrders(ords.data);
+      if (asts.success) setAssets(asts.data);
     } catch (error) {
       console.error('Failed to load inventory data from backend:', error);
     }
@@ -109,14 +180,14 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [activeBranch, user]);
 
   const addProduct = async (newProduct: Omit<Product, 'id'>) => {
     try {
       const res = await fetch(`${API_BASE}/products`, {
         method: 'POST',
         headers: DB_HEADER,
-        body: JSON.stringify(newProduct),
+        body: JSON.stringify({ ...newProduct, branch: activeBranch !== 'All' ? activeBranch : 'Delhi' }),
       });
       const data = await res.json();
       if (data.success) {
@@ -175,7 +246,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
     try {
       const res = await fetch(`${API_BASE}/products/${id}`, {
         method: 'DELETE',
-        headers: DB_HEADER,
+        headers: NO_BODY_HEADER,
       });
       const data = await res.json();
       if (data.success) {
@@ -190,11 +261,31 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const updateCategory = async (name: string, updatedCategory: Partial<Category>) => {
+    try {
+      const res = await fetch(`${API_BASE}/categories/${encodeURIComponent(name)}`, {
+        method: 'PUT',
+        headers: DB_HEADER,
+        body: JSON.stringify(updatedCategory),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setCategories((prev) => prev.map((c) => c.name === name ? data.data : c));
+        toast.success('Category updated successfully!');
+      } else {
+        toast.error(data.message || 'Failed to update category.');
+      }
+    } catch (error) {
+      console.error('Failed to update category:', error);
+      toast.error('Network error while updating category.');
+    }
+  };
+
   const deleteCategory = async (name: string) => {
     try {
       const res = await fetch(`${API_BASE}/categories/${encodeURIComponent(name)}`, {
         method: 'DELETE',
-        headers: DB_HEADER,
+        headers: NO_BODY_HEADER,
       });
       const data = await res.json();
       if (data.success) {
@@ -209,11 +300,31 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const updateSupplier = async (name: string, updatedSupplier: Partial<Supplier>) => {
+    try {
+      const res = await fetch(`${API_BASE}/suppliers/${encodeURIComponent(name)}`, {
+        method: 'PUT',
+        headers: DB_HEADER,
+        body: JSON.stringify(updatedSupplier),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSuppliers((prev) => prev.map((s) => s.name === name ? data.data : s));
+        toast.success('Supplier updated successfully!');
+      } else {
+        toast.error(data.message || 'Failed to update supplier.');
+      }
+    } catch (error) {
+      console.error('Failed to update supplier:', error);
+      toast.error('Network error while updating supplier.');
+    }
+  };
+
   const deleteSupplier = async (name: string) => {
     try {
       const res = await fetch(`${API_BASE}/suppliers/${encodeURIComponent(name)}`, {
         method: 'DELETE',
-        headers: DB_HEADER,
+        headers: NO_BODY_HEADER,
       });
       const data = await res.json();
       if (data.success) {
@@ -239,7 +350,14 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
       const res = await fetch(`${API_BASE}/transactions`, {
         method: 'POST',
         headers: DB_HEADER,
-        body: JSON.stringify({ productId, type, quantity, reasonOrLocation, notes }),
+        body: JSON.stringify({
+          productId,
+          type,
+          quantity,
+          reasonOrLocation,
+          notes,
+          branch: activeBranch
+        }),
       });
       const data = await res.json();
       if (data.success) {
@@ -276,21 +394,193 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const transferStock = async (
+    productId: string,
+    quantity: number,
+    toBranch: string,
+    notes?: string
+  ): Promise<boolean> => {
+    if (activeBranch === toBranch) {
+      toast.error('Cannot transfer to the same branch.');
+      return false;
+    }
+    try {
+      const res = await fetch(`${API_BASE}/transactions/transfer`, {
+        method: 'POST',
+        headers: DB_HEADER,
+        body: JSON.stringify({
+          productId,
+          quantity,
+          fromBranch: activeBranch,
+          toBranch,
+          notes,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        await fetchData();
+        toast.success('Stock transferred successfully!');
+        return true;
+      } else {
+        toast.error(data.message || 'Failed to transfer stock.');
+        return false;
+      }
+    } catch (error) {
+      console.error('Failed to transfer stock:', error);
+      toast.error('Network error while transferring stock.');
+      return false;
+    }
+  };
+
+  const addOrder = async (order: Omit<Order, 'id' | 'createdAt'>) => {
+    try {
+      const res = await fetch(`${API_BASE}/orders`, {
+        method: 'POST',
+        headers: DB_HEADER,
+        body: JSON.stringify({ ...order, branch: activeBranch }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        await fetchData();
+        toast.success('Order created successfully!');
+      } else {
+        toast.error(data.message || 'Failed to create order.');
+      }
+    } catch (error) {
+      console.error('Failed to create order:', error);
+      toast.error('Network error while creating order.');
+    }
+  };
+
+  const updateOrder = async (id: string, orderData: Partial<Order>) => {
+    try {
+      const res = await fetch(`${API_BASE}/orders/${id}`, {
+        method: 'PUT',
+        headers: DB_HEADER,
+        body: JSON.stringify(orderData),
+      });
+      const data = await res.json();
+      if (data.success) {
+        await fetchData();
+        toast.success('Order updated successfully!');
+      } else {
+        toast.error(data.message || 'Failed to update order.');
+      }
+    } catch (error) {
+      console.error('Failed to update order:', error);
+      toast.error('Network error while updating order.');
+    }
+  };
+
+  const updateOrderStatus = async (id: string, status: Order['status']) => {
+    try {
+      const res = await fetch(`${API_BASE}/orders/${id}`, {
+        method: 'PUT',
+        headers: DB_HEADER,
+        body: JSON.stringify({ status }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        await fetchData();
+        toast.success('Order status updated!');
+      } else {
+        toast.error(data.message || 'Failed to update order.');
+      }
+    } catch (error) {
+      console.error('Failed to update order:', error);
+      toast.error('Network error while updating order.');
+    }
+  };
+
+  const deleteOrder = async (id: string) => {
+    try {
+      const res = await fetch(`${API_BASE}/orders/${id}`, {
+        method: 'DELETE',
+        headers: NO_BODY_HEADER,
+      });
+      if (res.ok) {
+        await fetchData();
+        toast.success('Order deleted successfully!');
+      } else {
+        toast.error('Failed to delete order.');
+      }
+    } catch (error) {
+      console.error('Failed to delete order:', error);
+      toast.error('Network error while deleting order.');
+    }
+  };
+
+  const assignAsset = async (asset: Omit<AssetAssignment, 'id' | 'assignedDate' | 'status' | 'returnedDate'>) => {
+    try {
+      const res = await fetch(`${API_BASE}/assets`, {
+        method: 'POST',
+        headers: DB_HEADER,
+        body: JSON.stringify({ ...asset, branch: activeBranch }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        await fetchData();
+        toast.success('Asset assigned successfully!');
+        return true;
+      } else {
+        toast.error(data.message || 'Failed to assign asset');
+        return false;
+      }
+    } catch (error) {
+      toast.error('An error occurred');
+      return false;
+    }
+  };
+
+  const returnAsset = async (id: string) => {
+    try {
+      const res = await fetch(`${API_BASE}/assets/${id}/return`, {
+        method: 'PUT',
+        headers: NO_BODY_HEADER,
+      });
+      const data = await res.json();
+      if (data.success) {
+        await fetchData();
+        toast.success('Asset returned successfully!');
+        return true;
+      } else {
+        toast.error(data.message || 'Failed to return asset');
+        return false;
+      }
+    } catch (error) {
+      toast.error('An error occurred');
+      return false;
+    }
+  };
+
   return (
     <InventoryContext.Provider
       value={{
+        activeBranch,
+        setActiveBranch,
         products,
         transactions,
         categories,
         suppliers,
+        orders,
         addProduct,
         addCategory,
         addSupplier,
+        addOrder,
         recordTransaction,
+        transferStock,
         deleteProduct,
         updateProduct,
+        updateCategory,
         deleteCategory,
+        updateSupplier,
         deleteSupplier,
+        updateOrder,
+        updateOrderStatus,
+        deleteOrder,
+        assets,
+        assignAsset,
+        returnAsset,
       }}
     >
       {children}

@@ -6,10 +6,12 @@ import { Plus, Search, Edit2, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useInventory, Product } from '@/context/inventory-context';
+import { ConfirmDeleteModal } from '@/components/confirm-delete-modal';
 
 export default function ProductsPage() {
-  const { products, deleteProduct } = useInventory();
+  const { products, deleteProduct, activeBranch } = useInventory();
   const [searchTerm, setSearchTerm] = useState('');
+  const [productToDelete, setProductToDelete] = useState<Product | null>(null);
 
   const filteredProducts = products.filter((product: Product) =>
     product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -76,9 +78,15 @@ export default function ProductsPage() {
                       <td className="p-4 align-middle font-mono">₹{product.price.toLocaleString('en-IN')}</td>
                       <td className="p-4 align-middle">
                         <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-semibold ${
-                          product.stock <= product.threshold ? 'bg-destructive/10 text-destructive animate-pulse' : 'bg-emerald-500/10 text-emerald-500'
+                          (activeBranch === 'All' 
+                            ? Object.values(product.stock).reduce((a, b) => a + b, 0) 
+                            : product.stock[activeBranch] || 0) <= product.threshold 
+                            ? 'bg-destructive/10 text-destructive animate-pulse' 
+                            : 'bg-emerald-500/10 text-emerald-500'
                         }`}>
-                          {product.stock} units
+                          {activeBranch === 'All' 
+                            ? Object.values(product.stock).reduce((a, b) => a + b, 0) 
+                            : product.stock[activeBranch] || 0} units
                         </span>
                       </td>
                       <td className="p-4 align-middle text-muted-foreground">{product.supplier}</td>
@@ -89,7 +97,7 @@ export default function ProductsPage() {
                           </Button>
                         </Link>
                         <Button
-                          onClick={() => deleteProduct(product.id)}
+                          onClick={() => setProductToDelete(product)}
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8 text-destructive hover:bg-destructive/10"
@@ -105,6 +113,19 @@ export default function ProductsPage() {
           </div>
         </CardContent>
       </Card>
+
+      <ConfirmDeleteModal
+        isOpen={productToDelete !== null}
+        onClose={() => setProductToDelete(null)}
+        onConfirm={async () => {
+          if (productToDelete) {
+            await deleteProduct(productToDelete.id);
+          }
+        }}
+        title="Delete Product"
+        description="Are you sure you want to delete this product? All related inventory logs and records will be impacted."
+        itemName={productToDelete ? `${productToDelete.name} (${productToDelete.id})` : ''}
+      />
     </div>
   );
 }

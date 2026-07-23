@@ -23,7 +23,7 @@ import { Button } from "@/components/ui/button";
 import { useInventory, Product } from '@/context/inventory-context';
 
 export default function StockInPage() {
-  const { products, recordTransaction } = useInventory();
+  const { products, recordTransaction, activeBranch } = useInventory();
   const router = useRouter();
 
   // Form states
@@ -131,7 +131,7 @@ export default function StockInPage() {
                   >
                     {products.map((prod: Product) => (
                       <option key={prod.id} value={prod.id}>
-                        {prod.name} (Current: {prod.stock} units)
+                        {prod.name} (Current: {activeBranch === 'All' ? Object.values(prod.stock).reduce((a, b) => a + b, 0) : prod.stock[activeBranch] || 0} units)
                       </option>
                     ))}
                   </select>

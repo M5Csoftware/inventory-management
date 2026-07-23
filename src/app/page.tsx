@@ -1,7 +1,9 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
-import { Package, Truck, AlertCircle, IndianRupee } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Package, Truck, AlertCircle, IndianRupee, ShoppingCart } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useInventory } from '@/context/inventory-context';
@@ -22,19 +24,30 @@ import {
 } from 'recharts';
 
 export default function Dashboard() {
-  const { products, transactions, categories } = useInventory();
+  const { products, transactions, categories, orders, activeBranch } = useInventory();
+  const [stockFlowDays, setStockFlowDays] = useState(7);
+
+  const getStock = (p: any) => {
+    if (!p.stock) return 0;
+    if (typeof p.stock === 'number') return p.stock;
+    if (activeBranch === 'All') {
+      return Object.values(p.stock as Record<string, number>).reduce((acc, curr) => acc + (curr || 0), 0);
+    }
+    return (p.stock as Record<string, number>)[activeBranch] || 0;
+  };
 
   // Metrics
   const totalProducts = products.length;
-  const totalStockUnits = products.reduce((acc, curr) => acc + curr.stock, 0);
-  const lowStockAlerts = products.filter((p) => p.stock <= p.threshold).length;
-  const totalInventoryValue = products.reduce((acc, curr) => acc + (curr.stock * curr.price), 0);
+  const totalStockUnits = products.reduce((acc, curr) => acc + getStock(curr), 0);
+  const lowStockAlerts = products.filter((p) => getStock(p) <= p.threshold).length;
+  const totalInventoryValue = products.reduce((acc, curr) => acc + (getStock(curr) * curr.price), 0);
+  const activeOrdersCount = orders ? orders.filter(o => o.status === 'Pending' || o.status === 'Processing').length : 0;
 
   // Category Distribution (Value)
   const categoryData = categories.map((cat) => {
     const value = products
       .filter((p) => (p.category || '').toLowerCase() === (cat.name || '').toLowerCase())
-      .reduce((acc, p) => acc + ((p.stock || 0) * (p.price || 0)), 0);
+      .reduce((acc, p) => acc + (getStock(p) * (p.price || 0)), 0);
     return { name: cat.name || 'Unknown', value };
   }).filter(c => c.value > 0);
 
@@ -54,9 +67,16 @@ export default function Dashboard() {
     return acc;
   }, {});
   
-  const movementData = Object.values(transactionsByDate)
-    .sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime())
-    .slice(-14);
+  // Generate last N days array
+  const lastNDays = Array.from({ length: stockFlowDays }).map((_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - ((stockFlowDays - 1) - i));
+    return d.toISOString().split('T')[0];
+  });
+
+  const movementData = lastNDays.map(date => {
+    return transactionsByDate[date] || { date, 'Stock In': 0, 'Stock Out': 0 };
+  });
 
   const recentTransactions = transactions.slice(0, 5);
 
@@ -82,9 +102,22 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Top 4 Metric Cards */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="group relative overflow-hidden bg-gradient-to-br from-card to-card/50 backdrop-blur-xl border-border/50 shadow-sm transition-all hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1 duration-300">
+      {/* Top 5 Metric Cards */}
+      <motion.div 
+        className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5"
+        initial="hidden"
+        animate="visible"
+        variants={{
+          hidden: {},
+          visible: {
+            transition: {
+              staggerChildren: 0.1
+            }
+          }
+        }}
+      >
+        <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 24 } } }}>
+        <Card className="group relative h-full overflow-hidden bg-gradient-to-br from-card to-card/50 backdrop-blur-xl border-border/50 shadow-sm transition-all hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1 duration-300">
           <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"></div>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors">Total Inventory Value</CardTitle>
@@ -97,8 +130,10 @@ export default function Dashboard() {
             <p className="text-xs text-muted-foreground mt-1">Total worth of current stock</p>
           </CardContent>
         </Card>
+        </motion.div>
 
-        <Card className="group relative overflow-hidden bg-gradient-to-br from-card to-card/50 backdrop-blur-xl border-border/50 shadow-sm transition-all hover:shadow-xl hover:shadow-blue-500/5 hover:-translate-y-1 duration-300">
+        <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 24 } } }}>
+        <Card className="group relative h-full overflow-hidden bg-gradient-to-br from-card to-card/50 backdrop-blur-xl border-border/50 shadow-sm transition-all hover:shadow-xl hover:shadow-blue-500/5 hover:-translate-y-1 duration-300">
           <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"></div>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors">Unique Products</CardTitle>
@@ -111,8 +146,10 @@ export default function Dashboard() {
             <p className="text-xs text-muted-foreground mt-1">Active SKUs cataloged</p>
           </CardContent>
         </Card>
+        </motion.div>
 
-        <Card className="group relative overflow-hidden bg-gradient-to-br from-card to-card/50 backdrop-blur-xl border-border/50 shadow-sm transition-all hover:shadow-xl hover:shadow-emerald-500/5 hover:-translate-y-1 duration-300">
+        <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 24 } } }}>
+        <Card className="group relative h-full overflow-hidden bg-gradient-to-br from-card to-card/50 backdrop-blur-xl border-border/50 shadow-sm transition-all hover:shadow-xl hover:shadow-emerald-500/5 hover:-translate-y-1 duration-300">
           <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"></div>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors">Total Stock Units</CardTitle>
@@ -125,8 +162,10 @@ export default function Dashboard() {
             <p className="text-xs text-muted-foreground mt-1">Physical items in warehouse</p>
           </CardContent>
         </Card>
+        </motion.div>
 
-        <Card className="group relative overflow-hidden bg-gradient-to-br from-card to-card/50 backdrop-blur-xl border-border/50 shadow-sm transition-all hover:shadow-xl hover:shadow-destructive/5 hover:-translate-y-1 duration-300">
+        <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 24 } } }}>
+        <Card className="group relative h-full overflow-hidden bg-gradient-to-br from-card to-card/50 backdrop-blur-xl border-border/50 shadow-sm transition-all hover:shadow-xl hover:shadow-destructive/5 hover:-translate-y-1 duration-300">
           <div className="absolute inset-0 bg-gradient-to-br from-destructive/10 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"></div>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors">Low Stock Alerts</CardTitle>
@@ -142,10 +181,27 @@ export default function Dashboard() {
             <p className="text-xs text-muted-foreground mt-1">Items below minimum threshold</p>
           </CardContent>
         </Card>
-      </div>
+        </motion.div>
+
+        <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 24 } } }}>
+        <Card className="group relative overflow-hidden bg-gradient-to-br from-card to-card/50 backdrop-blur-xl border-border/50 shadow-sm transition-all hover:shadow-xl hover:shadow-amber-500/5 hover:-translate-y-1 duration-300">
+          <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"></div>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors">Active Orders</CardTitle>
+            <div className="p-2 rounded-xl bg-amber-500/10 text-amber-500 ring-1 ring-amber-500/20 transition-transform duration-300 group-hover:scale-110">
+              <ShoppingCart className="h-4 w-4" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold tracking-tight group-hover:text-amber-500 transition-colors">{activeOrdersCount}</div>
+            <p className="text-xs text-muted-foreground mt-1">Orders in progress</p>
+          </CardContent>
+        </Card>
+        </motion.div>
+      </motion.div>
 
       {/* Charts Section */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
         
         {/* Category Value Distribution */}
         <Card className="bg-card/50 backdrop-blur-xl shadow-lg border-border/50 transition-all hover:shadow-xl hover:border-primary/20">
@@ -169,6 +225,7 @@ export default function Dashboard() {
                     outerRadius={80}
                     paddingAngle={3}
                     dataKey="value"
+                    nameKey="name"
                     stroke="none"
                   >
                     {categoryData.map((entry, index) => (
@@ -179,37 +236,11 @@ export default function Dashboard() {
                     formatter={(value) => [`₹${(Number(value) || 0).toLocaleString('en-IN')}`, 'Value']}
                     contentStyle={{ backgroundColor: 'hsl(var(--background))', borderColor: 'hsl(var(--border))', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
                   />
-                </PieChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Stock Movement Trend */}
-        <Card className="bg-card/50 backdrop-blur-xl shadow-lg border-border/50 transition-all hover:shadow-xl hover:border-primary/20">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg bg-gradient-to-r from-emerald-500 to-blue-500 bg-clip-text text-transparent">Stock Flow</CardTitle>
-            <CardDescription>Daily in vs out.</CardDescription>
-          </CardHeader>
-          <CardContent className="h-[240px] pt-4">
-            {movementData.length === 0 ? (
-              <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-                No movement data.
-              </div>
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={movementData} margin={{ top: 0, right: 0, left: -25, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" opacity={0.5} />
-                  <XAxis dataKey="date" tick={{ fontSize: 10 }} tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(val) => val.split('-')[2]} />
-                  <YAxis tick={{ fontSize: 10 }} tickLine={false} axisLine={false} tickMargin={8} />
-                  <Tooltip 
-                    cursor={{ fill: 'hsl(var(--muted)/0.4)' }}
-                    contentStyle={{ backgroundColor: 'hsl(var(--background))', borderColor: 'hsl(var(--border))', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                  <Legend 
+                    wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} 
+                    iconType="circle" 
                   />
-                  <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} iconType="circle" />
-                  <Bar dataKey="Stock In" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={30} />
-                  <Bar dataKey="Stock Out" fill="#ef4444" radius={[4, 4, 0, 0]} maxBarSize={30} />
-                </BarChart>
+                </PieChart>
               </ResponsiveContainer>
             )}
           </CardContent>
@@ -229,28 +260,79 @@ export default function Dashboard() {
             </div>
           </CardHeader>
           <CardContent className="h-[230px] overflow-y-auto pr-2 space-y-3 pt-2">
-            {products.filter((p) => p.stock <= p.threshold).length === 0 ? (
-              <div className="flex h-full items-center justify-center text-sm text-muted-foreground text-center">
-                All stock levels look good!
-              </div>
+            {products.filter((p) => getStock(p) <= p.threshold).length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">All stock levels are healthy.</p>
             ) : (
-              products.filter((p) => p.stock <= p.threshold).slice(0, 5).map((p) => (
-                <div key={p.id} className="flex items-center justify-between p-2 rounded-lg bg-background/50 border border-border/30 hover:border-border transition-colors">
-                  <div className="flex items-center gap-3 overflow-hidden">
-                    <div className="h-8 w-8 rounded-full bg-destructive/10 flex items-center justify-center text-destructive flex-shrink-0">
-                      <AlertCircle className="h-4 w-4" />
-                    </div>
-                    <div className="truncate">
-                      <p className="text-sm font-semibold truncate">{p.name}</p>
-                      <p className="text-xs text-muted-foreground truncate">{p.category}</p>
-                    </div>
+              products.filter((p) => getStock(p) <= p.threshold).slice(0, 5).map((p) => (
+                <div key={p.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/40 hover:bg-muted/60 transition-colors">
+                  <div className="space-y-0.5">
+                    <p className="text-sm font-medium leading-none">{p.name}</p>
+                    <p className="text-xs text-muted-foreground">Threshold: {p.threshold} units</p>
                   </div>
-                  <div className="text-right flex-shrink-0 ml-2">
-                    <p className="text-sm font-bold text-destructive">{p.stock}</p>
-                    <p className="text-[10px] text-muted-foreground">/ {p.threshold}</p>
+                  <div className="text-right">
+                    <p className="text-sm font-bold text-destructive">{getStock(p)}</p>
+                    <p className="text-[10px] text-muted-foreground">Remaining</p>
                   </div>
                 </div>
               ))
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Stock Movement Trend */}
+        <Card className="bg-card/50 backdrop-blur-xl shadow-lg border-border/50 transition-all hover:shadow-xl hover:border-primary/20 lg:col-span-2">
+          <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
+            <div>
+              <CardTitle className="text-lg bg-gradient-to-r from-emerald-500 to-blue-500 bg-clip-text text-transparent">Stock Flow</CardTitle>
+              <CardDescription>Daily in vs out.</CardDescription>
+            </div>
+            <div className="flex gap-2">
+              <Button 
+                variant={stockFlowDays === 7 ? "default" : "outline"} 
+                size="sm" 
+                onClick={() => setStockFlowDays(7)}
+                className="text-xs h-7 px-2"
+              >
+                7D
+              </Button>
+              <Button 
+                variant={stockFlowDays === 15 ? "default" : "outline"} 
+                size="sm" 
+                onClick={() => setStockFlowDays(15)}
+                className="text-xs h-7 px-2"
+              >
+                15D
+              </Button>
+              <Button 
+                variant={stockFlowDays === 30 ? "default" : "outline"} 
+                size="sm" 
+                onClick={() => setStockFlowDays(30)}
+                className="text-xs h-7 px-2"
+              >
+                30D
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="h-[240px] pt-4">
+            {movementData.length === 0 ? (
+              <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+                No movement data.
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={movementData} margin={{ top: 20, right: 20, left: -25, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={true} horizontal={true} stroke="#94a3b8" opacity={0.2} />
+                  <XAxis dataKey="date" tick={{ fontSize: 10 }} tickLine={true} axisLine={true} tickMargin={12} tickFormatter={(val) => val.split('-')[2]} />
+                  <YAxis tick={{ fontSize: 10 }} tickLine={true} axisLine={true} tickMargin={8} />
+                  <Tooltip 
+                    cursor={false}
+                    contentStyle={{ backgroundColor: 'hsl(var(--background))', borderColor: 'hsl(var(--border))', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                  />
+                  <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} iconType="circle" />
+                  <Bar dataKey="Stock In" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={30} />
+                  <Bar dataKey="Stock Out" fill="#ef4444" radius={[4, 4, 0, 0]} maxBarSize={30} />
+                </BarChart>
+              </ResponsiveContainer>
             )}
           </CardContent>
         </Card>

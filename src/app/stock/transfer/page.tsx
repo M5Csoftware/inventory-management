@@ -5,13 +5,12 @@ import Link from "next/link";
 import { useRouter } from 'next/navigation';
 import {
   ArrowLeft,
-  ArrowDownRight,
+  ArrowRight,
   Package,
   FileText,
   Plus,
   Save,
-  AlertCircle,
-  User,
+  MapPin,
 } from "lucide-react";
 import {
   Card,
@@ -22,43 +21,51 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useInventory, Product } from '@/context/inventory-context';
+import { toast } from 'react-toastify';
 
-export default function StockOutPage() {
-  const { products, categories, recordTransaction, activeBranch } = useInventory();
+export default function StockTransferPage() {
+  const { products, categories, transferStock, activeBranch } = useInventory();
   const router = useRouter();
 
   // Form states
   const [productId, setProductId] = useState('');
   const [quantity, setQuantity] = useState('');
-  const [reason, setReason] = useState('Customer Order / Sale');
-  const [handedTo, setHandedTo] = useState('');
+  const [destinationBranch, setDestinationBranch] = useState('');
   const [notes, setNotes] = useState('');
 
-  // Filter out products that belong to an asset category
   const nonAssetProducts = products.filter((prod) => {
     const category = categories.find((c) => c.name.toLowerCase() === prod.category.toLowerCase());
     return !category?.isAsset;
   });
 
-  // Default selection when products load
+  const branches = ['Ahmedabad', 'Ludhiana', 'Delhi', 'Mumbai'].filter(b => b !== activeBranch);
+
   useEffect(() => {
     if (nonAssetProducts.length > 0 && !productId) {
       setProductId(nonAssetProducts[0].id);
     }
   }, [nonAssetProducts, productId]);
 
+  useEffect(() => {
+    if (branches.length > 0 && !branches.includes(destinationBranch)) {
+      setDestinationBranch(branches[0]);
+    }
+  }, [activeBranch, branches, destinationBranch]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!productId || !quantity || !reason) return;
+    if (!productId || !quantity || !destinationBranch) return;
 
-    const finalNotes = handedTo ? `Handed to: ${handedTo}\n${notes}` : notes;
+    if (activeBranch === 'All') {
+      toast.error('Please select a specific branch from the sidebar before transferring stock.');
+      return;
+    }
 
-    const success = await recordTransaction(
+    const success = await transferStock(
       productId,
-      'Stock Out',
       parseInt(quantity),
-      reason,
-      finalNotes || undefined
+      destinationBranch,
+      notes || undefined
     );
 
     if (success) {
@@ -66,10 +73,23 @@ export default function StockOutPage() {
     }
   };
 
+  if (activeBranch === 'All') {
+    return (
+      <div className="min-h-screen p-6 sm:p-8 flex items-center justify-center">
+        <Card className="border border-border/50 bg-background/60 backdrop-blur-sm p-8 text-center max-w-md w-full">
+          <p className="text-muted-foreground mb-4">Please select a specific branch from the sidebar to perform a stock transfer.</p>
+          <Link href="/stock">
+            <Button>Go Back</Button>
+          </Link>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 p-4 sm:p-6">
       <div className="mx-auto max-w-full space-y-4">
-        {/* Header Section - Compact */}
+        {/* Header Section */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
             <Link href="/stock">
@@ -83,45 +103,44 @@ export default function StockOutPage() {
             </Link>
             <div>
               <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-                Stock Out (Dispatch Stock)
+                Transfer Stock
               </h1>
               <p className="text-xs text-muted-foreground flex items-center gap-1.5 mt-0.5">
-                <ArrowDownRight className="h-3 w-3 text-blue-500" />
-                Record outward stock movement, sales, or product wastage
+                <ArrowRight className="h-3 w-3 text-purple-500" />
+                Move inventory from {activeBranch} to another branch
               </p>
             </div>
           </div>
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <span className="flex h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
-            <span>Outgoing</span>
+            <span className="flex h-2 w-2 rounded-full bg-purple-500 animate-pulse" />
+            <span>Inter-branch Transfer</span>
           </div>
         </div>
 
         {nonAssetProducts.length === 0 ? (
           <Card className="border border-border/50 bg-background/60 backdrop-blur-sm p-8 text-center space-y-4 max-w-lg mx-auto">
             <p className="text-sm text-muted-foreground">
-              You must have at least one consumable product (non-asset) created before recording stock out transactions.
+              No transferable products found.
             </p>
             <Link href="/products/new">
               <Button size="sm">Create Product</Button>
             </Link>
           </Card>
         ) : (
-          /* Main Form Card - Compact */
           <Card className="border-0 shadow-xl shadow-primary/5 bg-gradient-to-br from-card to-card/80 backdrop-blur-sm">
             <CardHeader className="border-b border-border/50 pb-3">
               <div className="flex items-start justify-between">
                 <div>
                   <CardTitle className="text-lg flex items-center gap-2">
-                    <ArrowDownRight className="h-4 w-4 text-blue-500" />
-                    Stock Out Details
+                    <ArrowRight className="h-4 w-4 text-purple-500" />
+                    Transfer Details
                   </CardTitle>
                   <CardDescription className="text-xs mt-1">
-                    Select product, specify outgoing quantity, and reasons for dispatch
+                    Select product, specify quantity, and destination branch
                   </CardDescription>
                 </div>
-                <span className="rounded-full bg-blue-500/10 px-2.5 py-0.5 text-[10px] font-medium text-blue-600">
-                  Dispatch
+                <span className="rounded-full bg-purple-500/10 px-2.5 py-0.5 text-[10px] font-medium text-purple-600">
+                  Source: {activeBranch}
                 </span>
               </div>
             </CardHeader>
@@ -141,17 +160,16 @@ export default function StockOutPage() {
                   >
                     {nonAssetProducts.map((prod: Product) => (
                       <option key={prod.id} value={prod.id}>
-                        {prod.name} (Current: {activeBranch === 'All' ? Object.values(prod.stock).reduce((a, b) => a + b, 0) : prod.stock[activeBranch] || 0} units)
+                        {prod.name} (Available in {activeBranch}: {prod.stock[activeBranch] || 0} units)
                       </option>
                     ))}
                   </select>
                 </div>
 
-                {/* Dispatched Quantity, Reason, & Handed To */}
-                <div className="grid gap-4 md:grid-cols-3">
+                <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-1.5">
                     <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                      Dispatched Quantity <span className="text-destructive">*</span>
+                      Quantity to Transfer <span className="text-destructive">*</span>
                     </label>
                     <input
                       type="number"
@@ -164,51 +182,35 @@ export default function StockOutPage() {
                   </div>
                   <div className="space-y-1.5">
                     <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                      <AlertCircle className="h-3 w-3" />
-                      Reason / Destination <span className="text-destructive">*</span>
+                      <MapPin className="h-3 w-3" />
+                      Destination Branch <span className="text-destructive">*</span>
                     </label>
                     <select 
-                      value={reason}
-                      onChange={(e) => setReason(e.target.value)}
+                      value={destinationBranch}
+                      onChange={(e) => setDestinationBranch(e.target.value)}
                       className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22currentColor%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E')] bg-[length:16px] bg-[right_10px_center] bg-no-repeat hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
                     >
-                      <option value="Customer Order / Sale">🛒 Customer Order / Sale</option>
-                      <option value="Damage / Scrap / Waste">🗑️ Damage / Scrap / Waste</option>
-                      <option value="Return to Supplier">🔄 Return to Supplier</option>
-                      <option value="Internal Usage">🏢 Internal Usage</option>
+                      {branches.map(b => (
+                        <option key={b} value={b}>📍 {b}</option>
+                      ))}
                     </select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                      <User className="h-3 w-3" />
-                      Handed To
-                    </label>
-                    <input
-                      type="text"
-                      value={handedTo}
-                      onChange={(e) => setHandedTo(e.target.value)}
-                      placeholder="Name of person receiving"
-                      className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all placeholder:text-muted-foreground/50 hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
-                    />
                   </div>
                 </div>
 
-                {/* Notes */}
                 <div className="space-y-1.5">
                   <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                     <FileText className="h-3 w-3" />
-                    Notes / Order Reference
+                    Notes / Reference
                   </label>
                   <textarea
                     rows={2}
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
-                    placeholder="e.g. Customer Invoice #INV-0043, shipped via Local courier."
+                    placeholder="e.g. Requested by Delhi manager, transferred via truck."
                     className="w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 py-2 text-sm shadow-sm transition-all placeholder:text-muted-foreground/50 hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 resize-y dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
                   />
                 </div>
 
-                {/* Action Buttons - Compact */}
                 <div className="flex flex-col-reverse gap-2 border-t border-border/50 pt-4 sm:flex-row sm:justify-end">
                   <Link href="/stock" className="w-full sm:w-auto">
                     <Button
@@ -221,27 +223,17 @@ export default function StockOutPage() {
                   </Link>
                   <Button
                     type="submit"
-                    className="group w-full gap-2 bg-gradient-to-r from-blue-600 to-blue-500 shadow-lg shadow-blue-500/30 transition-all hover:scale-[1.02] hover:shadow-blue-500/40 sm:w-auto h-9 text-sm"
+                    className="group w-full gap-2 bg-gradient-to-r from-purple-600 to-purple-500 shadow-lg shadow-purple-500/30 transition-all hover:scale-[1.02] hover:shadow-purple-500/40 sm:w-auto h-9 text-sm"
                   >
                     <Save className="h-3.5 w-3.5 transition-transform group-hover:scale-110" />
-                    Record Stock Out
-                    <Plus className="h-3.5 w-3.5 transition-transform group-hover:rotate-90" />
+                    Transfer Stock
+                    <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
                   </Button>
                 </div>
               </form>
             </CardContent>
           </Card>
         )}
-
-        {/* Help Tip - Compact */}
-        <div className="flex items-center justify-center gap-2 text-[10px] text-muted-foreground/70">
-          <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full border border-muted-foreground/20 text-[9px]">
-            i
-          </span>
-          <span>
-            All fields marked with <span className="text-destructive">*</span> are required
-          </span>
-        </div>
       </div>
     </div>
   );

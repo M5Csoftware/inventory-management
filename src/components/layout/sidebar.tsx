@@ -3,8 +3,11 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Package, LayoutDashboard, Box, Truck, Users, FileText, Settings, ChevronDown, ChevronRight, PlusCircle, List, LogOut } from 'lucide-react';
+import { Package, LayoutDashboard, Box, Truck, Users, FileText, Settings, ChevronDown, ChevronRight, PlusCircle, List, LogOut, ShoppingCart } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { useInventory } from '@/context/inventory-context';
+import { useAuth } from '@/context/auth-context';
 
 export interface SubNavItem {
   href: string;
@@ -36,6 +39,8 @@ export const navItems: NavItem[] = [
       { href: '/stock', label: 'Current Stock', icon: List },
       { href: '/stock/in', label: 'Stock In (Add)', icon: PlusCircle },
       { href: '/stock/out', label: 'Stock Out (Remove)', icon: PlusCircle },
+      { href: '/stock/transfer', label: 'Transfer Stock', icon: Truck },
+      { href: '/stock/assets', label: 'Assets (Assigned)', icon: List },
     ]
   },
   {
@@ -54,17 +59,25 @@ export const navItems: NavItem[] = [
       { href: '/suppliers/new', label: 'Add Supplier', icon: PlusCircle },
     ]
   },
+  {
+    label: 'Orders',
+    icon: ShoppingCart,
+    subItems: [
+      { href: '/orders', label: 'All Orders', icon: List },
+      { href: '/orders/new', label: 'Generate Order', icon: PlusCircle },
+    ]
+  },
   { href: '/reports', label: 'Reports', icon: FileText },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
+  const { activeBranch, setActiveBranch } = useInventory();
+  const { user, logout } = useAuth();
   
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    router.replace('/login');
+    logout();
   };
   
   // Track open states of submenus. By default, keep active section open.
@@ -96,7 +109,34 @@ export function Sidebar() {
         </div>
         <span className="text-lg font-bold tracking-tight">M5C Logistics</span>
       </div>
-      <nav className="flex-1 space-y-1 p-4 overflow-y-auto">
+      
+      {/* Branch Selector (Only for Master Admin) */}
+      <div className="px-4 py-3 border-b">
+        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1 block">
+          Current Branch
+        </label>
+        {user?.role === 'admin' ? (
+          <div className="relative">
+            <select 
+              value={activeBranch}
+              onChange={(e) => setActiveBranch(e.target.value)}
+              className="w-full h-9 bg-accent/50 border border-border/50 text-foreground text-sm rounded-md px-3 appearance-none focus:outline-none focus:ring-1 focus:ring-primary/50 transition-colors cursor-pointer"
+            >
+              <option value="Delhi">🏭 Delhi (HO)</option>
+              <option value="Ahmedabad">🏭 Ahmedabad</option>
+              <option value="Ludhiana">🏭 Ludhiana</option>
+              <option value="Mumbai">🏭 Mumbai</option>
+            </select>
+            <ChevronDown className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
+          </div>
+        ) : (
+          <div className="w-full h-9 bg-accent/30 border border-border/30 text-foreground text-sm rounded-md px-3 flex items-center">
+            🏭 {activeBranch}
+          </div>
+        )}
+      </div>
+
+      <nav className="flex-1 space-y-1 p-4 overflow-y-auto hide-scrollbar">
         {navItems.map((item) => {
           const Icon = item.icon;
           
@@ -118,11 +158,27 @@ export function Sidebar() {
                     <Icon className="h-5 w-5" />
                     <span>{item.label}</span>
                   </div>
-                  {isExpanded ? <ChevronDown className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
+                  {isExpanded ? (
+                    <motion.div layoutId={`icon-${item.label}`} className="h-5 w-5">
+                      <ChevronDown className="h-5 w-5" />
+                    </motion.div>
+                  ) : (
+                    <motion.div layoutId={`icon-${item.label}`} className="h-5 w-5">
+                      <ChevronRight className="h-5 w-5" />
+                    </motion.div>
+                  )}
                 </Link>
-                {isExpanded && (
-                  <div className="pl-6 space-y-1 mt-1 border-l ml-5 border-border">
-                    {item.subItems.map((sub) => {
+                <AnimatePresence initial={false}>
+                  {isExpanded && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.2, ease: "easeInOut" }}
+                      className="overflow-hidden"
+                    >
+                      <div className="pl-6 space-y-1 mt-1 border-l ml-5 border-border">
+                        {item.subItems.map((sub) => {
                       const SubIcon = sub.icon;
                       const isActive = pathname === sub.href;
                       return (
@@ -142,9 +198,11 @@ export function Sidebar() {
                       );
                     })}
                   </div>
-                )}
-              </div>
-            );
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        );
           }
 
           // Item with no children (like Dashboard, Reports)

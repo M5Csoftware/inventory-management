@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import {
   ArrowLeft,
   UserPlus,
@@ -11,8 +11,8 @@ import {
   Mail,
   Phone,
   MapPin,
-  Plus,
   Save,
+  Edit2
 } from 'lucide-react';
 import {
   Card,
@@ -24,22 +24,42 @@ import {
 import { Button } from '@/components/ui/button';
 import { useInventory } from '@/context/inventory-context';
 
-export default function NewSupplierPage() {
-  const { addSupplier, activeBranch } = useInventory();
+export default function EditSupplierPage() {
+  const { suppliers, updateSupplier } = useInventory();
   const router = useRouter();
+  const params = useParams();
+  const decodedName = decodeURIComponent((params?.name as string) || '');
 
   const [name, setName] = useState('');
   const [contact, setContact] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [location, setLocation] = useState('');
-  const [branch, setBranch] = useState(activeBranch && activeBranch !== 'All' ? activeBranch : 'Delhi');
+  const [branch, setBranch] = useState('Delhi');
+  const [taxId, setTaxId] = useState('');
+  const [website, setWebsite] = useState('');
+
+  useEffect(() => {
+    if (decodedName && suppliers.length > 0) {
+      const supplier = suppliers.find((s) => s.name === decodedName);
+      if (supplier) {
+        setName(supplier.name);
+        setContact(supplier.contact);
+        setEmail(supplier.email);
+        setPhone(supplier.phone);
+        setLocation(supplier.location);
+        setBranch(supplier.branch || 'Delhi');
+        setTaxId(supplier.taxId || '');
+        setWebsite(supplier.website || '');
+      }
+    }
+  }, [decodedName, suppliers]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !contact || !email || !phone || !location) return;
 
-    await addSupplier({ name, contact, email, phone, location, branch });
+    await updateSupplier(decodedName, { name, contact, email, phone, location, branch, taxId, website });
     router.push('/suppliers');
   };
 
@@ -60,17 +80,13 @@ export default function NewSupplierPage() {
             </Link>
             <div>
               <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-                Add New Supplier
+                Edit Supplier
               </h1>
               <p className="text-xs text-muted-foreground flex items-center gap-1.5 mt-0.5">
-                <UserPlus className="h-3 w-3 text-primary" />
-                Register a partner supplier for supply logistics
+                <Edit2 className="h-3 w-3 text-primary" />
+                Update partner supplier details
               </p>
             </div>
-          </div>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <span className="flex h-2 w-2 rounded-full bg-primary animate-pulse" />
-            <span>New</span>
           </div>
         </div>
 
@@ -84,7 +100,7 @@ export default function NewSupplierPage() {
                   Supplier Details
                 </CardTitle>
                 <CardDescription className="text-xs mt-1">
-                  Enter corporate details and primary contact information
+                  Update corporate details and primary contact information
                 </CardDescription>
               </div>
               <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-[10px] font-medium text-primary">
@@ -175,8 +191,7 @@ export default function NewSupplierPage() {
                 />
                 <div className="space-y-1.5">
                   <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    Branch
-                    <span className="text-destructive">*</span>
+                    Branch <span className="text-destructive">*</span>
                   </label>
                   <select
                     value={branch}
@@ -206,6 +221,8 @@ export default function NewSupplierPage() {
                     </label>
                     <input
                       type="text"
+                      value={taxId}
+                      onChange={(e) => setTaxId(e.target.value)}
                       placeholder="e.g. 12-3456789"
                       className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all placeholder:text-muted-foreground/50 hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
                     />
@@ -216,6 +233,8 @@ export default function NewSupplierPage() {
                     </label>
                     <input
                       type="url"
+                      value={website}
+                      onChange={(e) => setWebsite(e.target.value)}
                       placeholder="e.g. https://apexsupplies.com"
                       className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all placeholder:text-muted-foreground/50 hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
                     />
@@ -239,23 +258,12 @@ export default function NewSupplierPage() {
                   className="group w-full gap-2 bg-gradient-to-r from-primary to-primary/90 shadow-lg shadow-primary/30 transition-all hover:scale-[1.02] hover:shadow-primary/40 sm:w-auto h-9 text-sm"
                 >
                   <Save className="h-3.5 w-3.5 transition-transform group-hover:scale-110" />
-                  Create Supplier
-                  <Plus className="h-3.5 w-3.5 transition-transform group-hover:rotate-90" />
+                  Save Changes
                 </Button>
               </div>
             </form>
           </CardContent>
         </Card>
-
-        {/* Help Tip - Compact */}
-        <div className="flex items-center justify-center gap-2 text-[10px] text-muted-foreground/70">
-          <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full border border-muted-foreground/20 text-[9px]">
-            i
-          </span>
-          <span>
-            All fields marked with <span className="text-destructive">*</span> are required
-          </span>
-        </div>
       </div>
     </div>
   );

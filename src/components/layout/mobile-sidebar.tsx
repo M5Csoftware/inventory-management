@@ -3,9 +3,12 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Package, Settings, ChevronDown, ChevronRight, LogOut, X, Users } from 'lucide-react';
+import { Package, Settings, ChevronDown, ChevronRight, LogOut, X, Users, Truck, PlusCircle, List } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { navItems, NavItem, SubNavItem } from './sidebar';
+import { navItems } from './sidebar';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useInventory } from '@/context/inventory-context';
+import { useAuth } from '@/context/auth-context';
 
 interface MobileSidebarProps {
   isOpen: boolean;
@@ -15,12 +18,12 @@ interface MobileSidebarProps {
 export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const { activeBranch, setActiveBranch } = useInventory();
+  const { user, logout } = useAuth();
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
     onClose();
-    router.replace('/login');
+    logout();
   };
   
   const [openSubMenus, setOpenSubMenus] = useState<Record<string, boolean>>(() => {
@@ -76,6 +79,32 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
           </button>
         </div>
         
+        {/* Branch Selector */}
+        <div className="px-6 py-4 border-b border-border/10">
+          <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2 block">
+            Current Branch
+          </label>
+          {user?.role === 'admin' ? (
+            <div className="relative">
+              <select 
+                value={activeBranch}
+                onChange={(e) => setActiveBranch(e.target.value)}
+                className="w-full h-10 bg-accent/50 border border-border/50 text-foreground text-sm rounded-xl px-4 appearance-none focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all cursor-pointer shadow-sm"
+              >
+                <option value="Delhi">🏭 Delhi (HO)</option>
+                <option value="Ahmedabad">🏭 Ahmedabad</option>
+                <option value="Ludhiana">🏭 Ludhiana</option>
+                <option value="Mumbai">🏭 Mumbai</option>
+              </select>
+              <ChevronDown className="absolute right-4 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
+            </div>
+          ) : (
+            <div className="w-full h-10 bg-accent/30 border border-border/30 text-foreground text-sm rounded-xl px-4 flex items-center shadow-sm">
+              🏭 {activeBranch}
+            </div>
+          )}
+        </div>
+        
         <nav className="flex-1 space-y-1 p-4 overflow-y-auto">
           {navItems.map((item) => {
             const Icon = item.icon;
@@ -97,11 +126,27 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
                       <Icon className="h-5 w-5" />
                       <span>{item.label}</span>
                     </div>
-                    {isExpanded ? <ChevronDown className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
+                    {isExpanded ? (
+                      <motion.div layoutId={`icon-m-${item.label}`} className="h-5 w-5">
+                        <ChevronDown className="h-5 w-5" />
+                      </motion.div>
+                    ) : (
+                      <motion.div layoutId={`icon-m-${item.label}`} className="h-5 w-5">
+                        <ChevronRight className="h-5 w-5" />
+                      </motion.div>
+                    )}
                   </button>
-                  {isExpanded && (
-                    <div className="pl-6 space-y-1 mt-1 border-l ml-5 border-border">
-                      {item.subItems.map((sub) => {
+                  <AnimatePresence initial={false}>
+                    {isExpanded && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2, ease: "easeInOut" }}
+                        className="overflow-hidden"
+                      >
+                        <div className="pl-6 space-y-1 mt-1 border-l ml-5 border-border">
+                          {item.subItems.map((sub) => {
                         const SubIcon = sub.icon;
                         const isActive = pathname === sub.href;
                         return (
@@ -122,9 +167,11 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
                         );
                       })}
                     </div>
-                  )}
-                </div>
-              );
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          );
             }
 
             const isActive = pathname === item.href;
