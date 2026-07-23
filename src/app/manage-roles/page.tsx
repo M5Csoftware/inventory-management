@@ -3,19 +3,26 @@
 import { useState, useEffect } from 'react';
 import { Shield, Plus, Edit2, Trash2, X, UserCog, Key } from 'lucide-react';
 import { toast } from 'react-toastify';
+import { useAuth } from '@/context/auth-context';
+import { ConfirmDeleteModal } from '@/components/confirm-delete-modal';
 
 interface User {
   id: string;
   name: string;
   email: string;
-  role: string;
+  role: 'admin' | 'staff';
   branch?: string;
-  lastLogin?: string;
+  status: 'active' | 'inactive';
 }
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/inventory';
+const DB_HEADER = { 'x-database': 'm5c-inventory', 'Content-Type': 'application/json' };
+
 export default function ManageRolesPage() {
+  const { user: currentUser } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
@@ -87,7 +94,6 @@ export default function ManageRolesPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this user?')) return;
     try {
       const token = localStorage.getItem('token');
       const res = await fetch(`${API_BASE}/users/${id}`, {
@@ -210,7 +216,7 @@ export default function ManageRolesPage() {
                           <Edit2 className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => handleDelete(user.id)}
+                          onClick={() => setUserToDelete(user)}
                           className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
                           title="Delete User"
                         >
@@ -328,6 +334,19 @@ export default function ManageRolesPage() {
           </div>
         </div>
       )}
+
+      <ConfirmDeleteModal
+        isOpen={userToDelete !== null}
+        onClose={() => setUserToDelete(null)}
+        onConfirm={async () => {
+          if (userToDelete) {
+            await handleDelete(userToDelete.id);
+          }
+        }}
+        title="Delete User Account"
+        description="Are you sure you want to revoke access and delete this user? They will no longer be able to log in."
+        itemName={userToDelete ? `${userToDelete.name} (${userToDelete.email})` : ''}
+      />
     </div>
   );
 }
