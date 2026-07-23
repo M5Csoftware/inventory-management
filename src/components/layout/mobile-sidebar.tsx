@@ -91,10 +91,9 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
                 onChange={(e) => setActiveBranch(e.target.value)}
                 className="w-full h-10 bg-accent/50 border border-border/50 text-foreground text-sm rounded-xl px-4 appearance-none focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all cursor-pointer shadow-sm"
               >
-                <option value="All">🌐 All Branches</option>
+                <option value="Delhi">🏭 Delhi (HO)</option>
                 <option value="Ahmedabad">🏭 Ahmedabad</option>
                 <option value="Ludhiana">🏭 Ludhiana</option>
-                <option value="Delhi">🏭 Delhi</option>
                 <option value="Mumbai">🏭 Mumbai</option>
               </select>
               <ChevronDown className="absolute right-4 top-3 h-4 w-4 text-muted-foreground pointer-events-none" />
