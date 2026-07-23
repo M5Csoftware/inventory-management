@@ -14,12 +14,15 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { toast } from 'react-toastify';
 import { useAutoAnimate } from '@formkit/auto-animate/react';
 
+import { ConfirmDeleteModal } from '@/components/confirm-delete-modal';
+
 export default function OrdersPage() {
   const router = useRouter();
   const [animationParent] = useAutoAnimate();
   const { orders, updateOrderStatus, deleteOrder, recordTransaction } = useInventory();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'active' | 'past'>('all');
+  const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
 
   const handleCompleteOrder = async (order: Order) => {
     if (order.status === 'Completed' || order.status === 'Cancelled') return;
@@ -290,7 +293,7 @@ export default function OrdersPage() {
                               <span>PDF</span>
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => deleteOrder(order.id)}>
+                            <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => setOrderToDelete(order)}>
                               <Trash className="mr-2 h-4 w-4" />
                               <span>Delete Order</span>
                             </DropdownMenuItem>
@@ -305,6 +308,19 @@ export default function OrdersPage() {
           </div>
         </CardContent>
       </Card>
+
+      <ConfirmDeleteModal
+        isOpen={orderToDelete !== null}
+        onClose={() => setOrderToDelete(null)}
+        onConfirm={async () => {
+          if (orderToDelete) {
+            await deleteOrder(orderToDelete.id);
+          }
+        }}
+        title="Delete Purchase Order"
+        description="Are you sure you want to delete this purchase order? This record will be permanently removed."
+        itemName={orderToDelete ? `Order #${orderToDelete.id} (${orderToDelete.supplierName})` : ''}
+      />
     </div>
   );
 }
