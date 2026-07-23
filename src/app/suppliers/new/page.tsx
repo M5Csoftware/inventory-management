@@ -25,7 +25,7 @@ import { Button } from '@/components/ui/button';
 import { useInventory } from '@/context/inventory-context';
 
 export default function NewSupplierPage() {
-  const { addSupplier } = useInventory();
+  const { addSupplier, activeBranch } = useInventory();
   const router = useRouter();
 
   const [name, setName] = useState('');
@@ -33,12 +33,13 @@ export default function NewSupplierPage() {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [location, setLocation] = useState('');
+  const [branch, setBranch] = useState(activeBranch && activeBranch !== 'All' ? activeBranch : 'Delhi');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !contact || !email || !phone || !location) return;
 
-    await addSupplier({ name, contact, email, phone, location });
+    await addSupplier({ name, contact, email, phone, location, branch });
     router.push('/suppliers');
   };
 
@@ -172,6 +173,23 @@ export default function NewSupplierPage() {
                   className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all placeholder:text-muted-foreground/50 hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
                   required
                 />
+                <div className="space-y-1.5">
+                  <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    Branch
+                    <span className="text-destructive">*</span>
+                  </label>
+                  <select
+                    value={branch}
+                    onChange={(e) => setBranch(e.target.value)}
+                    className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
+                    required
+                  >
+                    <option value="Delhi">Delhi (HO)</option>
+                    <option value="Ahmedabad">Ahmedabad</option>
+                    <option value="Ludhiana">Ludhiana</option>
+                    <option value="Mumbai">Mumbai</option>
+                  </select>
+                </div>
               </div>
 
               {/* Additional Info - Optional */}

@@ -122,8 +122,7 @@ export function Sidebar() {
               onChange={(e) => setActiveBranch(e.target.value)}
               className="w-full h-9 bg-accent/50 border border-border/50 text-foreground text-sm rounded-md px-3 appearance-none focus:outline-none focus:ring-1 focus:ring-primary/50 transition-colors cursor-pointer"
             >
-              <option value="All">🌐 All Branches</option>
-              <option value="Delhi">🏭 Delhi</option>
+              <option value="Delhi">🏭 Delhi (HO)</option>
               <option value="Ahmedabad">🏭 Ahmedabad</option>
               <option value="Ludhiana">🏭 Ludhiana</option>
               <option value="Mumbai">🏭 Mumbai</option>
