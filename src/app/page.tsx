@@ -8,8 +8,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { useInventory } from '@/context/inventory-context';
 import {
-  LineChart,
-  Line,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -20,12 +18,14 @@ import {
   Cell,
   Legend,
   BarChart,
-  Bar
+  Bar,
 } from 'recharts';
 
 export default function Dashboard() {
   const { products, transactions, categories, orders, activeBranch } = useInventory();
   const [stockFlowDays, setStockFlowDays] = useState(7);
+  const [monthlyTimeframe, setMonthlyTimeframe] = useState<'current_month' | 'last_month' | 'last_6_months'>('last_6_months');
+  const [selectedMonthlyProductId, setSelectedMonthlyProductId] = useState<string>('All');
 
   const getStock = (p: any) => {
     if (!p.stock) return 0;
@@ -77,6 +77,79 @@ export default function Dashboard() {
   const movementData = lastNDays.map(date => {
     return transactionsByDate[date] || { date, 'Stock In': 0, 'Stock Out': 0 };
   });
+
+  // Calculate Monthly Opening & Closing Stock Data (Start of month vs End of month)
+  const monthlyStockChartData = (() => {
+    const data: { label: string; 'Opening Stock': number; 'Closing Stock': number; 'Stock In': number; 'Stock Out': number }[] = [];
+    const now = new Date();
+
+    const targetProducts = selectedMonthlyProductId === 'All'
+      ? products
+      : products.filter(p => p.id === selectedMonthlyProductId);
+    
+    const targetTransactions = selectedMonthlyProductId === 'All'
+      ? transactions
+      : transactions.filter(t => t.productId === selectedMonthlyProductId);
+
+    const calculateMonthData = (year: number, monthIdx: number, customLabel?: string) => {
+      const monthStart = new Date(year, monthIdx, 1, 0, 0, 0, 0);
+      const monthEnd = new Date(year, monthIdx + 1, 0, 23, 59, 59, 999);
+      const monthName = monthStart.toLocaleString("default", { month: "short" });
+      const label = customLabel || `${monthName}${year !== now.getFullYear() ? ` '${String(year).slice(-2)}` : ""}`;
+
+      let openingStock = 0;
+      let stockIn = 0;
+      let stockOut = 0;
+
+      if (targetTransactions.length > 0) {
+        for (const tx of targetTransactions) {
+          const txDate = new Date(tx.date || (tx as any).createdAt);
+          if (txDate < monthStart) {
+            if (tx.type === "Stock In") openingStock += tx.quantity;
+            else if (tx.type === "Stock Out") openingStock -= tx.quantity;
+          } else if (txDate >= monthStart && txDate <= monthEnd) {
+            if (tx.type === "Stock In") stockIn += tx.quantity;
+            else if (tx.type === "Stock Out") stockOut += tx.quantity;
+          }
+        }
+      } else {
+        for (const p of targetProducts) {
+          openingStock += getStock(p);
+        }
+      }
+
+      if (openingStock <= 0 && targetTransactions.length === 0) {
+        openingStock = targetProducts.reduce((acc, p) => acc + getStock(p), 0);
+      }
+
+      const closingStock = Math.max(0, openingStock + stockIn - stockOut);
+
+      return {
+        label,
+        "Opening Stock": Math.max(0, openingStock),
+        "Stock In": stockIn,
+        "Stock Out": stockOut,
+        "Closing Stock": closingStock,
+      };
+    };
+
+    if (monthlyTimeframe === 'current_month') {
+      data.push(calculateMonthData(now.getFullYear(), now.getMonth(), `Current (${now.toLocaleString("default", { month: "short" })})`));
+    } else if (monthlyTimeframe === 'last_month') {
+      const targetYear = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+      const targetMonth = now.getMonth() === 0 ? 11 : now.getMonth() - 1;
+      const lastMonthName = new Date(targetYear, targetMonth, 1).toLocaleString("default", { month: "short" });
+      data.push(calculateMonthData(targetYear, targetMonth, `Last (${lastMonthName})`));
+    } else {
+      // Last 6 Months
+      for (let i = 5; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        data.push(calculateMonthData(d.getFullYear(), d.getMonth()));
+      }
+    }
+
+    return data;
+  })();
 
   const recentTransactions = transactions.slice(0, 5);
 
@@ -279,14 +352,112 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* Stock Movement Trend */}
-        <Card className="bg-card/50 backdrop-blur-xl shadow-lg border-border/50 transition-all hover:shadow-xl hover:border-primary/20 md:col-span-2">
+        {/* Monthly Opening & Closing Stock Comparison Chart (Horizontal Layout) */}
+        <Card className="bg-card/50 backdrop-blur-xl shadow-lg border-border/50 transition-all hover:shadow-xl hover:border-primary/20">
+          <CardHeader className="pb-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <CardTitle className="text-lg bg-gradient-to-r from-blue-500 to-emerald-500 bg-clip-text text-transparent">
+                Monthly Stock Overview
+              </CardTitle>
+              <CardDescription>
+                Opening Stock vs Closing Stock.
+              </CardDescription>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-1.5 self-start sm:self-auto">
+              {/* Product Selector Dropdown */}
+              <select
+                value={selectedMonthlyProductId}
+                onChange={(e) => setSelectedMonthlyProductId(e.target.value)}
+                className="h-7 text-xs bg-background border border-border rounded-md px-2 py-0 focus:outline-none focus:ring-1 focus:ring-primary max-w-[120px] truncate"
+              >
+                <option value="All">All Products</option>
+                {products.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+
+              {/* Timeframe Selector Dropdown */}
+              <select
+                value={monthlyTimeframe}
+                onChange={(e) => setMonthlyTimeframe(e.target.value as 'current_month' | 'last_month' | 'last_6_months')}
+                className="h-7 text-xs bg-background border border-border rounded-md px-2 py-0 focus:outline-none focus:ring-1 focus:ring-primary"
+              >
+                <option value="current_month">Current Month</option>
+                <option value="last_month">Last Month</option>
+                <option value="last_6_months">Last 6 Months</option>
+              </select>
+            </div>
+          </CardHeader>
+          <CardContent className="h-[240px] pt-4">
+            {monthlyStockChartData.length === 0 ? (
+              <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+                No monthly stock data available.
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  layout="vertical"
+                  data={monthlyStockChartData}
+                  margin={{ top: 10, right: 25, left: 10, bottom: 0 }}
+                  barGap={4}
+                >
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} vertical={true} stroke="#94a3b8" opacity={0.15} />
+                  <XAxis type="number" tick={{ fontSize: 10 }} tickLine={false} axisLine={{ stroke: '#94a3b8', opacity: 0.3 }} />
+                  <YAxis type="category" dataKey="label" tick={{ fontSize: 10 }} tickLine={false} axisLine={{ stroke: '#94a3b8', opacity: 0.3 }} width={85} />
+                  <Tooltip
+                    cursor={{ fill: 'rgba(255, 255, 255, 0.04)', radius: 8 }}
+                    content={({ active, payload, label }) => {
+                      if (active && payload && payload.length) {
+                        const data = payload[0].payload;
+                        return (
+                          <div className="p-3 bg-card border border-border rounded-xl shadow-xl space-y-1.5 text-xs">
+                            <p className="font-bold text-foreground border-b border-border/50 pb-1">{label}</p>
+                            <div className="flex justify-between gap-4 text-blue-500 font-medium">
+                              <span>Opening Stock (Start):</span>
+                              <span className="font-bold">{data["Opening Stock"]}</span>
+                            </div>
+                            {data["Stock In"] > 0 && (
+                              <div className="flex justify-between gap-4 text-emerald-500 font-medium">
+                                <span>Stock In (+):</span>
+                                <span className="font-bold">+{data["Stock In"]}</span>
+                              </div>
+                            )}
+                            {data["Stock Out"] > 0 && (
+                              <div className="flex justify-between gap-4 text-amber-500 font-medium">
+                                <span>Stock Out (-):</span>
+                                <span className="font-bold">-{data["Stock Out"]}</span>
+                              </div>
+                            )}
+                            <div className="flex justify-between gap-4 text-emerald-500 font-bold border-t border-border/40 pt-1">
+                              <span>Closing Stock (End):</span>
+                              <span>{data["Closing Stock"]}</span>
+                            </div>
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
+                  />
+                  <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '6px' }} iconType="circle" />
+                  <Bar dataKey="Opening Stock" fill="#3b82f6" radius={[0, 6, 6, 0]} maxBarSize={16} />
+                  <Bar dataKey="Closing Stock" fill="#10b981" radius={[0, 6, 6, 0]} maxBarSize={16} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Daily Stock Movement Trend */}
+        <Card className="bg-card/50 backdrop-blur-xl shadow-lg border-border/50 transition-all hover:shadow-xl hover:border-primary/20">
           <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
             <div>
               <CardTitle className="text-lg bg-gradient-to-r from-emerald-500 to-blue-500 bg-clip-text text-transparent">Stock Flow</CardTitle>
               <CardDescription>Daily in vs out.</CardDescription>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-1.5">
               <Button 
                 variant={stockFlowDays === 7 ? "default" : "outline"} 
                 size="sm" 
@@ -320,17 +491,17 @@ export default function Dashboard() {
               </div>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={movementData} margin={{ top: 20, right: 20, left: -25, bottom: 0 }}>
+                <BarChart data={movementData} margin={{ top: 20, right: 15, left: -25, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={true} horizontal={true} stroke="#94a3b8" opacity={0.2} />
                   <XAxis dataKey="date" tick={{ fontSize: 10 }} tickLine={true} axisLine={true} tickMargin={12} tickFormatter={(val) => val.split('-')[2]} />
-                  <YAxis tick={{ fontSize: 10 }} tickLine={true} axisLine={true} tickMargin={8} />
+                  <YAxis tick={{ fontSize: 10 }} tickLine={true} axisLine={true} />
                   <Tooltip 
                     cursor={false}
                     contentStyle={{ backgroundColor: 'hsl(var(--background))', borderColor: 'hsl(var(--border))', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
                   />
                   <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '10px' }} iconType="circle" />
-                  <Bar dataKey="Stock In" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={30} />
-                  <Bar dataKey="Stock Out" fill="#ef4444" radius={[4, 4, 0, 0]} maxBarSize={30} />
+                  <Bar dataKey="Stock In" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={24} />
+                  <Bar dataKey="Stock Out" fill="#ef4444" radius={[4, 4, 0, 0]} maxBarSize={24} />
                 </BarChart>
               </ResponsiveContainer>
             )}
