@@ -89,7 +89,13 @@ export default function ProductsPage() {
                             : product.stock[activeBranch] || 0} units
                         </span>
                       </td>
-                      <td className="p-4 align-middle text-muted-foreground">{product.supplier}</td>
+                      <td className="p-4 align-middle text-muted-foreground">
+                        {product.suppliersList && product.suppliersList.length > 0
+                          ? product.suppliersList.length > 1
+                            ? `${product.suppliersList[0].supplierName} (+${product.suppliersList.length - 1} more)`
+                            : product.suppliersList[0].supplierName
+                          : product.supplier || '-'}
+                      </td>
                       <td className="p-4 align-middle text-right space-x-1">
                         <Link href={`/products/edit/${product.id}`}>
                           <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">

@@ -1,245 +1,95 @@
 /* src/app/reports/page.tsx */
 "use client";
 
-import { useEffect, useState } from "react";
-import { toast } from "react-toastify";
-import DatePicker from "react-datepicker";
-import "react-datepicker/dist/react-datepicker.css";
-import { saveAs } from "file-saver";
-import * as XLSX from "xlsx";
-import { ChevronDown, Download } from "lucide-react";
+import Link from "next/link";
+import { FileText, BarChart3, ArrowRight, TrendingUp, History } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
-interface Transaction {
-  id: string;
-  date: string; // ISO string
-  productId: string;
-  productName: string;
-  type: string; // 'Stock In' | 'Stock Out'
-  quantity: number;
-  reasonOrLocation: string;
-  notes?: string;
-  branch: string;
-}
-
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/inventory";
-const DB_HEADER = {
-  "x-database": "m5c-inventory",
-  "Content-Type": "application/json",
-};
-
-export default function ReportsPage() {
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  // filter state
-  const [branch, setBranch] = useState<string>("All");
-  const [productId, setProductId] = useState<string>("");
-  const [type, setType] = useState<string>("");
-  const [startDate, setStartDate] = useState<Date | null>(null);
-  const [endDate, setEndDate] = useState<Date | null>(null);
-
-  const fetchReport = async () => {
-    setLoading(true);
-    try {
-      const token = localStorage.getItem("token");
-      const params = new URLSearchParams();
-      if (branch && branch !== "All") params.append("branch", branch);
-      if (productId) params.append("productId", productId);
-      if (type) params.append("type", type);
-      if (startDate) params.append("startDate", startDate.toISOString());
-      if (endDate) params.append("endDate", endDate.toISOString());
-
-      const res = await fetch(`${API_BASE}/reports?${params.toString()}`, {
-        headers: { ...DB_HEADER, Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      if (data.success) {
-        setTransactions(data.data);
-      } else {
-        toast.error(data.message || "Failed to load report");
-      }
-    } catch (err) {
-      toast.error("Network error while fetching report");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchReport();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const exportToExcel = () => {
-    if (!transactions.length) {
-      toast.info("No data to export");
-      return;
-    }
-    const ws = XLSX.utils.json_to_sheet(transactions);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Report");
-    const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" });
-    const blob = new Blob([wbout], { type: "application/octet-stream" });
-    saveAs(
-      blob,
-      `inventory_report_${new Date().toISOString().slice(0, 10)}.xlsx`,
-    );
-  };
-
-  const handleApplyFilters = () => {
-    fetchReport();
-  };
-
+export default function ReportsHubPage() {
   return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6 sm:space-y-8 animate-in fade-in duration-500">
-      <h1 className="text-2xl sm:text-4xl font-bold bg-linear-to-br from-foreground to-muted-foreground bg-clip-text text-transparent">
-        Reports &amp; Analytics
-      </h1>
+    <div className="p-6 sm:p-8 space-y-8">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Reports &amp; Analytics</h1>
+        <p className="text-muted-foreground mt-1">
+          Select a report module below to view detailed inventory movements, audit trails, and monthly stock calculations.
+        </p>
+      </div>
 
-      {/* Filters */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 bg-card p-3 sm:p-4 rounded-xl shadow-lg">
-        <div className="space-y-2">
-          <label className="text-xs sm:text-sm font-medium">Branch</label>
-          <select
-            value={branch}
-            onChange={(e) => setBranch(e.target.value)}
-            className="w-full h-10 px-3 py-2 bg-background border border-border rounded text-sm"
-          >
-            <option value="All">All Branches</option>
-            <option value="Ahmedabad">Ahmedabad</option>
-            <option value="Ludhiana">Ludhiana</option>
-            <option value="Delhi">Delhi</option>
-            <option value="Mumbai">Mumbai</option>
-          </select>
-        </div>
-        <div className="space-y-2">
-          <label className="text-xs sm:text-sm font-medium">Product ID</label>
-          <input
-            type="text"
-            value={productId}
-            onChange={(e) => setProductId(e.target.value)}
-            placeholder="e.g. PROD-001"
-            className="w-full h-10 px-3 py-2 bg-background border border-border rounded text-sm"
-          />
-        </div>
-        <div className="space-y-2">
-          <label className="text-xs sm:text-sm font-medium">
-            Transaction Type
-          </label>
-          <select
-            value={type}
-            onChange={(e) => setType(e.target.value)}
-            className="w-full h-10 px-3 py-2 bg-background border border-border rounded text-sm"
-          >
-            <option value="">All Types</option>
-            <option value="Stock In">Stock In</option>
-            <option value="Stock Out">Stock Out</option>
-          </select>
-        </div>
-        <div className="space-y-2 flex flex-col">
-          <label className="text-xs sm:text-sm font-medium">Date Range</label>
-          <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
-            <DatePicker
-              selected={startDate}
-              onChange={(date: Date | null) => setStartDate(date)}
-              selectsStart
-              startDate={startDate}
-              endDate={endDate}
-              placeholderText="Start"
-              className="w-full h-10 px-3 py-2 bg-background border border-border rounded text-sm"
-            />
-            <DatePicker
-              selected={endDate}
-              onChange={(date: Date | null) => setEndDate(date)}
-              selectsEnd
-              startDate={startDate}
-              endDate={endDate}
-              minDate={startDate ?? undefined}
-              placeholderText="End"
-              className="w-full h-10 px-3 py-2 bg-background border border-border rounded text-sm"
-            />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 pt-2">
+        {/* Card 1: Transaction History */}
+        <Card className="group relative overflow-hidden border-border/60 hover:border-primary/50 transition-all duration-300 hover:shadow-xl hover:shadow-primary/5 bg-gradient-to-b from-card to-card/50">
+          <div className="absolute top-0 right-0 p-8 text-primary/10 group-hover:text-primary/20 transition-colors pointer-events-none">
+            <History className="w-32 h-32 -mr-8 -mt-8" />
           </div>
-        </div>
-        <button
-          onClick={handleApplyFilters}
-          className="col-span-1 sm:col-span-2 lg:col-span-4 flex items-center justify-center gap-2 bg-primary text-primary-foreground px-4 py-2.5 rounded-xl hover:bg-primary/90 transition-all shadow-lg text-sm sm:text-base"
-        >
-          <ChevronDown className="w-4 h-4" />
-          Apply Filters
-        </button>
-      </div>
+          <CardHeader className="pb-4">
+            <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+              <FileText className="w-6 h-6" />
+            </div>
+            <CardTitle className="text-xl sm:text-2xl font-bold">
+              Transaction History
+            </CardTitle>
+            <CardDescription className="text-sm leading-relaxed">
+              Complete audit log of all inventory movements including Stock In, Stock Out, and Inter-branch transfers with multi-parameter filtering and Excel export.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="flex flex-wrap gap-2 text-xs font-medium">
+              <span className="px-2.5 py-1 rounded-md bg-muted text-muted-foreground">
+                Branch Filtering
+              </span>
+              <span className="px-2.5 py-1 rounded-md bg-muted text-muted-foreground">
+                Date Range Filter
+              </span>
+              <span className="px-2.5 py-1 rounded-md bg-muted text-muted-foreground">
+                Excel Export
+              </span>
+            </div>
+            <Link href="/reports/transactions" className="block">
+              <Button className="w-full justify-between group-hover:bg-primary group-hover:text-primary-foreground transition-all shadow-md">
+                <span>View Transaction Report</span>
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
 
-      {/* Export Button */}
-      <div className="flex justify-end">
-        <button
-          onClick={exportToExcel}
-          className="w-full sm:w-auto flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2.5 sm:py-2 rounded-xl shadow text-sm"
-        >
-          <Download className="w-4 h-4" />
-          Export to Excel
-        </button>
-      </div>
-
-      {/* Table */}
-      <div className="overflow-x-auto -mx-4 sm:mx-0">
-        <div className="min-w-[640px] px-4 sm:px-0">
-          <table className="w-full text-sm text-left border border-border rounded-lg">
-            <thead className="bg-muted/30 text-muted-foreground">
-              <tr>
-                <th className="p-2 font-medium whitespace-nowrap">Date</th>
-                <th className="p-2 font-medium whitespace-nowrap">Branch</th>
-                <th className="p-2 font-medium whitespace-nowrap">Product</th>
-                <th className="p-2 font-medium whitespace-nowrap">Type</th>
-                <th className="p-2 font-medium whitespace-nowrap">Qty</th>
-                <th className="p-2 font-medium whitespace-nowrap">
-                  Location / Reason
-                </th>
-                <th className="p-2 font-medium whitespace-nowrap">Notes</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/20">
-              {loading ? (
-                <tr>
-                  <td
-                    colSpan={7}
-                    className="p-4 text-center text-muted-foreground"
-                  >
-                    Loading report...
-                  </td>
-                </tr>
-              ) : transactions.length ? (
-                transactions.map((t) => (
-                  <tr
-                    key={t.id}
-                    className="hover:bg-muted/20 transition-colors"
-                  >
-                    <td className="p-2 whitespace-nowrap">
-                      {new Date(t.date).toLocaleDateString()}
-                    </td>
-                    <td className="p-2 whitespace-nowrap">{t.branch}</td>
-                    <td className="p-2 whitespace-nowrap">
-                      {t.productName} ({t.productId})
-                    </td>
-                    <td className="p-2 whitespace-nowrap">{t.type}</td>
-                    <td className="p-2 font-medium">{t.quantity}</td>
-                    <td className="p-2">{t.reasonOrLocation}</td>
-                    <td className="p-2">{t.notes || "-"}</td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td
-                    colSpan={7}
-                    className="p-4 text-center text-muted-foreground"
-                  >
-                    No transactions found.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+        {/* Card 2: Monthly Opening & Closing Stock */}
+        <Card className="group relative overflow-hidden border-border/60 hover:border-primary/50 transition-all duration-300 hover:shadow-xl hover:shadow-primary/5 bg-gradient-to-b from-card to-card/50">
+          <div className="absolute top-0 right-0 p-8 text-emerald-500/10 group-hover:text-emerald-500/20 transition-colors pointer-events-none">
+            <TrendingUp className="w-32 h-32 -mr-8 -mt-8" />
+          </div>
+          <CardHeader className="pb-4">
+            <div className="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+              <BarChart3 className="w-6 h-6" />
+            </div>
+            <CardTitle className="text-xl sm:text-2xl font-bold">
+              Monthly Opening &amp; Closing Stock
+            </CardTitle>
+            <CardDescription className="text-sm leading-relaxed">
+              Comprehensive inventory valuation report showing Opening Stock at the beginning of the month, total Stock In, total Stock Out, Net Variance, and Closing Stock.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="flex flex-wrap gap-2 text-xs font-medium">
+              <span className="px-2.5 py-1 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                Opening / Closing Valuation
+              </span>
+              <span className="px-2.5 py-1 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                Month &amp; Year Picker
+              </span>
+              <span className="px-2.5 py-1 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                Excel Export
+              </span>
+            </div>
+            <Link href="/reports/monthly-stock" className="block">
+              <Button className="w-full justify-between bg-emerald-600 hover:bg-emerald-700 text-white transition-all shadow-md">
+                <span>View Monthly Stock Summary</span>
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
