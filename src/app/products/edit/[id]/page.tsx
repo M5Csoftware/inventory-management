@@ -88,25 +88,29 @@ export default function EditProductPage() {
       // Populate supplier list
       if (product.suppliersList && product.suppliersList.length > 0) {
         setProductSuppliers(
-          product.suppliersList.map((s: ProductSupplierEntry) => ({
-            supplierName: s.supplierName,
-            rate: s.rate ? s.rate.toString() : product.price.toString(),
-            isCustom: false,
-            customName: '',
-          }))
+          product.suppliersList.map((s: ProductSupplierEntry) => {
+            const isKnown = suppliers.some((sup) => sup.name === s.supplierName);
+            return {
+              supplierName: isKnown ? s.supplierName : '',
+              rate: s.rate !== undefined ? s.rate.toString() : (product.price ? product.price.toString() : '0'),
+              isCustom: !isKnown,
+              customName: isKnown ? '' : s.supplierName,
+            };
+          })
         );
       } else if (product.supplier) {
+        const isKnown = suppliers.some((sup) => sup.name === product.supplier);
         setProductSuppliers([
           {
-            supplierName: product.supplier,
-            rate: product.price.toString(),
-            isCustom: false,
-            customName: '',
+            supplierName: isKnown ? product.supplier : '',
+            rate: product.price ? product.price.toString() : '0',
+            isCustom: !isKnown,
+            customName: isKnown ? '' : product.supplier,
           }
         ]);
       }
     }
-  }, [product, activeBranch]);
+  }, [product, activeBranch, suppliers]);
 
   const handleAddSupplierRow = () => {
     const defaultSup = suppliers.length > 0 ? suppliers[0].name : '';
