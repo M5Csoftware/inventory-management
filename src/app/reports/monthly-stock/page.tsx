@@ -327,7 +327,7 @@ export default function MonthlyStockReportPage() {
 
       {/* Monthly Table & Export Bar */}
       <div className="space-y-2">
-        <div className="overflow-auto max-h-[calc(100vh-220px)] min-h-[500px] bg-card rounded-xl border border-border shadow-sm">
+        <div className="overflow-auto max-h-[calc(100vh-380px)] min-h-[220px] bg-card rounded-xl border border-border shadow-sm">
           <div className="min-w-[768px]">
             <table className="w-full text-sm text-left border-collapse">
               <thead className="bg-muted/90 backdrop-blur-xs text-muted-foreground border-b border-border sticky top-0 z-10 shadow-2xs">
