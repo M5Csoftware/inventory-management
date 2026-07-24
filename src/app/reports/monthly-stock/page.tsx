@@ -128,37 +128,58 @@ export default function MonthlyStockReportPage() {
           const relevantBranches =
             monthlyBranch && monthlyBranch !== "All" ? [monthlyBranch] : branchesList;
 
-          for (const b of relevantBranches) {
-            const branchTxs = prodTxs.filter((t: any) => t.branch === b);
+          let prodCreatedAt = prod.createdAt ? new Date(prod.createdAt) : null;
+          if (!prodCreatedAt && prodTxs.length > 0) {
+            const timestamps = prodTxs.map((t: any) => new Date(t.date || t.createdAt).getTime()).filter((t: number) => !isNaN(t));
+            if (timestamps.length > 0) {
+              prodCreatedAt = new Date(Math.min(...timestamps));
+            }
+          }
+          if (!prodCreatedAt) {
+            prodCreatedAt = new Date();
+          }
 
-            let openingStock = 0;
+          for (const b of relevantBranches) {
+            if (prodCreatedAt > monthEnd) {
+              calculatedReport.push({
+                productId: prod.id,
+                productName: prod.name,
+                category: prod.category,
+                sku: prod.sku || "",
+                branch: b,
+                openingStock: 0,
+                stockIn: 0,
+                stockOut: 0,
+                closingStock: 0,
+              });
+              continue;
+            }
+
+            const branchTxs = prodTxs.filter((t: any) => t.branch === b);
+            const liveStock = typeof prod.stock === "number" ? prod.stock : (prod.stock?.[b] || 0);
+
+            let netTxAfterMonthEnd = 0;
             let stockIn = 0;
             let stockOut = 0;
 
-            if (branchTxs.length > 0) {
-              for (const tx of branchTxs) {
-                const txDate = new Date(tx.date || tx.createdAt);
-                if (txDate < monthStart) {
-                  if (tx.type === "Stock In") openingStock += tx.quantity;
-                  else if (tx.type === "Stock Out") openingStock -= tx.quantity;
-                } else if (txDate >= monthStart && txDate <= monthEnd) {
-                  if (tx.type === "Stock In") stockIn += tx.quantity;
-                  else if (tx.type === "Stock Out") stockOut += tx.quantity;
-                }
-              }
-            } else {
-              const prodCreated = new Date(prod.createdAt || Date.now());
-              if (prodCreated <= monthEnd) {
-                if (prodCreated < monthStart) {
-                  openingStock = prod.stock?.[b] || 0;
-                } else {
-                  openingStock = 0;
-                  stockIn = prod.stock?.[b] || 0;
-                }
+            for (const tx of branchTxs) {
+              const txDate = new Date(tx.date || tx.createdAt);
+              if (txDate > monthEnd) {
+                if (tx.type === "Stock In") netTxAfterMonthEnd += tx.quantity;
+                else if (tx.type === "Stock Out") netTxAfterMonthEnd -= tx.quantity;
+              } else if (txDate >= monthStart && txDate <= monthEnd) {
+                if (tx.type === "Stock In") stockIn += tx.quantity;
+                else if (tx.type === "Stock Out") stockOut += tx.quantity;
               }
             }
 
-            const closingStock = Math.max(0, openingStock + stockIn - stockOut);
+            const closingStock = Math.max(0, liveStock - netTxAfterMonthEnd);
+            let openingStock = 0;
+            if (prodCreatedAt > monthStart) {
+              openingStock = 0;
+            } else {
+              openingStock = Math.max(0, closingStock - stockIn + stockOut);
+            }
 
             calculatedReport.push({
               productId: prod.id,
@@ -166,7 +187,7 @@ export default function MonthlyStockReportPage() {
               category: prod.category,
               sku: prod.sku || "",
               branch: b,
-              openingStock: Math.max(0, openingStock),
+              openingStock,
               stockIn,
               stockOut,
               closingStock,
