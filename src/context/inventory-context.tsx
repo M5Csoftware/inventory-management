@@ -4,6 +4,11 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import { useAuth } from './auth-context';
 
+export interface ProductSupplierEntry {
+  supplierName: string;
+  rate: number;
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -12,6 +17,7 @@ export interface Product {
   stock: Record<string, number>;
   threshold: number;
   supplier: string;
+  suppliersList?: ProductSupplierEntry[];
   sku?: string;
   description?: string;
   status?: string;

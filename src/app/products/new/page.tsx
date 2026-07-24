@@ -1,3 +1,4 @@
+/* src/app/products/new/page.tsx */
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -13,6 +14,8 @@ import {
   IndianRupee,
   Layers,
   AlertCircle,
+  Truck,
+  Trash2,
 } from "lucide-react";
 import {
   Card,
@@ -24,6 +27,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { useInventory, Category, Supplier } from '@/context/inventory-context';
 
+interface SupplierRow {
+  supplierName: string;
+  rate: string;
+  isCustom?: boolean;
+  customName?: string;
+}
+
 export default function NewProductPage() {
   const { addProduct, categories, suppliers, activeBranch } = useInventory();
   const router = useRouter();
@@ -32,17 +42,19 @@ export default function NewProductPage() {
   const [name, setName] = useState('');
   const [sku, setSku] = useState('');
   const [category, setCategory] = useState('');
-  const [supplier, setSupplier] = useState('');
   const [description, setDescription] = useState('');
-  const [price, setPrice] = useState('');
   const [stock, setStock] = useState('');
   const [threshold, setThreshold] = useState('10');
-  const [status, setStatus] = useState('active');
   const [uomValue, setUomValue] = useState('1');
   const [uom, setUom] = useState('pcs');
   const [packaging, setPackaging] = useState('boxes');
 
-  // Set default selection values once categories/suppliers load
+  // Multi-supplier list state
+  const [productSuppliers, setProductSuppliers] = useState<SupplierRow[]>([
+    { supplierName: '', rate: '', isCustom: false, customName: '' }
+  ]);
+
+  // Set default category and supplier when loaded
   useEffect(() => {
     if (categories.length > 0 && !category) {
       setCategory(categories[0].name);
@@ -50,14 +62,49 @@ export default function NewProductPage() {
   }, [categories, category]);
 
   useEffect(() => {
-    if (suppliers.length > 0 && !supplier) {
-      setSupplier(suppliers[0].name);
+    if (suppliers.length > 0 && !productSuppliers[0]?.supplierName && !productSuppliers[0]?.isCustom) {
+      setProductSuppliers([
+        { supplierName: suppliers[0].name, rate: '', isCustom: false, customName: '' }
+      ]);
     }
-  }, [suppliers, supplier]);
+  }, [suppliers]);
+
+  const handleAddSupplierRow = () => {
+    const defaultSup = suppliers.length > 0 ? suppliers[0].name : '';
+    setProductSuppliers((prev) => [
+      ...prev,
+      { supplierName: defaultSup, rate: '', isCustom: false, customName: '' }
+    ]);
+  };
+
+  const handleRemoveSupplierRow = (index: number) => {
+    if (productSuppliers.length <= 1) return;
+    setProductSuppliers((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const updateSupplierRow = (index: number, updatedFields: Partial<SupplierRow>) => {
+    setProductSuppliers((prev) =>
+      prev.map((row, i) => (i === index ? { ...row, ...updatedFields } : row))
+    );
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !price || !stock || !category || !supplier) return;
+    if (!name || !stock || !category) return;
+
+    // Process suppliersList
+    const validSuppliers = productSuppliers
+      .map((s) => {
+        const finalName = s.isCustom ? (s.customName || '').trim() : s.supplierName.trim();
+        return {
+          supplierName: finalName,
+          rate: parseFloat(s.rate) || 0,
+        };
+      })
+      .filter((s) => s.supplierName.length > 0);
+
+    const primarySupplierName = validSuppliers.length > 0 ? validSuppliers[0].supplierName : 'N/A';
+    const derivedPrice = validSuppliers.length > 0 ? validSuppliers[0].rate : 0;
 
     const targetBranch = activeBranch === 'All' ? 'Delhi' : activeBranch;
     const initialStockMap = {
@@ -70,13 +117,13 @@ export default function NewProductPage() {
     await addProduct({
       name,
       category,
-      price: parseFloat(price),
+      price: derivedPrice,
       stock: initialStockMap,
       threshold: parseInt(threshold || '10'),
-      supplier,
+      supplier: primarySupplierName,
+      suppliersList: validSuppliers,
       sku: sku || undefined,
       description: description || undefined,
-      status,
       uomValue: parseFloat(uomValue) || 1,
       uom,
       packaging,
@@ -85,12 +132,12 @@ export default function NewProductPage() {
     router.push('/products');
   };
 
-  const hasDependencies = categories.length > 0 && suppliers.length > 0;
+  const hasCategories = categories.length > 0;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 p-4 sm:p-6">
       <div className="mx-auto max-w-full space-y-4">
-        {/* Header Section - Compact */}
+        {/* Header Section */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
             <Link href="/products">
@@ -118,32 +165,25 @@ export default function NewProductPage() {
           </div>
         </div>
 
-        {!hasDependencies ? (
+        {!hasCategories ? (
           <Card className="border border-warning bg-warning/5 p-6 rounded-xl text-center space-y-4 max-w-lg mx-auto">
             <div className="mx-auto h-12 w-12 rounded-full bg-amber-500/10 text-amber-500 flex items-center justify-center">
               <AlertCircle className="h-6 w-6" />
             </div>
             <div className="space-y-2">
-              <h3 className="text-lg font-bold">Prerequisites Required</h3>
+              <h3 className="text-lg font-bold">Category Required</h3>
               <p className="text-sm text-muted-foreground">
-                Before adding a product, you must have at least one **Category** and one **Supplier** created.
+                Before adding a product, you must have at least one **Category** created.
               </p>
             </div>
             <div className="flex justify-center gap-3 pt-2">
-              {categories.length === 0 && (
-                <Link href="/categories/new">
-                  <Button size="sm">Create Category</Button>
-                </Link>
-              )}
-              {suppliers.length === 0 && (
-                <Link href="/suppliers/new">
-                  <Button size="sm" variant="outline">Create Supplier</Button>
-                </Link>
-              )}
+              <Link href="/categories/new">
+                <Button size="sm">Create Category</Button>
+              </Link>
             </div>
           </Card>
         ) : (
-          /* Main Form Card - Compact */
+          /* Main Form Card */
           <Card className="border-0 shadow-xl shadow-primary/5 bg-gradient-to-br from-card to-card/80 backdrop-blur-sm">
             <CardHeader className="border-b border-border/50 pb-3">
               <div className="flex items-start justify-between">
@@ -153,7 +193,7 @@ export default function NewProductPage() {
                     Product Details
                   </CardTitle>
                   <CardDescription className="text-xs mt-1">
-                    Enter product specification, pricing, and initial stock values
+                    Enter product specification, pricing, suppliers, and stock values
                   </CardDescription>
                 </div>
                 <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-[10px] font-medium text-primary">
@@ -164,7 +204,7 @@ export default function NewProductPage() {
 
             <CardContent className="pt-4">
               <form onSubmit={handleSubmit} className="space-y-4">
-                {/* Product Name & SKU - Compact */}
+                {/* Product Name & SKU */}
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                   <div className="space-y-1.5 md:col-span-2 lg:col-span-2">
                     <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -196,7 +236,7 @@ export default function NewProductPage() {
                   </div>
                 </div>
 
-                {/* Category & Supplier - Compact */}
+                {/* Category & Minimum Stock Alert (Placed above where primary supplier was) */}
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-1.5">
                     <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -214,21 +254,21 @@ export default function NewProductPage() {
                   </div>
                   <div className="space-y-1.5">
                     <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                      Primary Supplier <span className="text-destructive">*</span>
+                      <AlertCircle className="h-3 w-3 text-amber-500" />
+                      Min Stock Alert (Threshold) <span className="text-destructive">*</span>
                     </label>
-                    <select 
-                      value={supplier}
-                      onChange={(e) => setSupplier(e.target.value)}
-                      className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22currentColor%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E')] bg-[length:16px] bg-[right_10px_center] bg-no-repeat hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
-                    >
-                      {suppliers.map((sup: Supplier) => (
-                        <option key={sup.name} value={sup.name}>{sup.name}</option>
-                      ))}
-                    </select>
+                    <input
+                      type="number"
+                      value={threshold}
+                      onChange={(e) => setThreshold(e.target.value)}
+                      placeholder="10"
+                      className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all placeholder:text-muted-foreground/50 hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
+                      required
+                    />
                   </div>
                 </div>
 
-                {/* Description - Compact */}
+                {/* Description */}
                 <div className="space-y-1.5">
                   <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                     Description
@@ -242,65 +282,95 @@ export default function NewProductPage() {
                   />
                 </div>
 
-                {/* Pricing & Stock - Compact */}
-                <div className="rounded-lg bg-muted/30 p-3 sm:p-4">
-                  <div className="mb-3 flex items-center gap-2">
-                    <IndianRupee className="h-3.5 w-3.5 text-primary" />
-                    <span className="text-xs font-medium">
-                      Pricing & Inventory
-                    </span>
+                {/* Suppliers & Rates Section */}
+                <div className="rounded-lg bg-muted/30 p-3 sm:p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <IndianRupee className="h-3.5 w-3.5 text-primary" />
+                      <span className="text-xs font-semibold uppercase tracking-wider text-foreground">
+                        Suppliers &amp; Cost Rates
+                      </span>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleAddSupplierRow}
+                      className="h-7 text-xs gap-1 border-dashed text-primary hover:bg-primary/10"
+                    >
+                      <Plus className="h-3 w-3" /> Add Supplier
+                    </Button>
                   </div>
-                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-medium text-muted-foreground">
-                        Unit Price (₹) <span className="text-destructive">*</span>
-                      </label>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
-                          ₹
-                        </span>
-                        <input
-                          type="number"
-                          step="0.01"
-                          value={price}
-                          onChange={(e) => setPrice(e.target.value)}
-                          placeholder="0.00"
-                          className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 pl-7 pr-3 text-sm shadow-sm transition-all placeholder:text-muted-foreground/50 hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
-                          required
-                        />
-                      </div>
+
+                    <div className="space-y-2.5">
+                      {productSuppliers.map((supRow, idx) => (
+                        <div key={idx} className="flex flex-col sm:flex-row gap-2 items-start sm:items-center bg-background/60 p-2.5 rounded-lg border border-border/50 shadow-xs">
+                          <div className="flex-1 w-full space-y-1">
+                            <select
+                              value={supRow.isCustom ? "CUSTOM_NEW" : supRow.supplierName}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                if (val === "CUSTOM_NEW") {
+                                  updateSupplierRow(idx, { isCustom: true, supplierName: "" });
+                                } else {
+                                  updateSupplierRow(idx, { isCustom: false, supplierName: val });
+                                }
+                              }}
+                              className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-xs shadow-sm transition-all dark:border-gray-600 dark:bg-gray-900/90"
+                            >
+                              <option value="" disabled>Select Supplier</option>
+                              {suppliers.map((s) => (
+                                <option key={s.name} value={s.name}>{s.name}</option>
+                              ))}
+                              <option value="CUSTOM_NEW">+ Enter Custom Supplier Name...</option>
+                            </select>
+
+                            {supRow.isCustom && (
+                              <input
+                                type="text"
+                                value={supRow.customName || ""}
+                                onChange={(e) => updateSupplierRow(idx, { customName: e.target.value })}
+                                placeholder="Type new supplier name..."
+                                className="h-8 w-full rounded-md border border-primary/50 bg-background px-2.5 text-xs focus:ring-1 focus:ring-primary mt-1"
+                                required
+                              />
+                            )}
+                          </div>
+
+                          <div className="w-full sm:w-36 space-y-1">
+                            <div className="relative">
+                              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">
+                                ₹
+                              </span>
+                              <input
+                                type="number"
+                                step="0.01"
+                                value={supRow.rate}
+                                onChange={(e) => updateSupplierRow(idx, { rate: e.target.value })}
+                                placeholder="Cost Rate"
+                                className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 pl-6 pr-2 text-xs shadow-sm dark:border-gray-600 dark:bg-gray-900/90"
+                                required
+                              />
+                            </div>
+                          </div>
+
+                          {productSuppliers.length > 1 && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleRemoveSupplierRow(idx)}
+                              className="h-9 w-9 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg shrink-0 self-end sm:self-center"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      ))}
                     </div>
-                    <div className="space-y-1">
-                      <label className="flex items-center gap-1 text-[10px] font-medium text-muted-foreground">
-                        <AlertCircle className="h-3 w-3" />
-                        Min Stock Alert
-                      </label>
-                      <input
-                        type="number"
-                        value={threshold}
-                        onChange={(e) => setThreshold(e.target.value)}
-                        placeholder="10"
-                        className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all placeholder:text-muted-foreground/50 hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-medium text-muted-foreground">
-                        Status
-                      </label>
-                      <select 
-                        value={status}
-                        onChange={(e) => setStatus(e.target.value)}
-                        className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22currentColor%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E')] bg-[length:16px] bg-[right_10px_center] bg-no-repeat hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
-                      >
-                        <option value="active">🟢 Active</option>
-                        <option value="draft">⚪ Draft</option>
-                        <option value="inactive">🔴 Inactive</option>
-                      </select>
-                    </div>
-                  </div>
                 </div>
 
-                {/* Packaging & Stock Info - Compact */}
+                {/* Packaging & Stock Info */}
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                   <div className="space-y-1.5 md:col-span-2">
                     <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -372,7 +442,7 @@ export default function NewProductPage() {
                   </div>
                 </div>
 
-                {/* Action Buttons - Compact */}
+                {/* Action Buttons */}
                 <div className="flex flex-col-reverse gap-2 border-t border-border/50 pt-4 sm:flex-row sm:justify-end">
                   <Link href="/products" className="w-full sm:w-auto">
                     <Button
@@ -397,7 +467,7 @@ export default function NewProductPage() {
           </Card>
         )}
 
-        {/* Help Tip - Compact */}
+        {/* Help Tip */}
         <div className="flex items-center justify-center gap-2 text-[10px] text-muted-foreground/70">
           <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full border border-muted-foreground/20 text-[9px]">
             i
