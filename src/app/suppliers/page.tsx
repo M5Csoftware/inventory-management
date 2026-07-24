@@ -10,6 +10,7 @@ import {
   Building,
   Edit2,
   Trash2,
+  Search,
 } from "lucide-react";
 import {
   Card,
@@ -25,6 +26,26 @@ import { ConfirmDeleteModal } from "@/components/confirm-delete-modal";
 export default function SuppliersPage() {
   const { suppliers, products, deleteSupplier, activeBranch } = useInventory();
   const [supplierToDelete, setSupplierToDelete] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const filteredSuppliers = suppliers.filter((s: Supplier) => {
+    const matchesBranch =
+      activeBranch === "Delhi" ||
+      !s.branch ||
+      s.branch === "All" ||
+      s.branch === activeBranch;
+
+    const searchLower = searchTerm.toLowerCase().trim();
+    const matchesSearch =
+      searchLower === "" ||
+      s.name.toLowerCase().includes(searchLower) ||
+      s.contact.toLowerCase().includes(searchLower) ||
+      s.email.toLowerCase().includes(searchLower) ||
+      s.location.toLowerCase().includes(searchLower) ||
+      (s.branch && s.branch.toLowerCase().includes(searchLower));
+
+    return matchesBranch && matchesSearch;
+  });
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8">
@@ -51,26 +72,39 @@ export default function SuppliersPage() {
           </p>
         </Card>
       ) : (
-        <div className="grid gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {suppliers
-            .filter(
-              (s: Supplier) =>
-                activeBranch === "Delhi" ||
-                !s.branch ||
-                s.branch === "All" ||
-                s.branch === activeBranch,
-            )
-            .map((supplier: Supplier) => {
+        <>
+          <div className="relative max-w-md">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <input
+              type="search"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search suppliers..."
+              className="w-full rounded-lg border border-border/60 bg-background/60 py-2.5 pl-9 pr-3 text-sm outline-none transition focus:border-primary/60"
+            />
+          </div>
+
+          {filteredSuppliers.length === 0 ? (
+            <Card className="bg-background/60 backdrop-blur-sm border-border/50 p-8 sm:p-12 text-center">
+              <p className="text-muted-foreground text-sm">
+                {searchTerm
+                  ? "No suppliers match your search."
+                  : "No suppliers added yet. Click Add Supplier to start!"}
+              </p>
+            </Card>
+          ) : (
+            <div className="grid gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {filteredSuppliers.map((supplier: Supplier) => {
               const linkedProductsCount = products.filter(
                 (p: Product) =>
                   p.supplier.toLowerCase() === supplier.name.toLowerCase(),
               ).length;
 
-              return (
-                <Card
-                  key={supplier.name}
-                  className="group bg-background/60 backdrop-blur-sm border-border/50 shadow-sm transition-all hover:shadow-md hover:border-primary/30 flex flex-col justify-between"
-                >
+                return (
+                  <Card
+                    key={supplier.name}
+                    className="group bg-background/60 backdrop-blur-sm border-border/50 shadow-sm transition-all hover:shadow-md hover:border-primary/30 flex flex-col justify-between"
+                  >
                   <CardHeader className="pb-4">
                     <div className="flex items-start gap-3 sm:gap-4 min-w-0">
                       <div className="p-2.5 sm:p-3 rounded-xl bg-primary/10 text-primary ring-1 ring-primary/20 group-hover:scale-115 transition-transform shrink-0">
@@ -136,10 +170,12 @@ export default function SuppliersPage() {
                       </div>
                     </div>
                   </CardContent>
-                </Card>
-              );
-            })}
-        </div>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </>
       )}
 
       <ConfirmDeleteModal
