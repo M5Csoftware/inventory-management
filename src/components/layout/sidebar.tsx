@@ -17,6 +17,7 @@ import {
   List,
   LogOut,
   ShoppingCart,
+  BarChart3,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -81,7 +82,14 @@ export const navItems: NavItem[] = [
       { href: "/orders/new", label: "Generate Order", icon: PlusCircle },
     ],
   },
-  { href: "/reports", label: "Reports", icon: FileText },
+  {
+    label: "Reports",
+    icon: FileText,
+    subItems: [
+      { href: "/reports/transactions", label: "Transaction History", icon: List },
+      { href: "/reports/monthly-stock", label: "Monthly Stock Summary", icon: BarChart3 },
+    ],
+  },
 ];
 
 export function Sidebar() {
