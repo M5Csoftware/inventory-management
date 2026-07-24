@@ -97,39 +97,67 @@ export default function Dashboard() {
       const monthName = monthStart.toLocaleString("default", { month: "short" });
       const label = customLabel || `${monthName}${year !== now.getFullYear() ? ` '${String(year).slice(-2)}` : ""}`;
 
-      let openingStock = 0;
-      let stockIn = 0;
-      let stockOut = 0;
+      let totalOpeningStock = 0;
+      let totalStockIn = 0;
+      let totalStockOut = 0;
+      let totalClosingStock = 0;
 
-      if (targetTransactions.length > 0) {
-        for (const tx of targetTransactions) {
-          const txDate = new Date(tx.date || (tx as any).createdAt);
-          if (txDate < monthStart) {
-            if (tx.type === "Stock In") openingStock += tx.quantity;
-            else if (tx.type === "Stock Out") openingStock -= tx.quantity;
-          } else if (txDate >= monthStart && txDate <= monthEnd) {
-            if (tx.type === "Stock In") stockIn += tx.quantity;
-            else if (tx.type === "Stock Out") stockOut += tx.quantity;
+      for (const prod of targetProducts) {
+        const prodTxs = targetTransactions.filter(t => t.productId === prod.id);
+
+        let prodCreatedAt = (prod as any).createdAt ? new Date((prod as any).createdAt) : null;
+        if (!prodCreatedAt && prodTxs.length > 0) {
+          const timestamps = prodTxs.map(t => new Date(t.date || (t as any).createdAt).getTime()).filter(t => !isNaN(t));
+          if (timestamps.length > 0) {
+            prodCreatedAt = new Date(Math.min(...timestamps));
           }
         }
-      } else {
-        for (const p of targetProducts) {
-          openingStock += getStock(p);
+        if (!prodCreatedAt) {
+          prodCreatedAt = now;
         }
-      }
 
-      if (openingStock <= 0 && targetTransactions.length === 0) {
-        openingStock = targetProducts.reduce((acc, p) => acc + getStock(p), 0);
-      }
+        // If product was created AFTER this month ended, stock was 0
+        if (prodCreatedAt > monthEnd) {
+          continue;
+        }
 
-      const closingStock = Math.max(0, openingStock + stockIn - stockOut);
+        const liveStock = getStock(prod);
+
+        let netTxAfterMonthEnd = 0;
+        let prodInMonth = 0;
+        let prodOutMonth = 0;
+
+        for (const tx of prodTxs) {
+          const txDate = new Date(tx.date || (tx as any).createdAt);
+          if (txDate > monthEnd) {
+            if (tx.type === "Stock In") netTxAfterMonthEnd += tx.quantity;
+            else if (tx.type === "Stock Out") netTxAfterMonthEnd -= tx.quantity;
+          } else if (txDate >= monthStart && txDate <= monthEnd) {
+            if (tx.type === "Stock In") prodInMonth += tx.quantity;
+            else if (tx.type === "Stock Out") prodOutMonth += tx.quantity;
+          }
+        }
+
+        const prodClosing = Math.max(0, liveStock - netTxAfterMonthEnd);
+        let prodOpening = 0;
+        if (prodCreatedAt > monthStart) {
+          prodOpening = 0;
+        } else {
+          prodOpening = Math.max(0, prodClosing - prodInMonth + prodOutMonth);
+        }
+
+        totalOpeningStock += prodOpening;
+        totalStockIn += prodInMonth;
+        totalStockOut += prodOutMonth;
+        totalClosingStock += prodClosing;
+      }
 
       return {
         label,
-        "Opening Stock": Math.max(0, openingStock),
-        "Stock In": stockIn,
-        "Stock Out": stockOut,
-        "Closing Stock": closingStock,
+        "Opening Stock": totalOpeningStock,
+        "Stock In": totalStockIn,
+        "Stock Out": totalStockOut,
+        "Closing Stock": totalClosingStock,
       };
     };
 
