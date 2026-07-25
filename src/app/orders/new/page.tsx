@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useInventory } from '@/context/inventory-context';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -17,6 +17,7 @@ export default function NewOrderPage() {
   const [supplier, setSupplier] = useState('');
   const [items, setItems] = useState([{ productId: '', name: '', quantity: 1, price: 0 }]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const submittingRef = useRef(false);
 
   const handleItemChange = (index: number, field: string, value: any) => {
     const newItems = [...items];
@@ -48,6 +49,7 @@ export default function NewOrderPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submittingRef.current) return;
     if (!supplier) {
       alert('Please select a supplier.');
       return;
@@ -57,15 +59,20 @@ export default function NewOrderPage() {
       return;
     }
 
+    submittingRef.current = true;
     setIsSubmitting(true);
-    await addOrder({
-      supplier,
-      items,
-      totalAmount,
-      status: 'Pending'
-    });
-    setIsSubmitting(false);
-    router.push('/orders');
+    try {
+      await addOrder({
+        supplier,
+        items,
+        totalAmount,
+        status: 'Pending'
+      });
+      router.push('/orders');
+    } finally {
+      submittingRef.current = false;
+      setIsSubmitting(false);
+    }
   };
 
   return (

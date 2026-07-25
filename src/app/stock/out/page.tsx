@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from "next/link";
 import { useRouter } from 'next/navigation';
 import {
@@ -33,6 +33,8 @@ export default function StockOutPage() {
   const [reason, setReason] = useState('Customer Order / Sale');
   const [handedTo, setHandedTo] = useState('');
   const [notes, setNotes] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const submittingRef = useRef(false);
 
   // Filter out products that belong to an asset category
   const nonAssetProducts = products.filter((prod) => {
@@ -49,20 +51,28 @@ export default function StockOutPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!productId || !quantity || !reason) return;
+    if (submittingRef.current || !productId || !quantity || !reason) return;
 
-    const finalNotes = handedTo ? `Handed to: ${handedTo}\n${notes}` : notes;
+    submittingRef.current = true;
+    setIsSubmitting(true);
 
-    const success = await recordTransaction(
-      productId,
-      'Stock Out',
-      parseInt(quantity),
-      reason,
-      finalNotes || undefined
-    );
+    try {
+      const finalNotes = handedTo ? `Handed to: ${handedTo}\n${notes}` : notes;
 
-    if (success) {
-      router.push('/stock');
+      const success = await recordTransaction(
+        productId,
+        'Stock Out',
+        parseInt(quantity),
+        reason,
+        finalNotes || undefined
+      );
+
+      if (success) {
+        router.push('/stock');
+      }
+    } finally {
+      submittingRef.current = false;
+      setIsSubmitting(false);
     }
   };
 
@@ -221,10 +231,11 @@ export default function StockOutPage() {
                   </Link>
                   <Button
                     type="submit"
-                    className="group w-full gap-2 bg-gradient-to-r from-blue-600 to-blue-500 shadow-lg shadow-blue-500/30 transition-all hover:scale-[1.02] hover:shadow-blue-500/40 sm:w-auto h-9 text-sm"
+                    disabled={isSubmitting}
+                    className="group w-full gap-2 bg-gradient-to-r from-blue-600 to-blue-500 shadow-lg shadow-blue-500/30 transition-all hover:scale-[1.02] hover:shadow-blue-500/40 sm:w-auto h-9 text-sm disabled:opacity-50 disabled:pointer-events-none"
                   >
                     <Save className="h-3.5 w-3.5 transition-transform group-hover:scale-110" />
-                    Record Stock Out
+                    {isSubmitting ? 'Recording...' : 'Record Stock Out'}
                     <Plus className="h-3.5 w-3.5 transition-transform group-hover:rotate-90" />
                   </Button>
                 </div>

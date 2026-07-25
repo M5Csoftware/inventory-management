@@ -18,6 +18,7 @@ import {
   LogOut,
   ShoppingCart,
   BarChart3,
+  Laptop,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -55,6 +56,13 @@ export const navItems: NavItem[] = [
       { href: "/stock/in", label: "Stock In (Add)", icon: PlusCircle },
       { href: "/stock/out", label: "Stock Out (Remove)", icon: PlusCircle },
       { href: "/stock/transfer", label: "Transfer Stock", icon: Truck },
+    ],
+  },
+  {
+    label: "Assets",
+    icon: Laptop,
+    subItems: [
+      { href: "/stock/assets/in", label: "Stock In Assets", icon: PlusCircle },
       { href: "/stock/assets", label: "Assets (Assigned)", icon: List },
     ],
   },
