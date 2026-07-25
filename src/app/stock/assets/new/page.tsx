@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useInventory, Product } from '@/context/inventory-context';
@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft, Laptop, User, FileText, Package } from 'lucide-react';
 
 export default function NewAssetAssignmentPage() {
-  const { products, assignAsset, activeBranch } = useInventory();
+  const { products, categories, assignAsset, activeBranch } = useInventory();
   const router = useRouter();
 
   const [productId, setProductId] = useState('');
@@ -17,32 +17,43 @@ export default function NewAssetAssignmentPage() {
   const [notes, setNotes] = useState('');
   const [quantity, setQuantity] = useState('1');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const submittingRef = useRef(false);
+
+  // Filter products that belong to an asset category
+  const assetProducts = products.filter((prod) => {
+    const category = categories.find((c) => c.name.toLowerCase() === prod.category.toLowerCase());
+    return category?.isAsset === true;
+  });
 
   useEffect(() => {
-    if (products.length > 0 && !productId) {
-      setProductId(products[0].id);
+    if (assetProducts.length > 0 && !productId) {
+      setProductId(assetProducts[0].id);
     }
-  }, [products, productId]);
+  }, [assetProducts, productId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!productId || !assignedTo || !quantity) return;
+    if (submittingRef.current || !productId || !assignedTo || !quantity) return;
 
     const selectedProduct = products.find(p => p.id === productId);
     if (!selectedProduct) return;
 
+    submittingRef.current = true;
     setIsSubmitting(true);
-    const success = await assignAsset({
-      productId: selectedProduct.id,
-      productName: selectedProduct.name,
-      assignedTo,
-      quantity: parseInt(quantity),
-      notes: notes || undefined,
-    });
+    try {
+      const success = await assignAsset({
+        productId: selectedProduct.id,
+        productName: selectedProduct.name,
+        assignedTo,
+        quantity: parseInt(quantity),
+        notes: notes || undefined,
+      });
 
-    if (success) {
-      router.push('/stock/assets');
-    } else {
+      if (success) {
+        router.push('/stock/assets');
+      }
+    } finally {
+      submittingRef.current = false;
       setIsSubmitting(false);
     }
   };
@@ -72,10 +83,10 @@ export default function NewAssetAssignmentPage() {
           </div>
         </div>
 
-        {products.length === 0 ? (
-          <Card className="border border-border/50 bg-background/60 backdrop-blur-sm p-8 text-center space-y-4">
+        {assetProducts.length === 0 ? (
+          <Card className="border border-border/50 bg-background/60 backdrop-blur-sm p-8 text-center space-y-4 max-w-lg mx-auto">
             <p className="text-sm text-muted-foreground">
-              You must have at least one product created before assigning an asset.
+              You must have at least one asset product created before assigning assets. Ensure you have created a product under an asset category.
             </p>
             <Link href="/products/new">
               <Button size="sm">Create Product</Button>
@@ -89,7 +100,7 @@ export default function NewAssetAssignmentPage() {
                 Asset Details
               </CardTitle>
               <CardDescription className="text-xs mt-1">
-                Select an item from inventory to mark it as assigned. This will deduct from the available stock.
+                Select an item from asset inventory to mark it as assigned.
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-6">
@@ -104,7 +115,7 @@ export default function NewAssetAssignmentPage() {
                     onChange={(e) => setProductId(e.target.value)}
                     className="h-10 w-full rounded-lg border-2 border-muted bg-background px-3 text-sm shadow-sm transition-all appearance-none focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
                   >
-                    {products.map((prod: Product) => (
+                    {assetProducts.map((prod: Product) => (
                       <option key={prod.id} value={prod.id}>
                         {prod.name} (Available: {activeBranch === 'All' ? Object.values(prod.stock || {}).reduce((a, b) => a + b, 0) : prod.stock?.[activeBranch] || 0} units)
                       </option>

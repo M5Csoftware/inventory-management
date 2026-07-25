@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { User, Mail, Phone, Shield, Save, CheckCircle } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { User, Mail, Phone, Shield, Save, CheckCircle, Building } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { toast } from 'react-toastify';
@@ -12,6 +12,7 @@ interface UserProfile {
   phone: string;
   role: string;
   username: string;
+  branch?: string;
 }
 
 export default function SettingsPage() {
@@ -24,6 +25,7 @@ export default function SettingsPage() {
   });
 
   const [isSaved, setIsSaved] = useState(false);
+  const submittingRef = useRef(false);
 
   // Load profile from localStorage if exists
   useEffect(() => {
@@ -39,10 +41,18 @@ export default function SettingsPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    localStorage.setItem('m5c_user_profile', JSON.stringify(profile));
-    setIsSaved(true);
-    toast.success('Profile settings saved successfully!');
-    setTimeout(() => setIsSaved(false), 3000);
+    if (submittingRef.current) return;
+
+    submittingRef.current = true;
+
+    try {
+      localStorage.setItem('m5c_user_profile', JSON.stringify(profile));
+      setIsSaved(true);
+      toast.success('Profile settings saved successfully!');
+      setTimeout(() => setIsSaved(false), 3000);
+    } finally {
+      submittingRef.current = false;
+    }
   };
 
   return (

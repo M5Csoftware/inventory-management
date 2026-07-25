@@ -12,6 +12,7 @@ import {
   Filter,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useInventory, Category } from "@/context/inventory-context";
 
 interface MonthlyStockItem {
   productId: string;
@@ -48,12 +49,14 @@ const MONTHS = [
 ];
 
 export default function MonthlyStockReportPage() {
+  const { categories } = useInventory();
   const now = new Date();
   const [selectedYear, setSelectedYear] = useState<number>(now.getFullYear());
   const [selectedMonth, setSelectedMonth] = useState<number>(
     now.getMonth() + 1
   );
   const [monthlyBranch, setMonthlyBranch] = useState<string>("All");
+  const [monthlyCategory, setMonthlyCategory] = useState<string>("All");
   const [monthlySearch, setMonthlySearch] = useState<string>("");
   const [monthlyData, setMonthlyData] = useState<MonthlyStockItem[]>([]);
   const [loadingMonthly, setLoadingMonthly] = useState<boolean>(true);
@@ -71,6 +74,9 @@ export default function MonthlyStockReportPage() {
       if (monthlyBranch && monthlyBranch !== "All") {
         params.append("branch", monthlyBranch);
       }
+      if (monthlyCategory && monthlyCategory !== "All") {
+        params.append("category", monthlyCategory);
+      }
       if (monthlySearch.trim()) {
         params.append("search", monthlySearch.trim());
       }
@@ -83,7 +89,14 @@ export default function MonthlyStockReportPage() {
       if (res.ok) {
         const data = await res.json();
         if (data.success) {
-          setMonthlyData(data.data || []);
+          let list: MonthlyStockItem[] = data.data || [];
+          if (monthlyCategory && monthlyCategory !== "All") {
+            const catLower = monthlyCategory.toLowerCase();
+            list = list.filter(
+              (item) => item.category?.toLowerCase() === catLower
+            );
+          }
+          setMonthlyData(list);
           setLoadingMonthly(false);
           return;
         }
@@ -110,9 +123,15 @@ export default function MonthlyStockReportPage() {
         const branchesList = ["Ahmedabad", "Ludhiana", "Delhi", "Mumbai"];
 
         let filteredProducts = productsList;
+        if (monthlyCategory && monthlyCategory !== "All") {
+          const catLower = monthlyCategory.toLowerCase();
+          filteredProducts = filteredProducts.filter(
+            (p: any) => p.category?.toLowerCase() === catLower
+          );
+        }
         if (monthlySearch.trim()) {
           const q = monthlySearch.toLowerCase().trim();
-          filteredProducts = productsList.filter(
+          filteredProducts = filteredProducts.filter(
             (p: any) =>
               p.name?.toLowerCase().includes(q) ||
               p.id?.toLowerCase().includes(q) ||
@@ -140,56 +159,54 @@ export default function MonthlyStockReportPage() {
           }
 
           for (const b of relevantBranches) {
-            if (prodCreatedAt > monthEnd) {
-              calculatedReport.push({
-                productId: prod.id,
-                productName: prod.name,
-                category: prod.category,
-                sku: prod.sku || "",
-                branch: b,
-                openingStock: 0,
-                stockIn: 0,
-                stockOut: 0,
-                closingStock: 0,
-              });
-              continue;
-            }
+            const initialStockForBranch = typeof prod.stock === "object" && prod.stock !== null
+              ? (prod.stock[b] || 0)
+              : (prod.stock || 0);
 
-            const branchTxs = prodTxs.filter((t: any) => t.branch === b);
-            const liveStock = typeof prod.stock === "number" ? prod.stock : (prod.stock?.[b] || 0);
+            const txsAfterMonthEnd = prodTxs.filter((t: any) => {
+              const txDate = new Date(t.date || t.createdAt);
+              const txBranch = t.branch || b;
+              return txDate > monthEnd && txBranch === b;
+            });
 
-            let netTxAfterMonthEnd = 0;
-            let stockIn = 0;
-            let stockOut = 0;
-
-            for (const tx of branchTxs) {
-              const txDate = new Date(tx.date || tx.createdAt);
-              if (txDate > monthEnd) {
-                if (tx.type === "Stock In") netTxAfterMonthEnd += tx.quantity;
-                else if (tx.type === "Stock Out") netTxAfterMonthEnd -= tx.quantity;
-              } else if (txDate >= monthStart && txDate <= monthEnd) {
-                if (tx.type === "Stock In") stockIn += tx.quantity;
-                else if (tx.type === "Stock Out") stockOut += tx.quantity;
+            let currentStockAtMonthEnd = initialStockForBranch;
+            for (const t of txsAfterMonthEnd) {
+              if (t.type === "Stock In") {
+                currentStockAtMonthEnd -= (t.quantity || 0);
+              } else if (t.type === "Stock Out") {
+                currentStockAtMonthEnd += (t.quantity || 0);
               }
             }
 
-            const closingStock = Math.max(0, liveStock - netTxAfterMonthEnd);
-            let openingStock = 0;
-            if (prodCreatedAt > monthStart) {
-              openingStock = 0;
-            } else {
-              openingStock = Math.max(0, closingStock - stockIn + stockOut);
+            const monthTxs = prodTxs.filter((t: any) => {
+              const txDate = new Date(t.date || t.createdAt);
+              const txBranch = t.branch || b;
+              return txDate >= monthStart && txDate <= monthEnd && txBranch === b;
+            });
+
+            let stockInMonth = 0;
+            let stockOutMonth = 0;
+            for (const t of monthTxs) {
+              if (t.type === "Stock In") stockInMonth += (t.quantity || 0);
+              if (t.type === "Stock Out") stockOutMonth += (t.quantity || 0);
+            }
+
+            const closingStock = Math.max(0, currentStockAtMonthEnd);
+            const openingStock = Math.max(0, closingStock - stockInMonth + stockOutMonth);
+
+            if (prodCreatedAt > monthEnd && openingStock === 0 && stockInMonth === 0 && stockOutMonth === 0 && closingStock === 0) {
+              continue;
             }
 
             calculatedReport.push({
               productId: prod.id,
               productName: prod.name,
-              category: prod.category,
-              sku: prod.sku || "",
+              category: prod.category || "Uncategorized",
+              sku: prod.sku || prod.id,
               branch: b,
               openingStock,
-              stockIn,
-              stockOut,
+              stockIn: stockInMonth,
+              stockOut: stockOutMonth,
               closingStock,
             });
           }
@@ -197,11 +214,11 @@ export default function MonthlyStockReportPage() {
 
         setMonthlyData(calculatedReport);
       } else {
-        toast.error("Failed to compute monthly stock report");
+        toast.error("Failed to load monthly stock calculation");
       }
     } catch (err) {
-      console.error("Monthly report fetch error:", err);
-      toast.error("Network error while fetching monthly stock report");
+      console.error("Fetch monthly report error:", err);
+      toast.error("Network error while calculating monthly stock");
     } finally {
       setLoadingMonthly(false);
     }
@@ -221,14 +238,15 @@ export default function MonthlyStockReportPage() {
       MONTHS.find((m) => m.value === selectedMonth)?.label || selectedMonth;
 
     const exportData = monthlyData.map((item) => ({
+      Month: `${monthLabel} ${selectedYear}`,
+      Branch: item.branch,
+      Category: item.category,
       "Product ID": item.productId,
       "Product Name": item.productName,
-      Category: item.category,
-      SKU: item.sku || "-",
-      Branch: item.branch,
+      SKU: item.sku,
       "Opening Stock": item.openingStock,
-      "Stock In (+)": item.stockIn,
-      "Stock Out (-)": item.stockOut,
+      "Stock In (+):": item.stockIn,
+      "Stock Out (-):": item.stockOut,
       "Net Change": item.stockIn - item.stockOut,
       "Closing Stock": item.closingStock,
     }));
@@ -254,7 +272,7 @@ export default function MonthlyStockReportPage() {
       </div>
 
       {/* Controls & Filter Bar */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4 bg-card p-4 sm:p-5 rounded-xl shadow-lg border border-border/50">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 bg-card p-4 sm:p-5 rounded-xl shadow-lg border border-border/50">
         <div className="space-y-2">
           <label className="text-xs sm:text-sm font-medium">Month</label>
           <select
@@ -301,6 +319,22 @@ export default function MonthlyStockReportPage() {
         </div>
 
         <div className="space-y-2">
+          <label className="text-xs sm:text-sm font-medium">Category</label>
+          <select
+            value={monthlyCategory}
+            onChange={(e) => setMonthlyCategory(e.target.value)}
+            className="w-full h-10 px-3 py-2 bg-background border border-border rounded text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+          >
+            <option value="All">All Categories</option>
+            {categories.map((cat: Category) => (
+              <option key={cat.name} value={cat.name}>
+                {cat.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="space-y-2">
           <label className="text-xs sm:text-sm font-medium">Search Product</label>
           <div className="relative">
             <Search className="absolute left-2.5 top-3 w-4 h-4 text-muted-foreground" />
@@ -308,7 +342,7 @@ export default function MonthlyStockReportPage() {
               type="text"
               value={monthlySearch}
               onChange={(e) => setMonthlySearch(e.target.value)}
-              placeholder="Name, ID, SKU, Category..."
+              placeholder="Name, ID, SKU..."
               className="w-full h-10 pl-9 pr-3 py-2 bg-background border border-border rounded text-sm focus:outline-none focus:ring-1 focus:ring-primary"
             />
           </div>

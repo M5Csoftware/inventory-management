@@ -1,18 +1,32 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import Link from 'next/link';
 import { useInventory, AssetAssignment } from '@/context/inventory-context';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Search, Laptop, Undo2 } from 'lucide-react';
+import { PlusCircle, Search, Laptop, Undo2, ArrowUpRight } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useAutoAnimate } from '@formkit/auto-animate/react';
 
 export default function AssetsPage() {
   const { assets, returnAsset } = useInventory();
   const [searchTerm, setSearchTerm] = useState('');
+  const [returningId, setReturningId] = useState<string | null>(null);
+  const returningRef = useRef<string | null>(null);
   const [animationParent] = useAutoAnimate();
+
+  const handleReturn = async (id: string) => {
+    if (returningRef.current) return;
+    returningRef.current = id;
+    setReturningId(id);
+    try {
+      await returnAsset(id);
+    } finally {
+      returningRef.current = null;
+      setReturningId(null);
+    }
+  };
 
   const filteredAssets = assets.filter((asset) => {
     const searchLower = searchTerm.toLowerCase();
@@ -30,11 +44,18 @@ export default function AssetsPage() {
           <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-br from-foreground to-muted-foreground bg-clip-text text-transparent">Assets (Assigned)</h1>
           <p className="text-muted-foreground mt-1">Track items assigned to staff and locations.</p>
         </div>
-        <Link href="/stock/assets/new">
-          <Button className="shadow-lg shadow-primary/20 transition-all hover:shadow-primary/40 hover:-translate-y-0.5">
-            <PlusCircle className="mr-2 h-4 w-4" /> Assign Asset
-          </Button>
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link href="/stock/assets/in">
+            <Button variant="outline" className="border-2 transition-all hover:bg-muted/50">
+              <ArrowUpRight className="mr-2 h-4 w-4 text-blue-500" /> Stock In Assets
+            </Button>
+          </Link>
+          <Link href="/stock/assets/new">
+            <Button className="shadow-lg shadow-primary/20 transition-all hover:shadow-primary/40 hover:-translate-y-0.5">
+              <PlusCircle className="mr-2 h-4 w-4" /> Assign Asset
+            </Button>
+          </Link>
+        </div>
       </div>
 
       <Card className="border-border/50 shadow-sm bg-card/50 backdrop-blur-xl">
@@ -80,22 +101,16 @@ export default function AssetsPage() {
                     </td>
                   </tr>
                 ) : (
-                  filteredAssets.map((asset) => (
+                  filteredAssets.map((asset: AssetAssignment) => (
                     <tr key={asset.id} className="hover:bg-muted/30 transition-colors">
-                      <td className="px-6 py-4 font-medium">{asset.id}</td>
-                      <td className="px-6 py-4">
-                        <div className="flex flex-col">
-                          <span className="font-medium text-foreground">{asset.productName}</span>
-                          <span className="text-xs text-muted-foreground">{asset.quantity} Unit(s)</span>
-                        </div>
+                      <td className="px-6 py-4 font-mono text-xs font-semibold text-primary">
+                        {asset.id}
+                      </td>
+                      <td className="px-6 py-4 font-medium text-foreground">
+                        {asset.productName}
                       </td>
                       <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">
-                            {asset.assignedTo.charAt(0).toUpperCase()}
-                          </div>
-                          {asset.assignedTo}
-                        </div>
+                        {asset.assignedTo}
                       </td>
                       <td className="px-6 py-4">
                         {new Date(asset.assignedDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
@@ -116,10 +131,12 @@ export default function AssetsPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            className="h-8 hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200 dark:hover:bg-emerald-950 dark:hover:border-emerald-800"
-                            onClick={() => returnAsset(asset.id)}
+                            disabled={returningId === asset.id}
+                            className="h-8 hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200 dark:hover:bg-emerald-950 dark:hover:border-emerald-800 disabled:opacity-50 disabled:pointer-events-none"
+                            onClick={() => handleReturn(asset.id)}
                           >
-                            <Undo2 className="mr-2 h-3.5 w-3.5" /> Return Asset
+                            <Undo2 className="mr-2 h-3.5 w-3.5" />
+                            {returningId === asset.id ? 'Returning...' : 'Return Asset'}
                           </Button>
                         )}
                         {asset.status === 'Returned' && (

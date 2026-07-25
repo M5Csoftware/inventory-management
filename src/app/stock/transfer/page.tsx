@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from "next/link";
 import { useRouter } from 'next/navigation';
 import {
@@ -32,6 +32,8 @@ export default function StockTransferPage() {
   const [quantity, setQuantity] = useState('');
   const [destinationBranch, setDestinationBranch] = useState('');
   const [notes, setNotes] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const submittingRef = useRef(false);
 
   const nonAssetProducts = products.filter((prod) => {
     const category = categories.find((c) => c.name.toLowerCase() === prod.category.toLowerCase());
@@ -54,22 +56,30 @@ export default function StockTransferPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!productId || !quantity || !destinationBranch) return;
+    if (submittingRef.current || !productId || !quantity || !destinationBranch) return;
 
     if (activeBranch === 'All') {
       toast.error('Please select a specific branch from the sidebar before transferring stock.');
       return;
     }
 
-    const success = await transferStock(
-      productId,
-      parseInt(quantity),
-      destinationBranch,
-      notes || undefined
-    );
+    submittingRef.current = true;
+    setIsSubmitting(true);
 
-    if (success) {
-      router.push('/stock');
+    try {
+      const success = await transferStock(
+        productId,
+        parseInt(quantity),
+        destinationBranch,
+        notes || undefined
+      );
+
+      if (success) {
+        router.push('/stock');
+      }
+    } finally {
+      submittingRef.current = false;
+      setIsSubmitting(false);
     }
   };
 
@@ -223,10 +233,11 @@ export default function StockTransferPage() {
                   </Link>
                   <Button
                     type="submit"
-                    className="group w-full gap-2 bg-gradient-to-r from-purple-600 to-purple-500 shadow-lg shadow-purple-500/30 transition-all hover:scale-[1.02] hover:shadow-purple-500/40 sm:w-auto h-9 text-sm"
+                    disabled={isSubmitting}
+                    className="group w-full gap-2 bg-gradient-to-r from-purple-600 to-purple-500 shadow-lg shadow-purple-500/30 transition-all hover:scale-[1.02] hover:shadow-purple-500/40 sm:w-auto h-9 text-sm disabled:opacity-50 disabled:pointer-events-none"
                   >
                     <Save className="h-3.5 w-3.5 transition-transform group-hover:scale-110" />
-                    Transfer Stock
+                    {isSubmitting ? 'Transferring...' : 'Transfer Stock'}
                     <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
                   </Button>
                 </div>

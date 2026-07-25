@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -34,13 +34,23 @@ export default function NewSupplierPage() {
   const [phone, setPhone] = useState('');
   const [location, setLocation] = useState('');
   const [branch, setBranch] = useState(activeBranch && activeBranch !== 'All' ? activeBranch : 'Delhi');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const submittingRef = useRef(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !contact || !email || !phone || !location) return;
+    if (submittingRef.current || !name || !contact || !email || !phone || !location) return;
 
-    await addSupplier({ name, contact, email, phone, location, branch });
-    router.push('/suppliers');
+    submittingRef.current = true;
+    setIsSubmitting(true);
+
+    try {
+      await addSupplier({ name, contact, email, phone, location, branch });
+      router.push('/suppliers');
+    } finally {
+      submittingRef.current = false;
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -236,10 +246,11 @@ export default function NewSupplierPage() {
                 </Link>
                 <Button
                   type="submit"
-                  className="group w-full gap-2 bg-gradient-to-r from-primary to-primary/90 shadow-lg shadow-primary/30 transition-all hover:scale-[1.02] hover:shadow-primary/40 sm:w-auto h-9 text-sm"
+                  disabled={isSubmitting}
+                  className="group w-full gap-2 bg-gradient-to-r from-primary to-primary/90 shadow-lg shadow-primary/30 transition-all hover:scale-[1.02] hover:shadow-primary/40 sm:w-auto h-9 text-sm disabled:opacity-50 disabled:pointer-events-none"
                 >
                   <Save className="h-3.5 w-3.5 transition-transform group-hover:scale-110" />
-                  Create Supplier
+                  {isSubmitting ? 'Creating...' : 'Create Supplier'}
                   <Plus className="h-3.5 w-3.5 transition-transform group-hover:rotate-90" />
                 </Button>
               </div>

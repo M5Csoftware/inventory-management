@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useInventory } from '@/context/inventory-context';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -22,6 +22,7 @@ export default function EditOrderPage() {
   const [items, setItems] = useState([{ productId: '', name: '', quantity: 1, price: 0 }]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
+  const submittingRef = useRef(false);
 
   useEffect(() => {
     if (orders.length > 0 && id) {
@@ -68,6 +69,7 @@ export default function EditOrderPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submittingRef.current) return;
     if (!supplier) {
       alert('Please select a supplier.');
       return;
@@ -77,15 +79,20 @@ export default function EditOrderPage() {
       return;
     }
 
+    submittingRef.current = true;
     setIsSubmitting(true);
-    await updateOrder(id, {
-      supplier,
-      items,
-      totalAmount,
-      status
-    });
-    setIsSubmitting(false);
-    router.push('/orders');
+    try {
+      await updateOrder(id, {
+        supplier,
+        items,
+        totalAmount,
+        status
+      });
+      router.push('/orders');
+    } finally {
+      submittingRef.current = false;
+      setIsSubmitting(false);
+    }
   };
 
   if (!isLoaded) return <div className="p-10 text-center animate-pulse">Loading order details...</div>;
