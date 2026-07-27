@@ -187,8 +187,8 @@ export function Sidebar() {
 
             return (
               <div key={item.label} className="space-y-1">
-                <Link
-                  href={item.subItems[0].href}
+                <button
+                  type="button"
                   onClick={() => toggleSubMenu(item.label)}
                   className={cn(
                     "flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm lg:text-base font-medium transition-all text-muted-foreground hover:bg-accent hover:text-accent-foreground",
@@ -214,7 +214,7 @@ export function Sidebar() {
                       <ChevronRight className="h-5 w-5" />
                     </motion.div>
                   )}
-                </Link>
+                </button>
                 <AnimatePresence initial={false}>
                   {isExpanded && (
                     <motion.div
