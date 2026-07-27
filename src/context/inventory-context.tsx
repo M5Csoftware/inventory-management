@@ -92,6 +92,45 @@ export interface AssetAssignment {
   notes?: string;
   warranty?: string;
 }
+// Add this interface after AssetAssignment
+export interface MaintenanceRecord {
+  id: string;
+  assetId: string;
+  assetName: string;
+  type: "Repair" | "Replace" | "Retire";
+  date: string;
+  cost: number;
+  description: string;
+  vendor?: string;
+  vendorContact?: string;
+  repairDetails?: {
+    issue: string;
+    partsReplaced?: string[];
+    laborCost?: number;
+    partsCost?: number;
+    estimatedTime?: string;
+    technician?: string;
+    warrantyClaim?: boolean;
+  };
+  replaceDetails?: {
+    newProductId?: string;
+    newProductName?: string;
+    reason: string;
+    disposalMethod?: string;
+  };
+  retireDetails?: {
+    reason: string;
+    disposalMethod: string;
+    salvageValue?: number;
+    retiredBy?: string;
+  };
+  status: "Pending" | "In Progress" | "Completed" | "Cancelled";
+  createdBy?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  attachments?: string[];
+  notes?: string;
+}
 
 interface InventoryContextType {
   activeBranch: string;

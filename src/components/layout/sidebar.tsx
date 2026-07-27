@@ -20,6 +20,7 @@ import {
   BarChart3,
   Laptop,
   IndianRupee,
+  Hammer,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -65,6 +66,7 @@ export const navItems: NavItem[] = [
     subItems: [
       { href: "/stock/assets/in", label: "Stock In Assets", icon: PlusCircle },
       { href: "/stock/assets", label: "Assets (Assigned)", icon: List },
+      { href: "/stock/assets/maintenance", label: "Maintenance", icon: Hammer },
     ],
   },
   {
@@ -81,7 +83,11 @@ export const navItems: NavItem[] = [
     subItems: [
       { href: "/suppliers", label: "All Suppliers", icon: List },
       { href: "/suppliers/rates", label: "Supplier Rates", icon: IndianRupee },
-      { href: "/suppliers/products", label: "Supplier Products", icon: Package },
+      {
+        href: "/suppliers/products",
+        label: "Supplier Products",
+        icon: Package,
+      },
       { href: "/suppliers/new", label: "Add Supplier", icon: PlusCircle },
     ],
   },
@@ -97,8 +103,16 @@ export const navItems: NavItem[] = [
     label: "Reports",
     icon: FileText,
     subItems: [
-      { href: "/reports/transactions", label: "Transaction History", icon: List },
-      { href: "/reports/monthly-stock", label: "Monthly Stock Summary", icon: BarChart3 },
+      {
+        href: "/reports/transactions",
+        label: "Transaction History",
+        icon: List,
+      },
+      {
+        href: "/reports/monthly-stock",
+        label: "Monthly Stock Summary",
+        icon: BarChart3,
+      },
     ],
   },
 ];
@@ -187,8 +201,7 @@ export function Sidebar() {
 
             return (
               <div key={item.label} className="space-y-1">
-                <Link
-                  href={item.subItems[0].href}
+                <button
                   onClick={() => toggleSubMenu(item.label)}
                   className={cn(
                     "flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm lg:text-base font-medium transition-all text-muted-foreground hover:bg-accent hover:text-accent-foreground",
@@ -214,7 +227,7 @@ export function Sidebar() {
                       <ChevronRight className="h-5 w-5" />
                     </motion.div>
                   )}
-                </Link>
+                </button>
                 <AnimatePresence initial={false}>
                   {isExpanded && (
                     <motion.div
@@ -252,7 +265,7 @@ export function Sidebar() {
             );
           }
 
-          // Item with no children (like Dashboard, Reports)
+          // Item with no children (like Dashboard)
           const isActive = pathname === item.href;
           return (
             <Link
