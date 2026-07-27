@@ -173,8 +173,8 @@ export default function EditOrderPage() {
                         required
                       >
                         <option value="">Select Product...</option>
-                        {products.map((p) => (
-                          <option key={p.id} value={p.id}>{p.name} (Stock: {activeBranch === 'All' ? Object.values(p.stock || {}).reduce((a, b) => a + b, 0) : p.stock?.[activeBranch] || 0})</option>
+                        {products.map((p, pIdx) => (
+                          <option key={`${p.id}-${pIdx}`} value={p.id}>{p.name} (Stock: {activeBranch === 'All' ? Object.values(p.stock || {}).reduce((a, b) => a + b, 0) : p.stock?.[activeBranch] || 0})</option>
                         ))}
                       </select>
                     </div>
