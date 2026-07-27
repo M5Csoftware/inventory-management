@@ -1,4 +1,3 @@
-/* src/app/reports/monthly-stock/page.tsx */
 "use client";
 
 import { useEffect, useState } from "react";
@@ -171,15 +170,15 @@ export default function MonthlyStockReportPage() {
           }
 
           for (const b of relevantBranches) {
+            const branchTxs = prodTxs.filter((t: any) => t.branch === b);
             const initialStockForBranch =
               typeof prod.stock === "object" && prod.stock !== null
                 ? prod.stock[b] || 0
                 : prod.stock || 0;
 
-            const txsAfterMonthEnd = prodTxs.filter((t: any) => {
+            const txsAfterMonthEnd = branchTxs.filter((t: any) => {
               const txDate = new Date(t.date || t.createdAt);
-              const txBranch = t.branch || b;
-              return txDate > monthEnd && txBranch === b;
+              return txDate > monthEnd;
             });
 
             let currentStockAtMonthEnd = initialStockForBranch;
@@ -191,12 +190,9 @@ export default function MonthlyStockReportPage() {
               }
             }
 
-            const monthTxs = prodTxs.filter((t: any) => {
+            const monthTxs = branchTxs.filter((t: any) => {
               const txDate = new Date(t.date || t.createdAt);
-              const txBranch = t.branch || b;
-              return (
-                txDate >= monthStart && txDate <= monthEnd && txBranch === b
-              );
+              return txDate >= monthStart && txDate <= monthEnd;
             });
 
             let stockInMonth = 0;
@@ -222,11 +218,11 @@ export default function MonthlyStockReportPage() {
               continue;
             }
 
-            const stockInTxs = prodTxs.filter(
+            const stockInTxs = branchTxs.filter(
               (t: any) => t.type === "Stock In",
             );
 
-            // Extract supplier from recent Stock In transactions if recorded
+            // Extract supplier from recent Stock In transactions
             let txSupplier = "";
             if (stockInTxs.length > 0) {
               const sorted = [...stockInTxs].sort(
@@ -261,10 +257,7 @@ export default function MonthlyStockReportPage() {
                 : null) ||
               "-";
 
-            // Fetch the Amount / Price entered on the Stock In form from the most
-            // recent Stock In transaction for this product — used directly as the
-            // Purchase Value (not multiplied by opening stock), since it's the
-            // actual amount paid on intake.
+            // Fetch the Amount / Price entered on the Stock In form
             let txPurchaseAmount: number | null = null;
             if (stockInTxs.length > 0) {
               const sortedForRate = [...stockInTxs].sort(
@@ -331,20 +324,30 @@ export default function MonthlyStockReportPage() {
                 ? txPurchaseAmount
                 : openingStock * purchaseRate;
 
+            // Get the most recent Stock In transaction for this product/branch to get the purchase date
             let lastPurchaseDate = "-";
             if (stockInTxs.length > 0) {
-              const sorted = [...stockInTxs].sort(
-                (a: any, b: any) =>
-                  new Date(b.date || b.createdAt).getTime() -
-                  new Date(a.date || a.createdAt).getTime(),
-              );
-              if (sorted[0] && (sorted[0].date || sorted[0].createdAt)) {
-                const d = new Date(sorted[0].date || sorted[0].createdAt);
-                lastPurchaseDate = d.toLocaleDateString("en-IN", {
-                  year: "numeric",
-                  month: "short",
-                  day: "numeric",
-                });
+              // Sort by purchaseDate first, then date, then createdAt
+              const sorted = [...stockInTxs].sort((a: any, b: any) => {
+                const dateA = a.purchaseDate || a.date || a.createdAt;
+                const dateB = b.purchaseDate || b.date || b.createdAt;
+                return new Date(dateB).getTime() - new Date(dateA).getTime();
+              });
+
+              const latestTx = sorted[0];
+              const dateToUse =
+                latestTx.purchaseDate || latestTx.date || latestTx.createdAt;
+
+              if (dateToUse) {
+                const d = new Date(dateToUse);
+                // Only format if it's a valid date
+                if (!isNaN(d.getTime())) {
+                  lastPurchaseDate = d.toLocaleDateString("en-IN", {
+                    year: "numeric",
+                    month: "short",
+                    day: "numeric",
+                  });
+                }
               }
             }
 
@@ -675,7 +678,7 @@ export default function MonthlyStockReportPage() {
           </div>
         </div>
 
-        {/* Results Summary & Export Button (Always visible right below table) */}
+        {/* Results Summary & Export Button */}
         <div className="flex flex-col sm:flex-row justify-between items-center gap-2 pt-1 px-1">
           <p className="text-xs sm:text-sm text-muted-foreground">
             Showing{" "}
