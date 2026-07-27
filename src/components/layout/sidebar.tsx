@@ -21,6 +21,7 @@ import {
   Laptop,
   IndianRupee,
   AlertTriangle,
+  Hammer,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -67,6 +68,7 @@ export const navItems: NavItem[] = [
     subItems: [
       { href: "/stock/assets/in", label: "Stock In Assets", icon: PlusCircle },
       { href: "/stock/assets", label: "Assets (Assigned)", icon: List },
+      { href: "/stock/assets/maintenance", label: "Maintenance", icon: Hammer },
     ],
   },
   {
@@ -83,7 +85,11 @@ export const navItems: NavItem[] = [
     subItems: [
       { href: "/suppliers", label: "All Suppliers", icon: List },
       { href: "/suppliers/rates", label: "Supplier Rates", icon: IndianRupee },
-      { href: "/suppliers/products", label: "Supplier Products", icon: Package },
+      {
+        href: "/suppliers/products",
+        label: "Supplier Products",
+        icon: Package,
+      },
       { href: "/suppliers/new", label: "Add Supplier", icon: PlusCircle },
     ],
   },
@@ -99,8 +105,16 @@ export const navItems: NavItem[] = [
     label: "Reports",
     icon: FileText,
     subItems: [
-      { href: "/reports/transactions", label: "Transaction History", icon: List },
-      { href: "/reports/monthly-stock", label: "Monthly Stock Summary", icon: BarChart3 },
+      {
+        href: "/reports/transactions",
+        label: "Transaction History",
+        icon: List,
+      },
+      {
+        href: "/reports/monthly-stock",
+        label: "Monthly Stock Summary",
+        icon: BarChart3,
+      },
     ],
   },
 ];
@@ -254,7 +268,7 @@ export function Sidebar() {
             );
           }
 
-          // Item with no children (like Dashboard, Reports)
+          // Item with no children (like Dashboard)
           const isActive = pathname === item.href;
           return (
             <Link
