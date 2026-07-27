@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { useRouter } from 'next/navigation';
+import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   ArrowDownRight,
@@ -12,6 +12,9 @@ import {
   Save,
   AlertCircle,
   User,
+  Search,
+  Check,
+  ChevronDown,
 } from "lucide-react";
 import {
   Card,
@@ -21,26 +24,46 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useInventory, Product } from '@/context/inventory-context';
+import { useInventory, Product } from "@/context/inventory-context";
 
 export default function StockOutPage() {
-  const { products, categories, recordTransaction, activeBranch } = useInventory();
+  const { products, categories, recordTransaction, activeBranch } =
+    useInventory();
   const router = useRouter();
 
   // Form states
-  const [productId, setProductId] = useState('');
-  const [quantity, setQuantity] = useState('');
-  const [reason, setReason] = useState('Customer Order / Sale');
-  const [handedTo, setHandedTo] = useState('');
-  const [notes, setNotes] = useState('');
+  const [productId, setProductId] = useState("");
+  const [quantity, setQuantity] = useState("");
+  const [reason, setReason] = useState("Customer Order / Sale");
+  const [handedTo, setHandedTo] = useState("");
+  const [notes, setNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const submittingRef = useRef(false);
 
+  // Searchable Select Product dropdown states
+  const [productSearchOpen, setProductSearchOpen] = useState(false);
+  const [productSearchTerm, setProductSearchTerm] = useState("");
+  const productDropdownRef = useRef<HTMLDivElement>(null);
+
   // Filter out products that belong to an asset category
   const nonAssetProducts = products.filter((prod) => {
-    const category = categories.find((c) => c.name.toLowerCase() === prod.category.toLowerCase());
+    const category = categories.find(
+      (c) => c.name.toLowerCase() === prod.category.toLowerCase(),
+    );
     return !category?.isAsset;
   });
+
+  // Products filtered by the search term (for the dropdown list)
+  const filteredNonAssetProducts = nonAssetProducts.filter((prod) =>
+    prod.name.toLowerCase().includes(productSearchTerm.toLowerCase()),
+  );
+
+  const selectedProduct = nonAssetProducts.find((p) => p.id === productId);
+
+  const getStockLabel = (prod: Product) =>
+    activeBranch === "All"
+      ? Object.values(prod.stock).reduce((a, b) => a + b, 0)
+      : prod.stock[activeBranch] || 0;
 
   // Default selection when products load
   useEffect(() => {
@@ -48,6 +71,27 @@ export default function StockOutPage() {
       setProductId(nonAssetProducts[0].id);
     }
   }, [nonAssetProducts, productId]);
+
+  // Close the product search dropdown when clicking outside of it
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        productDropdownRef.current &&
+        !productDropdownRef.current.contains(e.target as Node)
+      ) {
+        setProductSearchOpen(false);
+        setProductSearchTerm("");
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleProductChange = (id: string) => {
+    setProductId(id);
+    setProductSearchOpen(false);
+    setProductSearchTerm("");
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,14 +105,14 @@ export default function StockOutPage() {
 
       const success = await recordTransaction(
         productId,
-        'Stock Out',
+        "Stock Out",
         parseInt(quantity),
         reason,
-        finalNotes || undefined
+        finalNotes || undefined,
       );
 
       if (success) {
-        router.push('/stock');
+        router.push("/stock");
       }
     } finally {
       submittingRef.current = false;
@@ -110,7 +154,8 @@ export default function StockOutPage() {
         {nonAssetProducts.length === 0 ? (
           <Card className="border border-border/50 bg-background/60 backdrop-blur-sm p-8 text-center space-y-4 max-w-lg mx-auto">
             <p className="text-sm text-muted-foreground">
-              You must have at least one consumable product (non-asset) created before recording stock out transactions.
+              You must have at least one consumable product (non-asset) created
+              before recording stock out transactions.
             </p>
             <Link href="/products/new">
               <Button size="sm">Create Product</Button>
@@ -127,7 +172,8 @@ export default function StockOutPage() {
                     Stock Out Details
                   </CardTitle>
                   <CardDescription className="text-xs mt-1">
-                    Select product, specify outgoing quantity, and reasons for dispatch
+                    Select product, specify outgoing quantity, and reasons for
+                    dispatch
                   </CardDescription>
                 </div>
                 <span className="rounded-full bg-blue-500/10 px-2.5 py-0.5 text-[10px] font-medium text-blue-600">
@@ -144,24 +190,74 @@ export default function StockOutPage() {
                     <Package className="h-3 w-3" />
                     Select Product <span className="text-destructive">*</span>
                   </label>
-                  <select 
-                    value={productId}
-                    onChange={(e) => setProductId(e.target.value)}
-                    className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22currentColor%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E')] bg-[length:16px] bg-[right_10px_center] bg-no-repeat hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
-                  >
-                    {nonAssetProducts.map((prod: Product, index: number) => (
-                      <option key={`${prod.id}-${index}`} value={prod.id}>
-                        {prod.name} (Current: {activeBranch === 'All' ? Object.values(prod.stock).reduce((a, b) => a + b, 0) : prod.stock[activeBranch] || 0} units)
-                      </option>
-                    ))}
-                  </select>
+
+                  {/* Searchable Select Product dropdown */}
+                  <div className="relative" ref={productDropdownRef}>
+                    <button
+                      type="button"
+                      onClick={() => setProductSearchOpen((prev) => !prev)}
+                      className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500 flex items-center justify-between text-left"
+                    >
+                      <span className="truncate">
+                        {selectedProduct
+                          ? `${selectedProduct.name} (Current: ${getStockLabel(selectedProduct)} units)`
+                          : "Select a product"}
+                      </span>
+                      <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0 ml-1" />
+                    </button>
+
+                    {productSearchOpen && (
+                      <div className="absolute z-20 mt-1.5 w-full rounded-lg border-2 border-gray-300 bg-white shadow-lg dark:border-gray-600 dark:bg-gray-900 overflow-hidden">
+                        <div className="flex items-center gap-2 border-b border-border/50 px-2.5 py-2">
+                          <Search className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                          <input
+                            autoFocus
+                            type="text"
+                            value={productSearchTerm}
+                            onChange={(e) =>
+                              setProductSearchTerm(e.target.value)
+                            }
+                            placeholder="Search product name..."
+                            className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground/50"
+                          />
+                        </div>
+                        <div className="max-h-56 overflow-y-auto py-1">
+                          {filteredNonAssetProducts.length === 0 ? (
+                            <p className="px-3 py-2 text-sm text-muted-foreground">
+                              No products found.
+                            </p>
+                          ) : (
+                            filteredNonAssetProducts.map(
+                              (prod: Product, index: number) => (
+                                <button
+                                  key={`${prod.id}-${index}`}
+                                  type="button"
+                                  onClick={() => handleProductChange(prod.id)}
+                                  className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-muted/60 transition-colors"
+                                >
+                                  <span className="truncate">
+                                    {prod.name} (Current: {getStockLabel(prod)}{" "}
+                                    units)
+                                  </span>
+                                  {prod.id === productId && (
+                                    <Check className="h-3.5 w-3.5 text-primary shrink-0" />
+                                  )}
+                                </button>
+                              ),
+                            )
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* Dispatched Quantity, Reason, & Handed To */}
                 <div className="grid gap-4 md:grid-cols-3">
                   <div className="space-y-1.5">
                     <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                      Dispatched Quantity <span className="text-destructive">*</span>
+                      Dispatched Quantity{" "}
+                      <span className="text-destructive">*</span>
                     </label>
                     <input
                       type="number"
@@ -175,16 +271,23 @@ export default function StockOutPage() {
                   <div className="space-y-1.5">
                     <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                       <AlertCircle className="h-3 w-3" />
-                      Reason / Destination <span className="text-destructive">*</span>
+                      Reason / Destination{" "}
+                      <span className="text-destructive">*</span>
                     </label>
-                    <select 
+                    <select
                       value={reason}
                       onChange={(e) => setReason(e.target.value)}
                       className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22currentColor%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E')] bg-[length:16px] bg-[right_10px_center] bg-no-repeat hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
                     >
-                      <option value="Customer Order / Sale">🛒 Customer Order / Sale</option>
-                      <option value="Damage / Scrap / Waste">🗑️ Damage / Scrap / Waste</option>
-                      <option value="Return to Supplier">🔄 Return to Supplier</option>
+                      <option value="Customer Order / Sale">
+                        🛒 Customer Order / Sale
+                      </option>
+                      <option value="Damage / Scrap / Waste">
+                        🗑️ Damage / Scrap / Waste
+                      </option>
+                      <option value="Return to Supplier">
+                        🔄 Return to Supplier
+                      </option>
                       <option value="Internal Usage">🏢 Internal Usage</option>
                     </select>
                   </div>
@@ -235,7 +338,7 @@ export default function StockOutPage() {
                     className="group w-full gap-2 bg-gradient-to-r from-blue-600 to-blue-500 shadow-lg shadow-blue-500/30 transition-all hover:scale-[1.02] hover:shadow-blue-500/40 sm:w-auto h-9 text-sm disabled:opacity-50 disabled:pointer-events-none"
                   >
                     <Save className="h-3.5 w-3.5 transition-transform group-hover:scale-110" />
-                    {isSubmitting ? 'Recording...' : 'Record Stock Out'}
+                    {isSubmitting ? "Recording..." : "Record Stock Out"}
                     <Plus className="h-3.5 w-3.5 transition-transform group-hover:rotate-90" />
                   </Button>
                 </div>
@@ -250,7 +353,8 @@ export default function StockOutPage() {
             i
           </span>
           <span>
-            All fields marked with <span className="text-destructive">*</span> are required
+            All fields marked with <span className="text-destructive">*</span>{" "}
+            are required
           </span>
         </div>
       </div>
