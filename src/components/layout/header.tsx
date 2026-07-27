@@ -117,7 +117,11 @@ function HeaderInner() {
             {open && (
               <div className="absolute right-0 top-12 z-50 w-[calc(100vw-2rem)] max-w-sm sm:w-80 rounded-xl border border-border bg-background shadow-2xl shadow-black/20 overflow-hidden">
                 {/* Header */}
-                <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/30">
+                <Link
+                  href="/stock/alerts"
+                  onClick={() => setOpen(false)}
+                  className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/30 hover:bg-muted/60 transition-colors"
+                >
                   <div>
                     <h4 className="text-sm font-semibold">Low Stock Alerts</h4>
                     <p className="text-xs text-muted-foreground">
@@ -129,7 +133,7 @@ function HeaderInner() {
                       {alertCount} item{alertCount > 1 ? "s" : ""}
                     </span>
                   )}
-                </div>
+                </Link>
 
                 {/* List */}
                 <div className="max-h-72 overflow-y-auto">
@@ -146,9 +150,11 @@ function HeaderInner() {
                   ) : (
                     <div className="divide-y divide-border">
                       {lowStockProducts.map((product) => (
-                        <div
+                        <Link
                           key={product.id}
-                          className="flex items-start gap-3 px-4 py-3 hover:bg-muted/40 transition-colors"
+                          href="/stock/alerts"
+                          onClick={() => setOpen(false)}
+                          className="flex items-start gap-3 px-4 py-3 hover:bg-muted/40 transition-colors block"
                         >
                           {/* Icon */}
                           <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-destructive/10">
@@ -173,7 +179,7 @@ function HeaderInner() {
                               </span>
                             </div>
                           </div>
-                        </div>
+                        </Link>
                       ))}
                     </div>
                   )}
@@ -192,7 +198,7 @@ function HeaderInner() {
                       </Button>
                     </Link>
                     <Link
-                      href="/products"
+                      href="/stock/alerts"
                       className="flex-1"
                       onClick={() => setOpen(false)}
                     >
