@@ -364,8 +364,8 @@ export default function Dashboard() {
             {products.filter((p) => getStock(p) <= p.threshold).length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-4">All stock levels are healthy.</p>
             ) : (
-              products.filter((p) => getStock(p) <= p.threshold).slice(0, 5).map((p) => (
-                <div key={p.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/40 hover:bg-muted/60 transition-colors">
+              products.filter((p) => getStock(p) <= p.threshold).slice(0, 5).map((p, index) => (
+                <div key={`${p.id}-${index}`} className="flex items-center justify-between p-3 rounded-lg bg-muted/40 hover:bg-muted/60 transition-colors">
                   <div className="space-y-0.5">
                     <p className="text-sm font-medium leading-none">{p.name}</p>
                     <p className="text-xs text-muted-foreground">Threshold: {p.threshold} units</p>
@@ -400,8 +400,8 @@ export default function Dashboard() {
                 className="h-7 text-xs bg-background border border-border rounded-md px-2 py-0 focus:outline-none focus:ring-1 focus:ring-primary max-w-[120px] truncate"
               >
                 <option value="All">All Products</option>
-                {products.map((p) => (
-                  <option key={p.id} value={p.id}>
+                {products.map((p, index) => (
+                  <option key={`${p.id}-${index}`} value={p.id}>
                     {p.name}
                   </option>
                 ))}

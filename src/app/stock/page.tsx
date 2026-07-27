@@ -224,9 +224,9 @@ export default function StockPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredTransactions.map((tx) => (
+                    {filteredTransactions.map((tx, index) => (
                       <tr
-                        key={tx.id}
+                        key={`${tx.id}-${index}`}
                         className="border-b transition-colors hover:bg-muted/50"
                       >
                         <td className="p-4 align-middle text-muted-foreground text-xs">
@@ -345,9 +345,9 @@ export default function StockPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredProducts.map((p) => (
+                    {filteredProducts.map((p, index) => (
                       <tr
-                        key={p.id}
+                        key={`${p.id}-${index}`}
                         className="border-b transition-colors hover:bg-muted/50"
                       >
                         <td className="p-4 align-middle font-medium">
