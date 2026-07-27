@@ -89,24 +89,22 @@ export function TabProvider({ children }: { children: React.ReactNode }) {
     // Dashboard tab cannot be closed
     if (hrefToClose === "/") return;
 
-    setTabs((prevTabs) => {
-      const filtered = prevTabs.filter((t) => t.href !== hrefToClose);
-      
-      // Ensure Dashboard is always present as first tab
-      const dashboardTab = { id: "/", href: "/", label: "Dashboard" };
-      const finalTabs = filtered.some((t) => t.href === "/")
-        ? filtered
-        : [dashboardTab, ...filtered];
+    const closedIndex = tabs.findIndex((t) => t.href === hrefToClose);
+    const filtered = tabs.filter((t) => t.href !== hrefToClose);
 
-      // If we closed the active tab, switch to adjacent tab
-      if (pathname === hrefToClose) {
-        const closedIndex = prevTabs.findIndex((t) => t.href === hrefToClose);
-        const nextTab = finalTabs[Math.max(0, closedIndex - 1)] || dashboardTab;
-        router.push(nextTab.href);
-      }
+    // Ensure Dashboard is always present as first tab
+    const dashboardTab = { id: "/", href: "/", label: "Dashboard" };
+    const finalTabs = filtered.some((t) => t.href === "/")
+      ? filtered
+      : [dashboardTab, ...filtered];
 
-      return finalTabs;
-    });
+    setTabs(finalTabs);
+
+    // If we closed the active tab, switch to adjacent tab
+    if (pathname === hrefToClose) {
+      const nextTab = finalTabs[Math.max(0, closedIndex - 1)] || dashboardTab;
+      router.push(nextTab.href);
+    }
   };
 
   const closeAllTabs = () => {

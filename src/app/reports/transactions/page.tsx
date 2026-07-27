@@ -303,9 +303,9 @@ export default function TransactionsReportPage() {
                     </td>
                   </tr>
                 ) : transactions.length ? (
-                  transactions.map((t) => (
+                  transactions.map((t, idx) => (
                     <tr
-                      key={t.id}
+                      key={`${t.id}-${idx}`}
                       className="hover:bg-muted/20 transition-colors"
                     >
                       <td className="p-3 whitespace-nowrap text-xs text-muted-foreground">
