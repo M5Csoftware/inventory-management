@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useInventory, Product } from '@/context/inventory-context';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Laptop, User, FileText, Package } from 'lucide-react';
+import { ArrowLeft, Laptop, User, FileText, Package, ShieldCheck } from 'lucide-react';
 
 export default function NewAssetAssignmentPage() {
   const { products, categories, assignAsset, activeBranch } = useInventory();
@@ -15,6 +15,7 @@ export default function NewAssetAssignmentPage() {
   const [productId, setProductId] = useState('');
   const [assignedTo, setAssignedTo] = useState('');
   const [notes, setNotes] = useState('');
+  const [warranty, setWarranty] = useState('');
   const [quantity, setQuantity] = useState('1');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const submittingRef = useRef(false);
@@ -47,6 +48,7 @@ export default function NewAssetAssignmentPage() {
         assignedTo,
         quantity: parseInt(quantity),
         notes: notes || undefined,
+        warranty: warranty || undefined,
       });
 
       if (success) {
@@ -151,6 +153,20 @@ export default function NewAssetAssignmentPage() {
                       required
                     />
                   </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    <ShieldCheck className="h-3 w-3" />
+                    Warranty (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={warranty}
+                    onChange={(e) => setWarranty(e.target.value)}
+                    placeholder="e.g. 1 Year / Expires Dec 2026"
+                    className="h-10 w-full rounded-lg border-2 border-muted bg-background px-3 text-sm shadow-sm transition-all placeholder:text-muted-foreground/50 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  />
                 </div>
 
                 <div className="space-y-1.5">
