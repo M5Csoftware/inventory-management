@@ -11,6 +11,12 @@ import {
   FileText,
   Plus,
   Save,
+  Building2,
+  Receipt,
+  Hash,
+  Barcode,
+  IndianRupee,
+  Tag,
   Search,
   Check,
   ChevronDown,
@@ -23,16 +29,22 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useInventory, Product } from "@/context/inventory-context";
+import { useInventory, Product, Supplier } from "@/context/inventory-context";
 
 export default function StockInPage() {
-  const { products, categories, recordTransaction, activeBranch } =
+  const { products, categories, suppliers, recordTransaction, activeBranch } =
     useInventory();
   const router = useRouter();
 
-  // Form states
+  // Form states matching Asset Stock In
   const [productId, setProductId] = useState("");
+  const [supplier, setSupplier] = useState("");
+  const [customSupplier, setCustomSupplier] = useState("");
+  const [invoiceNumber, setInvoiceNumber] = useState("");
   const [quantity, setQuantity] = useState("");
+  const [model, setModel] = useState("");
+  const [serialNumber, setSerialNumber] = useState("");
+  const [amount, setAmount] = useState("");
   const [location, setLocation] = useState("Warehouse A (Zone 1)");
   const [notes, setNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -52,23 +64,35 @@ export default function StockInPage() {
   });
 
   // Products filtered by the search term (for the dropdown list)
-  const filteredNonAssetProducts = nonAssetProducts.filter((prod) =>
-    prod.name.toLowerCase().includes(productSearchTerm.toLowerCase()),
+  const filteredNonAssetProducts = nonAssetProducts.filter(
+    (prod) =>
+      prod.name.toLowerCase().includes(productSearchTerm.toLowerCase()) ||
+      prod.category.toLowerCase().includes(productSearchTerm.toLowerCase()),
   );
 
   const selectedProduct = nonAssetProducts.find((p) => p.id === productId);
 
   const getStockLabel = (prod: Product) =>
     activeBranch === "All"
-      ? Object.values(prod.stock).reduce((a, b) => a + b, 0)
-      : prod.stock[activeBranch] || 0;
+      ? Object.values(prod.stock || {}).reduce((a, b) => a + b, 0)
+      : prod.stock?.[activeBranch] || 0;
 
-  // Default selection when products load
+  // Default product selection & price auto-fill
   useEffect(() => {
     if (nonAssetProducts.length > 0 && !productId) {
       setProductId(nonAssetProducts[0].id);
+      if (nonAssetProducts[0].price) {
+        setAmount(nonAssetProducts[0].price.toString());
+      }
     }
   }, [nonAssetProducts, productId]);
+
+  // Set default supplier when suppliers load
+  useEffect(() => {
+    if (suppliers && suppliers.length > 0 && !supplier) {
+      setSupplier(suppliers[0].name);
+    }
+  }, [suppliers, supplier]);
 
   // Close the product search dropdown when clicking outside of it
   useEffect(() => {
@@ -87,6 +111,10 @@ export default function StockInPage() {
 
   const handleProductChange = (id: string) => {
     setProductId(id);
+    const selectedProd = nonAssetProducts.find((p) => p.id === id);
+    if (selectedProd && selectedProd.price) {
+      setAmount(selectedProd.price.toString());
+    }
     setProductSearchOpen(false);
     setProductSearchTerm("");
   };
@@ -94,6 +122,20 @@ export default function StockInPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (submittingRef.current || !productId || !quantity || !location) return;
+
+    const finalSupplier =
+      supplier === "CUSTOM_SUPPLIER" ? customSupplier : supplier;
+
+    const summaryParts = [
+      invoiceNumber ? `Invoice: ${invoiceNumber}` : "",
+      finalSupplier ? `Supplier: ${finalSupplier}` : "",
+      model ? `Model: ${model}` : "",
+      serialNumber ? `S/N: ${serialNumber}` : "",
+      amount ? `Price: ₹${amount}` : "",
+      notes ? `Notes: ${notes}` : "",
+    ].filter(Boolean);
+
+    const fullNotes = summaryParts.length > 0 ? summaryParts.join(" | ") : undefined;
 
     submittingRef.current = true;
     setIsSubmitting(true);
@@ -104,7 +146,7 @@ export default function StockInPage() {
         "Stock In",
         parseInt(quantity),
         location,
-        notes || undefined,
+        fullNotes,
       );
 
       if (success) {
@@ -117,9 +159,9 @@ export default function StockInPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 p-4 sm:p-6">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 p-4 sm:p-6 animate-in fade-in duration-500">
       <div className="mx-auto max-w-full space-y-4">
-        {/* Header Section - Compact */}
+        {/* Header Section */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
             <Link href="/stock">
@@ -132,18 +174,19 @@ export default function StockInPage() {
               </Button>
             </Link>
             <div>
-              <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+              <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent flex items-center gap-2">
+                <Package className="h-6 w-6 text-emerald-500" />
                 Stock In (Receive Shipment)
               </h1>
               <p className="text-xs text-muted-foreground flex items-center gap-1.5 mt-0.5">
                 <ArrowUpRight className="h-3 w-3 text-emerald-500" />
-                Record incoming catalog stock and assign it to a location
+                Record incoming catalog inventory with supplier, invoice, model, and serial tracking
               </p>
             </div>
           </div>
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span>Incoming</span>
+            <span>Incoming Stock</span>
           </div>
         </div>
 
@@ -158,18 +201,17 @@ export default function StockInPage() {
             </Link>
           </Card>
         ) : (
-          /* Main Form Card - Compact */
+          /* Main Form Card */
           <Card className="border-0 shadow-xl shadow-primary/5 bg-gradient-to-br from-card to-card/80 backdrop-blur-sm">
             <CardHeader className="border-b border-border/50 pb-3">
               <div className="flex items-start justify-between">
                 <div>
                   <CardTitle className="text-lg flex items-center gap-2">
                     <ArrowUpRight className="h-4 w-4 text-emerald-500" />
-                    Stock In Details
+                    Stock Intake Details
                   </CardTitle>
                   <CardDescription className="text-xs mt-1">
-                    Select catalog product, specify incoming quantity, and
-                    warehouse assignments
+                    Select product name, supplier, invoice, quantity, model, serial numbers, and location
                   </CardDescription>
                 </div>
                 <span className="rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-medium text-emerald-600">
@@ -180,80 +222,146 @@ export default function StockInPage() {
 
             <CardContent className="pt-4">
               <form onSubmit={handleSubmit} className="space-y-4">
-                {/* Select Product */}
-                <div className="space-y-1.5">
-                  <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    <Package className="h-3 w-3" />
-                    Select Product <span className="text-destructive">*</span>
-                  </label>
+                {/* 1. Item Name & Supplier */}
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      <Package className="h-3 w-3" />
+                      Item Name <span className="text-destructive">*</span>
+                    </label>
 
-                  {/* Searchable Select Product dropdown */}
-                  <div className="relative" ref={productDropdownRef}>
-                    <button
-                      type="button"
-                      onClick={() => setProductSearchOpen((prev) => !prev)}
-                      className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500 flex items-center justify-between text-left"
+                    {/* Searchable Item Name dropdown */}
+                    <div className="relative" ref={productDropdownRef}>
+                      <button
+                        type="button"
+                        onClick={() => setProductSearchOpen((prev) => !prev)}
+                        className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500 flex items-center justify-between text-left"
+                      >
+                        <span className="truncate">
+                          {selectedProduct
+                            ? `${selectedProduct.name} (${selectedProduct.category}) - Current: ${getStockLabel(selectedProduct)} units`
+                            : "Select an item"}
+                        </span>
+                        <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0 ml-1" />
+                      </button>
+
+                      {productSearchOpen && (
+                        <div className="absolute z-20 mt-1.5 w-full rounded-lg border-2 border-gray-300 bg-white shadow-lg dark:border-gray-600 dark:bg-gray-900 overflow-hidden">
+                          <div className="flex items-center gap-2 border-b border-border/50 px-2.5 py-2">
+                            <Search className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                            <input
+                              autoFocus
+                              type="text"
+                              value={productSearchTerm}
+                              onChange={(e) =>
+                                setProductSearchTerm(e.target.value)
+                              }
+                              placeholder="Search item name or category..."
+                              className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground/50"
+                            />
+                          </div>
+                          <div className="max-h-56 overflow-y-auto py-1">
+                            {filteredNonAssetProducts.length === 0 ? (
+                              <p className="px-3 py-2 text-sm text-muted-foreground">
+                                No items found.
+                              </p>
+                            ) : (
+                              filteredNonAssetProducts.map(
+                                (prod: Product, index: number) => (
+                                  <button
+                                    key={`${prod.id}-${index}`}
+                                    type="button"
+                                    onClick={() => handleProductChange(prod.id)}
+                                    className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-muted/60 transition-colors"
+                                  >
+                                    <span className="truncate">
+                                      {prod.name} ({prod.category}) - Current:{" "}
+                                      {getStockLabel(prod)} units
+                                    </span>
+                                    {prod.id === productId && (
+                                      <Check className="h-3.5 w-3.5 text-primary shrink-0" />
+                                    )}
+                                  </button>
+                                ),
+                              )
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      <Building2 className="h-3 w-3" />
+                      Supplier
+                    </label>
+                    <select
+                      value={supplier}
+                      onChange={(e) => setSupplier(e.target.value)}
+                      className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22currentColor%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E')] bg-[length:16px] bg-[right_10px_center] bg-no-repeat hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
                     >
-                      <span className="truncate">
-                        {selectedProduct
-                          ? `${selectedProduct.name} (Current: ${getStockLabel(selectedProduct)} units)`
-                          : "Select a product"}
-                      </span>
-                      <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0 ml-1" />
-                    </button>
-
-                    {productSearchOpen && (
-                      <div className="absolute z-20 mt-1.5 w-full rounded-lg border-2 border-gray-300 bg-white shadow-lg dark:border-gray-600 dark:bg-gray-900 overflow-hidden">
-                        <div className="flex items-center gap-2 border-b border-border/50 px-2.5 py-2">
-                          <Search className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                          <input
-                            autoFocus
-                            type="text"
-                            value={productSearchTerm}
-                            onChange={(e) =>
-                              setProductSearchTerm(e.target.value)
-                            }
-                            placeholder="Search product name..."
-                            className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground/50"
-                          />
-                        </div>
-                        <div className="max-h-56 overflow-y-auto py-1">
-                          {filteredNonAssetProducts.length === 0 ? (
-                            <p className="px-3 py-2 text-sm text-muted-foreground">
-                              No products found.
-                            </p>
-                          ) : (
-                            filteredNonAssetProducts.map(
-                              (prod: Product, index: number) => (
-                                <button
-                                  key={`${prod.id}-${index}`}
-                                  type="button"
-                                  onClick={() => handleProductChange(prod.id)}
-                                  className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-muted/60 transition-colors"
-                                >
-                                  <span className="truncate">
-                                    {prod.name} (Current: {getStockLabel(prod)}{" "}
-                                    units)
-                                  </span>
-                                  {prod.id === productId && (
-                                    <Check className="h-3.5 w-3.5 text-primary shrink-0" />
-                                  )}
-                                </button>
-                              ),
-                            )
-                          )}
-                        </div>
-                      </div>
+                      {suppliers.map((s: Supplier) => (
+                        <option key={s.name} value={s.name}>
+                          {s.name}
+                        </option>
+                      ))}
+                      <option value="CUSTOM_SUPPLIER">
+                        + Enter Custom Supplier
+                      </option>
+                    </select>
+                    {supplier === "CUSTOM_SUPPLIER" && (
+                      <input
+                        type="text"
+                        value={customSupplier}
+                        onChange={(e) => setCustomSupplier(e.target.value)}
+                        placeholder="Enter supplier name"
+                        className="mt-1.5 h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all placeholder:text-muted-foreground/50 hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
+                      />
                     )}
                   </div>
                 </div>
 
-                {/* Received Quantity & Warehouse */}
+                {/* 2. Invoice Number & Model (Optional) */}
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-1.5">
                     <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                      Received Quantity{" "}
-                      <span className="text-destructive">*</span>
+                      <Receipt className="h-3 w-3" />
+                      Invoice Number
+                    </label>
+                    <input
+                      type="text"
+                      value={invoiceNumber}
+                      onChange={(e) => setInvoiceNumber(e.target.value)}
+                      placeholder="e.g. INV-2026-9041"
+                      className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all placeholder:text-muted-foreground/50 hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      <Tag className="h-3 w-3" />
+                      Model{" "}
+                      <span className="text-[10px] font-normal text-muted-foreground">
+                        (Optional)
+                      </span>
+                    </label>
+                    <input
+                      type="text"
+                      value={model}
+                      onChange={(e) => setModel(e.target.value)}
+                      placeholder="e.g. Standard Model / Batch X"
+                      className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all placeholder:text-muted-foreground/50 hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
+                    />
+                  </div>
+                </div>
+
+                {/* 3. Quantity & Amount / Price */}
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      <Hash className="h-3 w-3" />
+                      Quantity <span className="text-destructive">*</span>
                     </label>
                     <input
                       type="number"
@@ -264,10 +372,43 @@ export default function StockInPage() {
                       required
                     />
                   </div>
+
+                  <div className="space-y-1.5">
+                    <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      <IndianRupee className="h-3 w-3" />
+                      Amount / Price (₹)
+                    </label>
+                    <input
+                      type="number"
+                      step="any"
+                      value={amount}
+                      onChange={(e) => setAmount(e.target.value)}
+                      placeholder="e.g. 4500"
+                      className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all placeholder:text-muted-foreground/50 hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
+                    />
+                  </div>
+                </div>
+
+                {/* 4. Serial / Batch Number & Storage Location */}
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      <Barcode className="h-3 w-3" />
+                      Serial / Batch Number
+                    </label>
+                    <input
+                      type="text"
+                      value={serialNumber}
+                      onChange={(e) => setSerialNumber(e.target.value)}
+                      placeholder="e.g. BATCH-80941A"
+                      className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all placeholder:text-muted-foreground/50 hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
+                    />
+                  </div>
+
                   <div className="space-y-1.5">
                     <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                       <Warehouse className="h-3 w-3" />
-                      Warehouse / Location{" "}
+                      Warehouse / Storage Location{" "}
                       <span className="text-destructive">*</span>
                     </label>
                     <select
@@ -288,22 +429,22 @@ export default function StockInPage() {
                   </div>
                 </div>
 
-                {/* Notes */}
+                {/* 5. Additional Notes */}
                 <div className="space-y-1.5">
                   <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                     <FileText className="h-3 w-3" />
-                    Notes / Transaction Reference
+                    Additional Notes / Transaction Details
                   </label>
                   <textarea
                     rows={2}
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
-                    placeholder="e.g. Supplier PO #40921, shipped via cargo dispatch."
+                    placeholder="e.g. Received via cargo dispatch with PO reference."
                     className="w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 py-2 text-sm shadow-sm transition-all placeholder:text-muted-foreground/50 hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 resize-y dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
                   />
                 </div>
 
-                {/* Action Buttons - Compact */}
+                {/* Action Buttons */}
                 <div className="flex flex-col-reverse gap-2 border-t border-border/50 pt-4 sm:flex-row sm:justify-end">
                   <Link href="/stock" className="w-full sm:w-auto">
                     <Button
@@ -329,7 +470,7 @@ export default function StockInPage() {
           </Card>
         )}
 
-        {/* Help Tip - Compact */}
+        {/* Help Tip */}
         <div className="flex items-center justify-center gap-2 text-[10px] text-muted-foreground/70">
           <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full border border-muted-foreground/20 text-[9px]">
             i
