@@ -1,12 +1,14 @@
 "use client";
 
-import { Bell, Search, AlertTriangle, Package, Menu } from "lucide-react";
+import { Bell, AlertTriangle, Package, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePathname } from "next/navigation";
 import { useInventory } from "@/context/inventory-context";
+import { useAuth } from "@/context/auth-context";
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { MobileSidebar } from "./mobile-sidebar";
+import { TabBar } from "./tab-bar";
 
 export function Header() {
   const pathname = usePathname();
@@ -18,9 +20,19 @@ export function Header() {
 function HeaderInner() {
   const pathname = usePathname();
   const { products, activeBranch } = useInventory();
+  const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const popoverRef = useRef<HTMLDivElement>(null);
+
+  const getInitials = (name?: string) => {
+    if (!name) return "U";
+    const parts = name.trim().split(" ").filter(Boolean);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return parts[0]?.slice(0, 2).toUpperCase() || "U";
+  };
 
   const getStock = (p: any) => {
     if (!p.stock) return 0;
@@ -60,30 +72,26 @@ function HeaderInner() {
         isOpen={isMobileMenuOpen}
         onClose={() => setIsMobileMenuOpen(false)}
       />
-      <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background/50 backdrop-blur-xl px-4 md:px-6">
-        {/* Mobile Hamburger & Search */}
-        <div className="flex items-center gap-2 md:gap-4">
+      <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-0 border-b bg-background/50 backdrop-blur-xl p-0">
+        {/* Mobile Hamburger */}
+        <div className="flex items-center shrink-0 md:hidden pl-2">
           <Button
             variant="ghost"
             size="icon"
-            className="md:hidden text-muted-foreground hover:text-foreground"
+            className="text-muted-foreground hover:text-foreground"
             onClick={() => setIsMobileMenuOpen(true)}
           >
             <Menu className="h-5 w-5" />
           </Button>
+        </div>
 
-          <div className="relative hidden sm:block">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <input
-              type="search"
-              placeholder="Search inventory..."
-              className="h-9 w-64 rounded-md border border-input bg-background/50 pl-9 pr-3 text-sm shadow-sm transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-            />
-          </div>
+        {/* Tab Bar in the Top Header where Search bar was */}
+        <div className="flex-1 min-w-0 h-full flex items-stretch">
+          <TabBar />
         </div>
 
         {/* Right side */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 px-4 md:px-6">
           {/* Bell with popover */}
           <div className="relative" ref={popoverRef}>
             <Button
@@ -202,8 +210,20 @@ function HeaderInner() {
             )}
           </div>
 
-          {/* Avatar */}
-          <div className="h-8 w-8 rounded-full bg-gradient-to-tr from-red-500 to-rose-600 ring-2 ring-background border border-border" />
+          {/* Avatar / User Initials / Login */}
+          {user ? (
+            <Link href="/settings" title={user.name || "User Profile"}>
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-tr from-red-500 to-rose-600 ring-2 ring-background border border-border text-xs font-bold text-white uppercase shadow-sm hover:opacity-90 transition-opacity">
+                {getInitials(user.name)}
+              </div>
+            </Link>
+          ) : (
+            <Link href="/login">
+              <Button variant="outline" size="sm" className="h-8 text-xs font-medium">
+                Login
+              </Button>
+            </Link>
+          )}
         </div>
       </header>
     </>

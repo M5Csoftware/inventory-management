@@ -70,8 +70,8 @@ export default function ProductsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredProducts.map((product: Product) => (
-                    <tr key={product.id} className="border-b transition-colors hover:bg-muted/50">
+                  {filteredProducts.map((product: Product, index: number) => (
+                    <tr key={`${product.id}-${index}`} className="border-b transition-colors hover:bg-muted/50">
                       <td className="p-4 align-middle font-medium font-mono text-xs">{product.id}</td>
                       <td className="p-4 align-middle font-medium">{product.name}</td>
                       <td className="p-4 align-middle text-muted-foreground">{product.category}</td>
