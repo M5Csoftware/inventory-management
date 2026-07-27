@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { toast } from 'react-toastify';
-import { useAuth } from './auth-context';
+import React, { createContext, useContext, useState, useEffect } from "react";
+import { toast } from "react-toastify";
+import { useAuth } from "./auth-context";
 
 export interface ProductSupplierEntry {
   supplierName: string;
@@ -31,12 +31,18 @@ export interface Product {
 export interface Transaction {
   id: string;
   date: string;
+  purchaseDate?: string; // Added: Purchase date from the Stock In form
   productId: string;
   productName: string;
-  type: 'Stock In' | 'Stock Out';
+  type: "Stock In" | "Stock Out";
   quantity: number;
   reasonOrLocation: string;
   notes?: string;
+  amount?: number; // Added: Amount/Price from the Stock In form
+  supplier?: string; // Added: Supplier from the Stock In form
+  invoiceNumber?: string; // Added: Invoice number from the Stock In form
+  model?: string; // Added: Model from the Stock In form
+  serialNumber?: string; // Added: Serial number from the Stock In form
 }
 
 export interface Category {
@@ -69,7 +75,7 @@ export interface Order {
   id: string;
   supplier: string;
   items: OrderItem[];
-  status: 'Pending' | 'Processing' | 'Completed' | 'Cancelled';
+  status: "Pending" | "Processing" | "Completed" | "Cancelled";
   totalAmount: number;
   createdAt?: string;
 }
@@ -81,7 +87,7 @@ export interface AssetAssignment {
   assignedTo: string;
   assignedDate: string;
   returnedDate?: string;
-  status: 'Assigned' | 'Returned';
+  status: "Assigned" | "Returned";
   quantity: number;
   notes?: string;
   warranty?: string;
@@ -96,25 +102,33 @@ interface InventoryContextType {
   suppliers: Supplier[];
   orders: Order[];
   assets: AssetAssignment[];
-  addOrder: (order: Omit<Order, 'id' | 'createdAt'>) => Promise<void>;
+  addOrder: (order: Omit<Order, "id" | "createdAt">) => Promise<void>;
   updateOrder: (id: string, orderData: Partial<Order>) => Promise<void>;
-  updateOrderStatus: (id: string, status: Order['status']) => Promise<void>;
+  updateOrderStatus: (id: string, status: Order["status"]) => Promise<void>;
   deleteOrder: (id: string) => Promise<void>;
-  addProduct: (product: Omit<Product, 'id'>) => Promise<void>;
+  addProduct: (product: Omit<Product, "id">) => Promise<void>;
   addCategory: (category: Category) => Promise<void>;
   addSupplier: (supplier: Supplier) => Promise<void>;
   recordTransaction: (
     productId: string,
-    type: 'Stock In' | 'Stock Out',
+    type: "Stock In" | "Stock Out",
     quantity: number,
     reasonOrLocation: string,
-    notes?: string
+    notes?: string,
+    additionalData?: {
+      purchaseDate?: string;
+      amount?: number;
+      supplier?: string;
+      invoiceNumber?: string;
+      model?: string;
+      serialNumber?: string;
+    },
   ) => Promise<boolean>;
   transferStock: (
     productId: string,
     quantity: number,
     toBranch: string,
-    notes?: string
+    notes?: string,
   ) => Promise<boolean>;
   deleteProduct: (id: string) => Promise<void>;
   updateProduct: (id: string, product: Partial<Product>) => Promise<void>;
@@ -122,19 +136,30 @@ interface InventoryContextType {
   deleteCategory: (name: string) => Promise<void>;
   updateSupplier: (name: string, supplier: Partial<Supplier>) => Promise<void>;
   deleteSupplier: (name: string) => Promise<void>;
-  assignAsset: (asset: Omit<AssetAssignment, 'id' | 'assignedDate' | 'status' | 'returnedDate'>) => Promise<boolean>;
+  assignAsset: (
+    asset: Omit<
+      AssetAssignment,
+      "id" | "assignedDate" | "status" | "returnedDate"
+    >,
+  ) => Promise<boolean>;
   returnAsset: (id: string) => Promise<boolean>;
 }
 
-const InventoryContext = createContext<InventoryContextType | undefined>(undefined);
+const InventoryContext = createContext<InventoryContextType | undefined>(
+  undefined,
+);
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/inventory';
-const DB_HEADER = { 'x-database': 'm5c-inventory', 'Content-Type': 'application/json' };
-const NO_BODY_HEADER = { 'x-database': 'm5c-inventory' };
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/inventory";
+const DB_HEADER = {
+  "x-database": "m5c-inventory",
+  "Content-Type": "application/json",
+};
+const NO_BODY_HEADER = { "x-database": "m5c-inventory" };
 
 export function InventoryProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
-  const [activeBranch, setActiveBranch] = useState<string>('Ahmedabad');
+  const [activeBranch, setActiveBranch] = useState<string>("Ahmedabad");
 
   // Synchronize activeBranch with user's assigned branch on mount/change
   useEffect(() => {
@@ -155,15 +180,25 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
     if (!user) return; // Don't fetch until user is loaded
 
     try {
-      const branchQuery = activeBranch !== 'All' ? `?branch=${activeBranch}` : '';
-      const [prodRes, txRes, catRes, supRes, ordRes, astsRes] = await Promise.all([
-        fetch(`${API_BASE}/products${branchQuery}`, { headers: NO_BODY_HEADER }),
-        fetch(`${API_BASE}/transactions${branchQuery}`, { headers: NO_BODY_HEADER }),
-        fetch(`${API_BASE}/categories`, { headers: NO_BODY_HEADER }),
-        fetch(`${API_BASE}/suppliers`, { headers: NO_BODY_HEADER }),
-        fetch(`${API_BASE}/orders${branchQuery}`, { headers: NO_BODY_HEADER }),
-        fetch(`${API_BASE}/assets${branchQuery}`, { headers: NO_BODY_HEADER }),
-      ]);
+      const branchQuery =
+        activeBranch !== "All" ? `?branch=${activeBranch}` : "";
+      const [prodRes, txRes, catRes, supRes, ordRes, astsRes] =
+        await Promise.all([
+          fetch(`${API_BASE}/products${branchQuery}`, {
+            headers: NO_BODY_HEADER,
+          }),
+          fetch(`${API_BASE}/transactions${branchQuery}`, {
+            headers: NO_BODY_HEADER,
+          }),
+          fetch(`${API_BASE}/categories`, { headers: NO_BODY_HEADER }),
+          fetch(`${API_BASE}/suppliers`, { headers: NO_BODY_HEADER }),
+          fetch(`${API_BASE}/orders${branchQuery}`, {
+            headers: NO_BODY_HEADER,
+          }),
+          fetch(`${API_BASE}/assets${branchQuery}`, {
+            headers: NO_BODY_HEADER,
+          }),
+        ]);
 
       const [prods, txs, cats, sups, ords, asts] = await Promise.all([
         prodRes.json(),
@@ -181,7 +216,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
       if (ords.success) setOrders(ords.data);
       if (asts.success) setAssets(asts.data);
     } catch (error) {
-      console.error('Failed to load inventory data from backend:', error);
+      console.error("Failed to load inventory data from backend:", error);
     }
   };
 
@@ -189,173 +224,206 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
     fetchData();
   }, [activeBranch, user]);
 
-  const addProduct = async (newProduct: Omit<Product, 'id'>) => {
+  const addProduct = async (newProduct: Omit<Product, "id">) => {
     try {
       const res = await fetch(`${API_BASE}/products`, {
-        method: 'POST',
+        method: "POST",
         headers: DB_HEADER,
-        body: JSON.stringify({ ...newProduct, branch: activeBranch !== 'All' ? activeBranch : 'Delhi' }),
+        body: JSON.stringify({
+          ...newProduct,
+          branch: activeBranch !== "All" ? activeBranch : "Delhi",
+        }),
       });
       const data = await res.json();
       if (data.success) {
         await fetchData();
-        toast.success('Product added successfully!');
+        toast.success("Product added successfully!");
       } else {
-        toast.error(data.message || 'Failed to add product.');
+        toast.error(data.message || "Failed to add product.");
       }
     } catch (error) {
-      console.error('Failed to add product:', error);
-      toast.error('Network error while adding product.');
+      console.error("Failed to add product:", error);
+      toast.error("Network error while adding product.");
     }
   };
 
   const addCategory = async (category: Category) => {
     try {
       const res = await fetch(`${API_BASE}/categories`, {
-        method: 'POST',
+        method: "POST",
         headers: DB_HEADER,
         body: JSON.stringify(category),
       });
       const data = await res.json();
       if (data.success) {
         setCategories((prev) => [...prev, data.data]);
-        toast.success('Category added successfully!');
+        toast.success("Category added successfully!");
       } else {
-        toast.error(data.message || 'Failed to add category.');
+        toast.error(data.message || "Failed to add category.");
       }
     } catch (error) {
-      console.error('Failed to add category:', error);
-      toast.error('Network error while adding category.');
+      console.error("Failed to add category:", error);
+      toast.error("Network error while adding category.");
     }
   };
 
   const addSupplier = async (supplier: Supplier) => {
     try {
       const res = await fetch(`${API_BASE}/suppliers`, {
-        method: 'POST',
+        method: "POST",
         headers: DB_HEADER,
         body: JSON.stringify(supplier),
       });
       const data = await res.json();
       if (data.success) {
         setSuppliers((prev) => [...prev, data.data]);
-        toast.success('Supplier added successfully!');
+        toast.success("Supplier added successfully!");
       } else {
-        toast.error(data.message || 'Failed to add supplier.');
+        toast.error(data.message || "Failed to add supplier.");
       }
     } catch (error) {
-      console.error('Failed to add supplier:', error);
-      toast.error('Network error while adding supplier.');
+      console.error("Failed to add supplier:", error);
+      toast.error("Network error while adding supplier.");
     }
   };
 
   const deleteProduct = async (id: string) => {
     try {
       const res = await fetch(`${API_BASE}/products/${id}`, {
-        method: 'DELETE',
+        method: "DELETE",
         headers: NO_BODY_HEADER,
       });
       const data = await res.json();
       if (data.success) {
         setProducts((prev) => prev.filter((p) => p.id !== id));
-        toast.success('Product deleted successfully!');
+        toast.success("Product deleted successfully!");
       } else {
-        toast.error(data.message || 'Failed to delete product.');
+        toast.error(data.message || "Failed to delete product.");
       }
     } catch (error) {
-      console.error('Failed to delete product:', error);
-      toast.error('Network error while deleting product.');
+      console.error("Failed to delete product:", error);
+      toast.error("Network error while deleting product.");
     }
   };
 
-  const updateCategory = async (name: string, updatedCategory: Partial<Category>) => {
+  const updateCategory = async (
+    name: string,
+    updatedCategory: Partial<Category>,
+  ) => {
     try {
-      const res = await fetch(`${API_BASE}/categories/${encodeURIComponent(name)}`, {
-        method: 'PUT',
-        headers: DB_HEADER,
-        body: JSON.stringify(updatedCategory),
-      });
+      const res = await fetch(
+        `${API_BASE}/categories/${encodeURIComponent(name)}`,
+        {
+          method: "PUT",
+          headers: DB_HEADER,
+          body: JSON.stringify(updatedCategory),
+        },
+      );
       const data = await res.json();
       if (data.success) {
-        setCategories((prev) => prev.map((c) => c.name === name ? data.data : c));
-        toast.success('Category updated successfully!');
+        setCategories((prev) =>
+          prev.map((c) => (c.name === name ? data.data : c)),
+        );
+        toast.success("Category updated successfully!");
       } else {
-        toast.error(data.message || 'Failed to update category.');
+        toast.error(data.message || "Failed to update category.");
       }
     } catch (error) {
-      console.error('Failed to update category:', error);
-      toast.error('Network error while updating category.');
+      console.error("Failed to update category:", error);
+      toast.error("Network error while updating category.");
     }
   };
 
   const deleteCategory = async (name: string) => {
     try {
-      const res = await fetch(`${API_BASE}/categories/${encodeURIComponent(name)}`, {
-        method: 'DELETE',
-        headers: NO_BODY_HEADER,
-      });
+      const res = await fetch(
+        `${API_BASE}/categories/${encodeURIComponent(name)}`,
+        {
+          method: "DELETE",
+          headers: NO_BODY_HEADER,
+        },
+      );
       const data = await res.json();
       if (data.success) {
         setCategories((prev) => prev.filter((c) => c.name !== name));
-        toast.success('Category deleted successfully!');
+        toast.success("Category deleted successfully!");
       } else {
-        toast.error(data.message || 'Failed to delete category.');
+        toast.error(data.message || "Failed to delete category.");
       }
     } catch (error) {
-      console.error('Failed to delete category:', error);
-      toast.error('Network error while deleting category.');
+      console.error("Failed to delete category:", error);
+      toast.error("Network error while deleting category.");
     }
   };
 
-  const updateSupplier = async (name: string, updatedSupplier: Partial<Supplier>) => {
+  const updateSupplier = async (
+    name: string,
+    updatedSupplier: Partial<Supplier>,
+  ) => {
     try {
-      const res = await fetch(`${API_BASE}/suppliers/${encodeURIComponent(name)}`, {
-        method: 'PUT',
-        headers: DB_HEADER,
-        body: JSON.stringify(updatedSupplier),
-      });
+      const res = await fetch(
+        `${API_BASE}/suppliers/${encodeURIComponent(name)}`,
+        {
+          method: "PUT",
+          headers: DB_HEADER,
+          body: JSON.stringify(updatedSupplier),
+        },
+      );
       const data = await res.json();
       if (data.success) {
-        setSuppliers((prev) => prev.map((s) => s.name === name ? data.data : s));
-        toast.success('Supplier updated successfully!');
+        setSuppliers((prev) =>
+          prev.map((s) => (s.name === name ? data.data : s)),
+        );
+        toast.success("Supplier updated successfully!");
       } else {
-        toast.error(data.message || 'Failed to update supplier.');
+        toast.error(data.message || "Failed to update supplier.");
       }
     } catch (error) {
-      console.error('Failed to update supplier:', error);
-      toast.error('Network error while updating supplier.');
+      console.error("Failed to update supplier:", error);
+      toast.error("Network error while updating supplier.");
     }
   };
 
   const deleteSupplier = async (name: string) => {
     try {
-      const res = await fetch(`${API_BASE}/suppliers/${encodeURIComponent(name)}`, {
-        method: 'DELETE',
-        headers: NO_BODY_HEADER,
-      });
+      const res = await fetch(
+        `${API_BASE}/suppliers/${encodeURIComponent(name)}`,
+        {
+          method: "DELETE",
+          headers: NO_BODY_HEADER,
+        },
+      );
       const data = await res.json();
       if (data.success) {
         setSuppliers((prev) => prev.filter((s) => s.name !== name));
-        toast.success('Supplier deleted successfully!');
+        toast.success("Supplier deleted successfully!");
       } else {
-        toast.error(data.message || 'Failed to delete supplier.');
+        toast.error(data.message || "Failed to delete supplier.");
       }
     } catch (error) {
-      console.error('Failed to delete supplier:', error);
-      toast.error('Network error while deleting supplier.');
+      console.error("Failed to delete supplier:", error);
+      toast.error("Network error while deleting supplier.");
     }
   };
 
   const recordTransaction = async (
     productId: string,
-    type: 'Stock In' | 'Stock Out',
+    type: "Stock In" | "Stock Out",
     quantity: number,
     reasonOrLocation: string,
-    notes?: string
+    notes?: string,
+    additionalData?: {
+      purchaseDate?: string;
+      amount?: number;
+      supplier?: string;
+      invoiceNumber?: string;
+      model?: string;
+      serialNumber?: string;
+    },
   ): Promise<boolean> => {
     try {
       const res = await fetch(`${API_BASE}/transactions`, {
-        method: 'POST',
+        method: "POST",
         headers: DB_HEADER,
         body: JSON.stringify({
           productId,
@@ -363,7 +431,13 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
           quantity,
           reasonOrLocation,
           notes,
-          branch: activeBranch
+          branch: activeBranch,
+          purchaseDate: additionalData?.purchaseDate,
+          amount: additionalData?.amount,
+          supplier: additionalData?.supplier,
+          invoiceNumber: additionalData?.invoiceNumber,
+          model: additionalData?.model,
+          serialNumber: additionalData?.serialNumber,
         }),
       });
       const data = await res.json();
@@ -375,29 +449,32 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
         toast.error(data.message || `Failed to record ${type}.`);
       }
     } catch (error) {
-      console.error('Failed to record stock transaction:', error);
-      toast.error('Network error while recording transaction.');
+      console.error("Failed to record stock transaction:", error);
+      toast.error("Network error while recording transaction.");
     }
     return false;
   };
 
-  const updateProduct = async (id: string, updatedProduct: Partial<Product>) => {
+  const updateProduct = async (
+    id: string,
+    updatedProduct: Partial<Product>,
+  ) => {
     try {
       const res = await fetch(`${API_BASE}/products/${id}`, {
-        method: 'PUT',
+        method: "PUT",
         headers: DB_HEADER,
         body: JSON.stringify(updatedProduct),
       });
       const data = await res.json();
       if (data.success) {
-        setProducts((prev) => prev.map((p) => p.id === id ? data.data : p));
-        toast.success('Product updated successfully!');
+        setProducts((prev) => prev.map((p) => (p.id === id ? data.data : p)));
+        toast.success("Product updated successfully!");
       } else {
-        toast.error(data.message || 'Failed to update product.');
+        toast.error(data.message || "Failed to update product.");
       }
     } catch (error) {
-      console.error('Failed to update product:', error);
-      toast.error('Network error while updating product.');
+      console.error("Failed to update product:", error);
+      toast.error("Network error while updating product.");
     }
   };
 
@@ -405,15 +482,15 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
     productId: string,
     quantity: number,
     toBranch: string,
-    notes?: string
+    notes?: string,
   ): Promise<boolean> => {
     if (activeBranch === toBranch) {
-      toast.error('Cannot transfer to the same branch.');
+      toast.error("Cannot transfer to the same branch.");
       return false;
     }
     try {
       const res = await fetch(`${API_BASE}/transactions/transfer`, {
-        method: 'POST',
+        method: "POST",
         headers: DB_HEADER,
         body: JSON.stringify({
           productId,
@@ -426,115 +503,120 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
       const data = await res.json();
       if (data.success) {
         await fetchData();
-        toast.success('Stock transferred successfully!');
+        toast.success("Stock transferred successfully!");
         return true;
       } else {
-        toast.error(data.message || 'Failed to transfer stock.');
+        toast.error(data.message || "Failed to transfer stock.");
         return false;
       }
     } catch (error) {
-      console.error('Failed to transfer stock:', error);
-      toast.error('Network error while transferring stock.');
+      console.error("Failed to transfer stock:", error);
+      toast.error("Network error while transferring stock.");
       return false;
     }
   };
 
-  const addOrder = async (order: Omit<Order, 'id' | 'createdAt'>) => {
+  const addOrder = async (order: Omit<Order, "id" | "createdAt">) => {
     try {
       const res = await fetch(`${API_BASE}/orders`, {
-        method: 'POST',
+        method: "POST",
         headers: DB_HEADER,
         body: JSON.stringify({ ...order, branch: activeBranch }),
       });
       const data = await res.json();
       if (data.success) {
         await fetchData();
-        toast.success('Order created successfully!');
+        toast.success("Order created successfully!");
       } else {
-        toast.error(data.message || 'Failed to create order.');
+        toast.error(data.message || "Failed to create order.");
       }
     } catch (error) {
-      console.error('Failed to create order:', error);
-      toast.error('Network error while creating order.');
+      console.error("Failed to create order:", error);
+      toast.error("Network error while creating order.");
     }
   };
 
   const updateOrder = async (id: string, orderData: Partial<Order>) => {
     try {
       const res = await fetch(`${API_BASE}/orders/${id}`, {
-        method: 'PUT',
+        method: "PUT",
         headers: DB_HEADER,
         body: JSON.stringify(orderData),
       });
       const data = await res.json();
       if (data.success) {
         await fetchData();
-        toast.success('Order updated successfully!');
+        toast.success("Order updated successfully!");
       } else {
-        toast.error(data.message || 'Failed to update order.');
+        toast.error(data.message || "Failed to update order.");
       }
     } catch (error) {
-      console.error('Failed to update order:', error);
-      toast.error('Network error while updating order.');
+      console.error("Failed to update order:", error);
+      toast.error("Network error while updating order.");
     }
   };
 
-  const updateOrderStatus = async (id: string, status: Order['status']) => {
+  const updateOrderStatus = async (id: string, status: Order["status"]) => {
     try {
       const res = await fetch(`${API_BASE}/orders/${id}`, {
-        method: 'PUT',
+        method: "PUT",
         headers: DB_HEADER,
         body: JSON.stringify({ status }),
       });
       const data = await res.json();
       if (data.success) {
         await fetchData();
-        toast.success('Order status updated!');
+        toast.success("Order status updated!");
       } else {
-        toast.error(data.message || 'Failed to update order.');
+        toast.error(data.message || "Failed to update order.");
       }
     } catch (error) {
-      console.error('Failed to update order:', error);
-      toast.error('Network error while updating order.');
+      console.error("Failed to update order:", error);
+      toast.error("Network error while updating order.");
     }
   };
 
   const deleteOrder = async (id: string) => {
     try {
       const res = await fetch(`${API_BASE}/orders/${id}`, {
-        method: 'DELETE',
+        method: "DELETE",
         headers: NO_BODY_HEADER,
       });
       if (res.ok) {
         await fetchData();
-        toast.success('Order deleted successfully!');
+        toast.success("Order deleted successfully!");
       } else {
-        toast.error('Failed to delete order.');
+        toast.error("Failed to delete order.");
       }
     } catch (error) {
-      console.error('Failed to delete order:', error);
-      toast.error('Network error while deleting order.');
+      console.error("Failed to delete order:", error);
+      toast.error("Network error while deleting order.");
     }
   };
 
-  const assignAsset = async (asset: Omit<AssetAssignment, 'id' | 'assignedDate' | 'status' | 'returnedDate'>) => {
+  const assignAsset = async (
+    asset: Omit<
+      AssetAssignment,
+      "id" | "assignedDate" | "status" | "returnedDate"
+    >,
+  ) => {
     try {
       const res = await fetch(`${API_BASE}/assets`, {
-        method: 'POST',
+        method: "POST",
         headers: DB_HEADER,
         body: JSON.stringify({ ...asset, branch: activeBranch }),
       });
       const data = await res.json();
       if (data.success) {
         await fetchData();
-        toast.success('Asset assigned successfully!');
+        toast.success("Asset assigned successfully!");
         return true;
       } else {
-        toast.error(data.message || 'Failed to assign asset');
+        toast.error(data.message || "Failed to assign asset");
         return false;
       }
     } catch (error) {
-      toast.error('An error occurred');
+      toast.error("An error occurred");
       return false;
     }
   };
@@ -542,20 +624,20 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
   const returnAsset = async (id: string) => {
     try {
       const res = await fetch(`${API_BASE}/assets/${id}/return`, {
-        method: 'PUT',
+        method: "PUT",
         headers: NO_BODY_HEADER,
       });
       const data = await res.json();
       if (data.success) {
         await fetchData();
-        toast.success('Asset returned successfully!');
+        toast.success("Asset returned successfully!");
         return true;
       } else {
-        toast.error(data.message || 'Failed to return asset');
+        toast.error(data.message || "Failed to return asset");
         return false;
       }
     } catch (error) {
-      toast.error('An error occurred');
+      toast.error("An error occurred");
       return false;
     }
   };
@@ -598,7 +680,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
 export function useInventory() {
   const context = useContext(InventoryContext);
   if (!context) {
-    throw new Error('useInventory must be used within an InventoryProvider');
+    throw new Error("useInventory must be used within an InventoryProvider");
   }
   return context;
 }
