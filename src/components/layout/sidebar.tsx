@@ -20,6 +20,7 @@ import {
   BarChart3,
   Laptop,
   IndianRupee,
+  AlertTriangle,
   Hammer,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -58,6 +59,7 @@ export const navItems: NavItem[] = [
       { href: "/stock/in", label: "Stock In (Add)", icon: PlusCircle },
       { href: "/stock/out", label: "Stock Out (Remove)", icon: PlusCircle },
       { href: "/stock/transfer", label: "Transfer Stock", icon: Truck },
+      { href: "/stock/alerts", label: "Low Stock Alerts", icon: AlertTriangle },
     ],
   },
   {
@@ -202,6 +204,7 @@ export function Sidebar() {
             return (
               <div key={item.label} className="space-y-1">
                 <button
+                  type="button"
                   onClick={() => toggleSubMenu(item.label)}
                   className={cn(
                     "flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm lg:text-base font-medium transition-all text-muted-foreground hover:bg-accent hover:text-accent-foreground",

@@ -72,13 +72,13 @@ function HeaderInner() {
         isOpen={isMobileMenuOpen}
         onClose={() => setIsMobileMenuOpen(false)}
       />
-      <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-2 md:gap-4 border-b bg-background/50 backdrop-blur-xl px-4 md:px-6">
+      <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-0 border-b bg-background/50 backdrop-blur-xl p-0">
         {/* Mobile Hamburger */}
-        <div className="flex items-center shrink-0">
+        <div className="flex items-center shrink-0 md:hidden pl-2">
           <Button
             variant="ghost"
             size="icon"
-            className="md:hidden text-muted-foreground hover:text-foreground"
+            className="text-muted-foreground hover:text-foreground"
             onClick={() => setIsMobileMenuOpen(true)}
           >
             <Menu className="h-5 w-5" />
@@ -91,7 +91,7 @@ function HeaderInner() {
         </div>
 
         {/* Right side */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 px-4 md:px-6">
           {/* Bell with popover */}
           <div className="relative" ref={popoverRef}>
             <Button
@@ -117,7 +117,11 @@ function HeaderInner() {
             {open && (
               <div className="absolute right-0 top-12 z-50 w-[calc(100vw-2rem)] max-w-sm sm:w-80 rounded-xl border border-border bg-background shadow-2xl shadow-black/20 overflow-hidden">
                 {/* Header */}
-                <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/30">
+                <Link
+                  href="/stock/alerts"
+                  onClick={() => setOpen(false)}
+                  className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/30 hover:bg-muted/60 transition-colors"
+                >
                   <div>
                     <h4 className="text-sm font-semibold">Low Stock Alerts</h4>
                     <p className="text-xs text-muted-foreground">
@@ -129,7 +133,7 @@ function HeaderInner() {
                       {alertCount} item{alertCount > 1 ? "s" : ""}
                     </span>
                   )}
-                </div>
+                </Link>
 
                 {/* List */}
                 <div className="max-h-72 overflow-y-auto">
@@ -146,9 +150,11 @@ function HeaderInner() {
                   ) : (
                     <div className="divide-y divide-border">
                       {lowStockProducts.map((product) => (
-                        <div
+                        <Link
                           key={product.id}
-                          className="flex items-start gap-3 px-4 py-3 hover:bg-muted/40 transition-colors"
+                          href="/stock/alerts"
+                          onClick={() => setOpen(false)}
+                          className="flex items-start gap-3 px-4 py-3 hover:bg-muted/40 transition-colors block"
                         >
                           {/* Icon */}
                           <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-destructive/10">
@@ -173,7 +179,7 @@ function HeaderInner() {
                               </span>
                             </div>
                           </div>
-                        </div>
+                        </Link>
                       ))}
                     </div>
                   )}
@@ -192,7 +198,7 @@ function HeaderInner() {
                       </Button>
                     </Link>
                     <Link
-                      href="/products"
+                      href="/stock/alerts"
                       className="flex-1"
                       onClick={() => setOpen(false)}
                     >
