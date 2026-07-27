@@ -5,12 +5,7 @@ import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import { saveAs } from "file-saver";
 import * as XLSX from "xlsx";
-import {
-  Download,
-  Search,
-  RefreshCw,
-  Filter,
-} from "lucide-react";
+import { Download, Search, RefreshCw, Filter } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useInventory, Category } from "@/context/inventory-context";
 
@@ -18,12 +13,16 @@ interface MonthlyStockItem {
   productId: string;
   productName: string;
   category: string;
-  sku: string;
+  supplier: string;
   branch: string;
+  sku: string;
   openingStock: number;
+  purchaseRate: number;
+  purchaseValue: number;
   stockIn: number;
   stockOut: number;
   closingStock: number;
+  lastPurchaseDate: string;
 }
 
 const API_BASE =
@@ -53,7 +52,7 @@ export default function MonthlyStockReportPage() {
   const now = new Date();
   const [selectedYear, setSelectedYear] = useState<number>(now.getFullYear());
   const [selectedMonth, setSelectedMonth] = useState<number>(
-    now.getMonth() + 1
+    now.getMonth() + 1,
   );
   const [monthlyBranch, setMonthlyBranch] = useState<string>("All");
   const [monthlyCategory, setMonthlyCategory] = useState<string>("All");
@@ -83,7 +82,7 @@ export default function MonthlyStockReportPage() {
 
       const res = await fetch(
         `${API_BASE}/reports/monthly-stock?${params.toString()}`,
-        { headers }
+        { headers },
       );
 
       if (res.ok) {
@@ -93,7 +92,7 @@ export default function MonthlyStockReportPage() {
           if (monthlyCategory && monthlyCategory !== "All") {
             const catLower = monthlyCategory.toLowerCase();
             list = list.filter(
-              (item) => item.category?.toLowerCase() === catLower
+              (item) => item.category?.toLowerCase() === catLower,
             );
           }
           setMonthlyData(list);
@@ -103,10 +102,17 @@ export default function MonthlyStockReportPage() {
       }
 
       // CLIENT-SIDE FALLBACK if /reports/monthly-stock returns 404 (e.g. deployed Render server)
-      const branchQuery = monthlyBranch && monthlyBranch !== "All" ? `?branch=${monthlyBranch}` : "";
+      const branchQuery =
+        monthlyBranch && monthlyBranch !== "All"
+          ? `?branch=${monthlyBranch}`
+          : "";
       const [prodRes, txRes] = await Promise.all([
-        fetch(`${API_BASE}/products${branchQuery}`, { headers: { "x-database": "m5c-inventory" } }),
-        fetch(`${API_BASE}/transactions${branchQuery}`, { headers: { "x-database": "m5c-inventory" } }),
+        fetch(`${API_BASE}/products${branchQuery}`, {
+          headers: { "x-database": "m5c-inventory" },
+        }),
+        fetch(`${API_BASE}/transactions${branchQuery}`, {
+          headers: { "x-database": "m5c-inventory" },
+        }),
       ]);
 
       const prods = await prodRes.json();
@@ -126,7 +132,7 @@ export default function MonthlyStockReportPage() {
         if (monthlyCategory && monthlyCategory !== "All") {
           const catLower = monthlyCategory.toLowerCase();
           filteredProducts = filteredProducts.filter(
-            (p: any) => p.category?.toLowerCase() === catLower
+            (p: any) => p.category?.toLowerCase() === catLower,
           );
         }
         if (monthlySearch.trim()) {
@@ -136,20 +142,26 @@ export default function MonthlyStockReportPage() {
               p.name?.toLowerCase().includes(q) ||
               p.id?.toLowerCase().includes(q) ||
               p.sku?.toLowerCase().includes(q) ||
-              p.category?.toLowerCase().includes(q)
+              p.category?.toLowerCase().includes(q),
           );
         }
 
         const calculatedReport: MonthlyStockItem[] = [];
 
         for (const prod of filteredProducts) {
-          const prodTxs = transactionsList.filter((t: any) => t.productId === prod.id);
+          const prodTxs = transactionsList.filter(
+            (t: any) => t.productId === prod.id,
+          );
           const relevantBranches =
-            monthlyBranch && monthlyBranch !== "All" ? [monthlyBranch] : branchesList;
+            monthlyBranch && monthlyBranch !== "All"
+              ? [monthlyBranch]
+              : branchesList;
 
           let prodCreatedAt = prod.createdAt ? new Date(prod.createdAt) : null;
           if (!prodCreatedAt && prodTxs.length > 0) {
-            const timestamps = prodTxs.map((t: any) => new Date(t.date || t.createdAt).getTime()).filter((t: number) => !isNaN(t));
+            const timestamps = prodTxs
+              .map((t: any) => new Date(t.date || t.createdAt).getTime())
+              .filter((t: number) => !isNaN(t));
             if (timestamps.length > 0) {
               prodCreatedAt = new Date(Math.min(...timestamps));
             }
@@ -159,9 +171,10 @@ export default function MonthlyStockReportPage() {
           }
 
           for (const b of relevantBranches) {
-            const initialStockForBranch = typeof prod.stock === "object" && prod.stock !== null
-              ? (prod.stock[b] || 0)
-              : (prod.stock || 0);
+            const initialStockForBranch =
+              typeof prod.stock === "object" && prod.stock !== null
+                ? prod.stock[b] || 0
+                : prod.stock || 0;
 
             const txsAfterMonthEnd = prodTxs.filter((t: any) => {
               const txDate = new Date(t.date || t.createdAt);
@@ -172,42 +185,183 @@ export default function MonthlyStockReportPage() {
             let currentStockAtMonthEnd = initialStockForBranch;
             for (const t of txsAfterMonthEnd) {
               if (t.type === "Stock In") {
-                currentStockAtMonthEnd -= (t.quantity || 0);
+                currentStockAtMonthEnd -= t.quantity || 0;
               } else if (t.type === "Stock Out") {
-                currentStockAtMonthEnd += (t.quantity || 0);
+                currentStockAtMonthEnd += t.quantity || 0;
               }
             }
 
             const monthTxs = prodTxs.filter((t: any) => {
               const txDate = new Date(t.date || t.createdAt);
               const txBranch = t.branch || b;
-              return txDate >= monthStart && txDate <= monthEnd && txBranch === b;
+              return (
+                txDate >= monthStart && txDate <= monthEnd && txBranch === b
+              );
             });
 
             let stockInMonth = 0;
             let stockOutMonth = 0;
             for (const t of monthTxs) {
-              if (t.type === "Stock In") stockInMonth += (t.quantity || 0);
-              if (t.type === "Stock Out") stockOutMonth += (t.quantity || 0);
+              if (t.type === "Stock In") stockInMonth += t.quantity || 0;
+              if (t.type === "Stock Out") stockOutMonth += t.quantity || 0;
             }
 
             const closingStock = Math.max(0, currentStockAtMonthEnd);
-            const openingStock = Math.max(0, closingStock - stockInMonth + stockOutMonth);
+            const openingStock = Math.max(
+              0,
+              closingStock - stockInMonth + stockOutMonth,
+            );
 
-            if (prodCreatedAt > monthEnd && openingStock === 0 && stockInMonth === 0 && stockOutMonth === 0 && closingStock === 0) {
+            if (
+              prodCreatedAt > monthEnd &&
+              openingStock === 0 &&
+              stockInMonth === 0 &&
+              stockOutMonth === 0 &&
+              closingStock === 0
+            ) {
               continue;
+            }
+
+            const stockInTxs = prodTxs.filter(
+              (t: any) => t.type === "Stock In",
+            );
+
+            // Extract supplier from recent Stock In transactions if recorded
+            let txSupplier = "";
+            if (stockInTxs.length > 0) {
+              const sorted = [...stockInTxs].sort(
+                (a: any, b: any) =>
+                  new Date(b.date || b.createdAt).getTime() -
+                  new Date(a.date || a.createdAt).getTime(),
+              );
+
+              for (const t of sorted) {
+                if (
+                  t.supplier &&
+                  typeof t.supplier === "string" &&
+                  t.supplier.trim()
+                ) {
+                  txSupplier = t.supplier.trim();
+                  break;
+                }
+                const combinedNotes = `${t.reasonOrLocation || ""} ${t.notes || ""} ${t.reason || ""}`;
+                const match = combinedNotes.match(/Supplier:\s*([^|]+)/i);
+                if (match && match[1] && match[1].trim()) {
+                  txSupplier = match[1].trim();
+                  break;
+                }
+              }
+            }
+
+            const supplierName =
+              txSupplier ||
+              prod.supplier ||
+              (prod.suppliersList && prod.suppliersList.length > 0
+                ? prod.suppliersList[0]?.supplierName
+                : null) ||
+              "-";
+
+            // Fetch the Amount / Price entered on the Stock In form from the most
+            // recent Stock In transaction for this product — used directly as the
+            // Purchase Value (not multiplied by opening stock), since it's the
+            // actual amount paid on intake.
+            let txPurchaseAmount: number | null = null;
+            if (stockInTxs.length > 0) {
+              const sortedForRate = [...stockInTxs].sort(
+                (a: any, b: any) =>
+                  new Date(b.date || b.createdAt).getTime() -
+                  new Date(a.date || a.createdAt).getTime(),
+              );
+
+              for (const t of sortedForRate) {
+                if (
+                  t.amount !== undefined &&
+                  t.amount !== null &&
+                  !isNaN(Number(t.amount))
+                ) {
+                  txPurchaseAmount = Number(t.amount);
+                  break;
+                }
+                if (
+                  t.price !== undefined &&
+                  t.price !== null &&
+                  !isNaN(Number(t.price))
+                ) {
+                  txPurchaseAmount = Number(t.price);
+                  break;
+                }
+                const combinedNotes = `${t.reasonOrLocation || ""} ${t.notes || ""} ${t.reason || ""}`;
+                const match = combinedNotes.match(
+                  /Price:\s*₹?\s*([\d,]+(?:\.\d+)?)/i,
+                );
+                if (match && match[1]) {
+                  const parsed = Number(match[1].replace(/,/g, ""));
+                  if (!isNaN(parsed)) {
+                    txPurchaseAmount = parsed;
+                    break;
+                  }
+                }
+              }
+            }
+
+            const purchaseRate = (() => {
+              if (
+                prod.suppliersList &&
+                Array.isArray(prod.suppliersList) &&
+                supplierName
+              ) {
+                const match = prod.suppliersList.find(
+                  (s: any) =>
+                    s.supplierName &&
+                    s.supplierName.toLowerCase() === supplierName.toLowerCase(),
+                );
+                if (
+                  match &&
+                  match.rate !== undefined &&
+                  match.rate !== null &&
+                  !isNaN(Number(match.rate))
+                ) {
+                  return Number(match.rate);
+                }
+              }
+              return Number(prod.price) || 0;
+            })();
+            const purchaseValue =
+              txPurchaseAmount !== null
+                ? txPurchaseAmount
+                : openingStock * purchaseRate;
+
+            let lastPurchaseDate = "-";
+            if (stockInTxs.length > 0) {
+              const sorted = [...stockInTxs].sort(
+                (a: any, b: any) =>
+                  new Date(b.date || b.createdAt).getTime() -
+                  new Date(a.date || a.createdAt).getTime(),
+              );
+              if (sorted[0] && (sorted[0].date || sorted[0].createdAt)) {
+                const d = new Date(sorted[0].date || sorted[0].createdAt);
+                lastPurchaseDate = d.toLocaleDateString("en-IN", {
+                  year: "numeric",
+                  month: "short",
+                  day: "numeric",
+                });
+              }
             }
 
             calculatedReport.push({
               productId: prod.id,
               productName: prod.name,
               category: prod.category || "Uncategorized",
+              supplier: supplierName,
               sku: prod.sku || prod.id,
               branch: b,
               openingStock,
+              purchaseRate,
+              purchaseValue,
               stockIn: stockInMonth,
               stockOut: stockOutMonth,
               closingStock,
+              lastPurchaseDate,
             });
           }
         }
@@ -240,15 +394,16 @@ export default function MonthlyStockReportPage() {
     const exportData = monthlyData.map((item) => ({
       Month: `${monthLabel} ${selectedYear}`,
       Branch: item.branch,
+      Product: item.productName,
       Category: item.category,
-      "Product ID": item.productId,
-      "Product Name": item.productName,
-      SKU: item.sku,
-      "Opening Stock": item.openingStock,
-      "Stock In (+):": item.stockIn,
-      "Stock Out (-):": item.stockOut,
-      "Net Change": item.stockIn - item.stockOut,
-      "Closing Stock": item.closingStock,
+      Supplier: item.supplier || "-",
+      "OS (Opening Stock)": item.openingStock,
+      "Purchase Rate (₹)": item.purchaseRate || 0,
+      "Purchase Value (₹)": item.purchaseValue || 0,
+      "Incoming Qty (Stock In)": item.stockIn,
+      "Stock Out": item.stockOut,
+      "Current Stock": item.closingStock,
+      "Last Purchase Date": item.lastPurchaseDate || "-",
     }));
 
     const ws = XLSX.utils.json_to_sheet(exportData);
@@ -256,10 +411,7 @@ export default function MonthlyStockReportPage() {
     XLSX.utils.book_append_sheet(wb, ws, "Monthly Stock Summary");
     const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" });
     const blob = new Blob([wbout], { type: "application/octet-stream" });
-    saveAs(
-      blob,
-      `monthly_stock_report_${monthLabel}_${selectedYear}.xlsx`
-    );
+    saveAs(blob, `monthly_stock_report_${monthLabel}_${selectedYear}.xlsx`);
   };
 
   return (
@@ -335,7 +487,9 @@ export default function MonthlyStockReportPage() {
         </div>
 
         <div className="space-y-2">
-          <label className="text-xs sm:text-sm font-medium">Search Product</label>
+          <label className="text-xs sm:text-sm font-medium">
+            Search Product
+          </label>
           <div className="relative">
             <Search className="absolute left-2.5 top-3 w-4 h-4 text-muted-foreground" />
             <input
@@ -366,23 +520,35 @@ export default function MonthlyStockReportPage() {
             <table className="w-full text-sm text-left border-collapse">
               <thead className="bg-muted/90 backdrop-blur-xs text-muted-foreground border-b border-border sticky top-0 z-10 shadow-2xs">
                 <tr>
-                  <th className="p-3 font-semibold whitespace-nowrap bg-muted/90">Product</th>
-                  <th className="p-3 font-semibold whitespace-nowrap bg-muted/90">Category</th>
-                  <th className="p-3 font-semibold whitespace-nowrap bg-muted/90">Branch</th>
-                  <th className="p-3 font-semibold whitespace-nowrap text-right bg-muted/90">
-                    Opening Stock
+                  <th className="p-3 font-semibold whitespace-nowrap bg-muted/90">
+                    Product
+                  </th>
+                  <th className="p-3 font-semibold whitespace-nowrap bg-muted/90">
+                    Category
+                  </th>
+                  <th className="p-3 font-semibold whitespace-nowrap bg-muted/90">
+                    Supplier
                   </th>
                   <th className="p-3 font-semibold whitespace-nowrap text-right bg-muted/90">
-                    Stock In (+)
+                    OS
                   </th>
                   <th className="p-3 font-semibold whitespace-nowrap text-right bg-muted/90">
-                    Stock Out (-)
+                    Purchase Rate
                   </th>
                   <th className="p-3 font-semibold whitespace-nowrap text-right bg-muted/90">
-                    Net Change
+                    Purchase Value
                   </th>
                   <th className="p-3 font-semibold whitespace-nowrap text-right bg-muted/90">
-                    Closing Stock
+                    Stock In
+                  </th>
+                  <th className="p-3 font-semibold whitespace-nowrap text-right bg-muted/90">
+                    Stock Out
+                  </th>
+                  <th className="p-3 font-semibold whitespace-nowrap text-right bg-muted/90">
+                    Current Stock
+                  </th>
+                  <th className="p-3 font-semibold whitespace-nowrap text-center bg-muted/90">
+                    Last Purchase Date
                   </th>
                 </tr>
               </thead>
@@ -390,7 +556,7 @@ export default function MonthlyStockReportPage() {
                 {loadingMonthly ? (
                   <tr>
                     <td
-                      colSpan={8}
+                      colSpan={10}
                       className="p-6 text-center text-muted-foreground"
                     >
                       <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-primary" />
@@ -399,7 +565,6 @@ export default function MonthlyStockReportPage() {
                   </tr>
                 ) : monthlyData.length ? (
                   monthlyData.map((item, idx) => {
-                    const netChange = item.stockIn - item.stockOut;
                     return (
                       <tr
                         key={`${item.productId}-${item.branch}-${idx}`}
@@ -414,36 +579,35 @@ export default function MonthlyStockReportPage() {
                         <td className="p-3 text-xs text-muted-foreground whitespace-nowrap">
                           {item.category}
                         </td>
-                        <td className="p-3 font-medium whitespace-nowrap">
-                          {item.branch}
+                        <td className="p-3 text-xs text-muted-foreground whitespace-nowrap">
+                          {item.supplier || "-"}
                         </td>
                         <td className="p-3 text-right font-semibold text-muted-foreground">
-                          {item.openingStock}
+                          {item.openingStock.toLocaleString()}
+                        </td>
+                        <td className="p-3 text-right font-mono text-xs">
+                          ₹{(item.purchaseRate || 0).toLocaleString("en-IN")}
+                        </td>
+                        <td className="p-3 text-right font-mono text-xs font-semibold">
+                          ₹{(item.purchaseValue || 0).toLocaleString("en-IN")}
                         </td>
                         <td className="p-3 text-right font-semibold text-emerald-500">
-                          {item.stockIn > 0 ? `+${item.stockIn}` : 0}
+                          {item.stockIn > 0
+                            ? `+${item.stockIn.toLocaleString()}`
+                            : 0}
                         </td>
                         <td className="p-3 text-right font-semibold text-amber-500">
-                          {item.stockOut > 0 ? `-${item.stockOut}` : 0}
-                        </td>
-                        <td className="p-3 text-right">
-                          <span
-                            className={cn(
-                              "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold",
-                              netChange > 0
-                                ? "bg-emerald-500/10 text-emerald-500"
-                                : netChange < 0
-                                ? "bg-amber-500/10 text-amber-500"
-                                : "bg-muted text-muted-foreground"
-                            )}
-                          >
-                            {netChange > 0 ? `+${netChange}` : netChange}
-                          </span>
+                          {item.stockOut > 0
+                            ? `-${item.stockOut.toLocaleString()}`
+                            : 0}
                         </td>
                         <td className="p-3 text-right">
                           <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-primary/10 text-primary font-bold">
-                            {item.closingStock}
+                            {item.closingStock.toLocaleString()}
                           </span>
+                        </td>
+                        <td className="p-3 text-center text-xs text-muted-foreground whitespace-nowrap">
+                          {item.lastPurchaseDate || "-"}
                         </td>
                       </tr>
                     );
@@ -451,7 +615,7 @@ export default function MonthlyStockReportPage() {
                 ) : (
                   <tr>
                     <td
-                      colSpan={8}
+                      colSpan={10}
                       className="p-6 text-center text-muted-foreground"
                     >
                       No monthly inventory records found.
@@ -459,6 +623,54 @@ export default function MonthlyStockReportPage() {
                   </tr>
                 )}
               </tbody>
+              {!loadingMonthly && monthlyData.length > 0 && (
+                <tfoot className="bg-muted/90 font-bold border-t-2 border-border sticky bottom-0 z-10 text-xs sm:text-sm">
+                  <tr>
+                    <td className="p-3">Total ({monthlyData.length} items)</td>
+                    <td className="p-3">-</td>
+                    <td className="p-3">-</td>
+                    <td className="p-3 text-right text-foreground font-bold">
+                      {monthlyData
+                        .reduce(
+                          (acc, curr) => acc + (curr.openingStock || 0),
+                          0,
+                        )
+                        .toLocaleString()}
+                    </td>
+                    <td className="p-3 text-right">-</td>
+                    <td className="p-3 text-right font-mono text-foreground font-bold">
+                      ₹
+                      {monthlyData
+                        .reduce(
+                          (acc, curr) => acc + (curr.purchaseValue || 0),
+                          0,
+                        )
+                        .toLocaleString("en-IN")}
+                    </td>
+                    <td className="p-3 text-right text-emerald-500 font-bold">
+                      +
+                      {monthlyData
+                        .reduce((acc, curr) => acc + (curr.stockIn || 0), 0)
+                        .toLocaleString()}
+                    </td>
+                    <td className="p-3 text-right text-amber-500 font-bold">
+                      -
+                      {monthlyData
+                        .reduce((acc, curr) => acc + (curr.stockOut || 0), 0)
+                        .toLocaleString()}
+                    </td>
+                    <td className="p-3 text-right text-primary font-bold">
+                      {monthlyData
+                        .reduce(
+                          (acc, curr) => acc + (curr.closingStock || 0),
+                          0,
+                        )
+                        .toLocaleString()}
+                    </td>
+                    <td className="p-3 text-center">-</td>
+                  </tr>
+                </tfoot>
+              )}
             </table>
           </div>
         </div>
@@ -466,9 +678,14 @@ export default function MonthlyStockReportPage() {
         {/* Results Summary & Export Button (Always visible right below table) */}
         <div className="flex flex-col sm:flex-row justify-between items-center gap-2 pt-1 px-1">
           <p className="text-xs sm:text-sm text-muted-foreground">
-            Showing <span className="font-semibold text-foreground">{monthlyData.length}</span> inventory items for{" "}
+            Showing{" "}
             <span className="font-semibold text-foreground">
-              {MONTHS.find((m) => m.value === selectedMonth)?.label} {selectedYear}
+              {monthlyData.length}
+            </span>{" "}
+            inventory items for{" "}
+            <span className="font-semibold text-foreground">
+              {MONTHS.find((m) => m.value === selectedMonth)?.label}{" "}
+              {selectedYear}
             </span>
           </p>
           <button
