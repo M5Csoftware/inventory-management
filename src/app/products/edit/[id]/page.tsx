@@ -49,6 +49,9 @@ export default function EditProductPage() {
   const [description, setDescription] = useState('');
   const [stock, setStock] = useState('');
   const [threshold, setThreshold] = useState('10');
+  const [uomValue, setUomValue] = useState('1');
+  const [uom, setUom] = useState('pcs');
+  const [packaging, setPackaging] = useState('boxes');
   const [weight, setWeight] = useState('');
   const [length, setLength] = useState('');
   const [width, setWidth] = useState('');
@@ -76,6 +79,9 @@ export default function EditProductPage() {
             : (product.stock?.[activeBranch] || 0));
       setStock(currentStock.toString());
       setThreshold(product.threshold ? product.threshold.toString() : '10');
+      setUomValue(product.uomValue ? product.uomValue.toString() : '1');
+      setUom(product.uom || 'pcs');
+      setPackaging(product.packaging || 'boxes');
       setWeight(product.weight?.toString() || '');
 
       if (product.dimensions) {
@@ -172,6 +178,9 @@ export default function EditProductPage() {
         suppliersList: validSuppliers,
         sku: sku || undefined,
         description: description || undefined,
+        uomValue: parseFloat(uomValue) || 1,
+        uom,
+        packaging,
         weight: weight ? parseFloat(weight) : undefined,
         dimensions: dimensionStr
       });
@@ -422,63 +431,122 @@ export default function EditProductPage() {
                   </div>
                 </div>
 
-              {/* Additional Info & Stock */}
-              <div className="grid gap-4 md:grid-cols-3">
-                <div className="space-y-1.5">
-                  <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    Current Stock ({activeBranch}) <span className="text-destructive">*</span>
-                  </label>
-                  <input
-                    type="number"
-                    value={stock}
-                    onChange={(e) => setStock(e.target.value)}
-                    placeholder="0"
-                    className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all placeholder:text-muted-foreground/50 hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
-                    required
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    Weight (kg)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    value={weight}
-                    onChange={(e) => setWeight(e.target.value)}
-                    placeholder="0.0"
-                    className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all placeholder:text-muted-foreground/50 hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    Dimensions (L x W x H in cm)
-                  </label>
-                  <div className="grid grid-cols-3 gap-2">
+                {/* Packaging & Stock Info */}
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                  <div className="space-y-1.5 md:col-span-2">
+                    <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      Base Measurement
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={uomValue}
+                        onChange={(e) => setUomValue(e.target.value)}
+                        placeholder="1"
+                        className="h-9 w-24 rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-center text-sm shadow-sm transition-all hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
+                      />
+                      <select 
+                        value={uom}
+                        onChange={(e) => setUom(e.target.value)}
+                        className="h-9 flex-1 rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22currentColor%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E')] bg-[length:16px] bg-[right_10px_center] bg-no-repeat hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
+                      >
+                        <optgroup label="Count">
+                          <option value="pcs">Pieces (pcs)</option>
+                          <option value="units">Units</option>
+                        </optgroup>
+                        <optgroup label="Length">
+                          <option value="mm">Millimeters (mm)</option>
+                          <option value="cm">Centimeters (cm)</option>
+                          <option value="m">Meters (m)</option>
+                        </optgroup>
+                        <optgroup label="Weight">
+                          <option value="g">Grams (g)</option>
+                          <option value="kg">Kilograms (kg)</option>
+                        </optgroup>
+                        <optgroup label="Volume">
+                          <option value="ml">Milliliters (ml)</option>
+                          <option value="liters">Liters (L)</option>
+                        </optgroup>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      Packaging Type
+                    </label>
+                    <select 
+                      value={packaging}
+                      onChange={(e) => setPackaging(e.target.value)}
+                      className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22currentColor%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E')] bg-[length:16px] bg-[right_10px_center] bg-no-repeat hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
+                    >
+                      <option value="boxes">Boxes</option>
+                      <option value="cartons">Cartons</option>
+                      <option value="pallets">Pallets</option>
+                      <option value="rolls">Rolls</option>
+                      <option value="bags">Bags</option>
+                      <option value="loose">Loose</option>
+                    </select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      Current Quantity ({activeBranch} in {packaging}) <span className="text-destructive">*</span>
+                    </label>
                     <input
                       type="number"
-                      value={length}
-                      onChange={(e) => setLength(e.target.value)}
-                      placeholder="L"
-                      className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-2 text-center text-sm shadow-sm transition-all placeholder:text-muted-foreground/50 hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
-                    />
-                    <input
-                      type="number"
-                      value={width}
-                      onChange={(e) => setWidth(e.target.value)}
-                      placeholder="W"
-                      className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-2 text-center text-sm shadow-sm transition-all placeholder:text-muted-foreground/50 hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
-                    />
-                    <input
-                      type="number"
-                      value={height}
-                      onChange={(e) => setHeight(e.target.value)}
-                      placeholder="H"
-                      className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-2 text-center text-sm shadow-sm transition-all placeholder:text-muted-foreground/50 hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
+                      value={stock}
+                      onChange={(e) => setStock(e.target.value)}
+                      placeholder="0"
+                      className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all placeholder:text-muted-foreground/50 hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
+                      required
                     />
                   </div>
                 </div>
-              </div>
+
+                {/* Optional Weight & Dimensions */}
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      Weight (kg) <span className="text-[9px] text-muted-foreground font-normal">(Optional)</span>
+                    </label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      value={weight}
+                      onChange={(e) => setWeight(e.target.value)}
+                      placeholder="0.0"
+                      className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all placeholder:text-muted-foreground/50 hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      Dimensions (L x W x H in cm) <span className="text-[9px] text-muted-foreground font-normal">(Optional)</span>
+                    </label>
+                    <div className="grid grid-cols-3 gap-2">
+                      <input
+                        type="number"
+                        value={length}
+                        onChange={(e) => setLength(e.target.value)}
+                        placeholder="L"
+                        className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-2 text-center text-sm shadow-sm transition-all placeholder:text-muted-foreground/50 hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
+                      />
+                      <input
+                        type="number"
+                        value={width}
+                        onChange={(e) => setWidth(e.target.value)}
+                        placeholder="W"
+                        className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-2 text-center text-sm shadow-sm transition-all placeholder:text-muted-foreground/50 hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
+                      />
+                      <input
+                        type="number"
+                        value={height}
+                        onChange={(e) => setHeight(e.target.value)}
+                        placeholder="H"
+                        className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-2 text-center text-sm shadow-sm transition-all placeholder:text-muted-foreground/50 hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
+                      />
+                    </div>
+                  </div>
+                </div>
 
               {/* Action Buttons */}
               <div className="flex flex-col-reverse gap-2 border-t border-border/50 pt-4 sm:flex-row sm:justify-end">
