@@ -19,9 +19,10 @@ export function TabBar() {
       {/* Scrollable Tabs List */}
       <div className="flex items-stretch overflow-x-auto hide-scrollbar flex-1 min-w-0 h-full">
         <AnimatePresence initial={false}>
-          {tabs.map((tab) => {
+          {tabs.map((tab, index) => {
             const isActive = pathname === tab.href;
             const isDashboard = tab.href === "/";
+            const isFirst = index === 0;
 
             return (
               <motion.div
@@ -34,7 +35,8 @@ export function TabBar() {
               >
                 <div
                   className={cn(
-                    "group flex items-center justify-between gap-2.5 h-full px-4 border-r border-border/20 border-b-2 text-xs transition-all duration-150 cursor-pointer",
+                    "group flex items-center justify-between gap-2.5 h-full px-3.5 sm:px-4 border-r border-border/60 border-b-2 text-xs transition-all duration-150 cursor-pointer",
+                    isFirst && "border-l border-l-border/60",
                     isActive
                       ? "border-b-red-500 text-foreground bg-background/80 font-semibold"
                       : "border-b-muted-foreground/30 text-muted-foreground hover:text-foreground hover:bg-muted/30 hover:border-b-muted-foreground/60"
@@ -42,7 +44,7 @@ export function TabBar() {
                 >
                   <Link
                     href={tab.href}
-                    className="flex items-center gap-2 truncate max-w-[150px] sm:max-w-[200px] h-full"
+                    className="flex items-center gap-2 truncate max-w-[140px] sm:max-w-[190px] h-full"
                   >
                     <Layout className={cn("h-3.5 w-3.5 shrink-0 transition-colors", isActive ? "text-red-500" : "text-muted-foreground/60")} />
                     <span className="truncate tracking-tight">{tab.label}</span>
@@ -77,7 +79,7 @@ export function TabBar() {
           <button
             type="button"
             onClick={closeAllTabs}
-            className="flex items-center gap-1.5 h-8 px-2.5 rounded-md border border-border/40 bg-muted/20 text-xs font-medium text-muted-foreground hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 transition-all duration-150 active:scale-95"
+            className="flex items-center gap-1.5 h-8 px-2.5 rounded-md border border-border/40 bg-muted/20 text-xs font-medium text-muted-foreground hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 transition-all duration-150 active:scale-95 ml-2"
             title="Close all tabs"
           >
             <XCircle className="h-3.5 w-3.5" />
