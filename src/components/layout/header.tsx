@@ -72,13 +72,13 @@ function HeaderInner() {
         isOpen={isMobileMenuOpen}
         onClose={() => setIsMobileMenuOpen(false)}
       />
-      <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-2 md:gap-4 border-b bg-background/50 backdrop-blur-xl px-4 md:px-6">
+      <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-0 border-b bg-background/50 backdrop-blur-xl p-0">
         {/* Mobile Hamburger */}
-        <div className="flex items-center shrink-0">
+        <div className="flex items-center shrink-0 md:hidden pl-2">
           <Button
             variant="ghost"
             size="icon"
-            className="md:hidden text-muted-foreground hover:text-foreground"
+            className="text-muted-foreground hover:text-foreground"
             onClick={() => setIsMobileMenuOpen(true)}
           >
             <Menu className="h-5 w-5" />
@@ -91,7 +91,7 @@ function HeaderInner() {
         </div>
 
         {/* Right side */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 px-4 md:px-6">
           {/* Bell with popover */}
           <div className="relative" ref={popoverRef}>
             <Button
