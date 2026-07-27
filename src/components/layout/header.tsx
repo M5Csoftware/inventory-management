@@ -4,6 +4,7 @@ import { Bell, Search, AlertTriangle, Package, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePathname } from "next/navigation";
 import { useInventory } from "@/context/inventory-context";
+import { useAuth } from "@/context/auth-context";
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { MobileSidebar } from "./mobile-sidebar";
@@ -18,9 +19,19 @@ export function Header() {
 function HeaderInner() {
   const pathname = usePathname();
   const { products, activeBranch } = useInventory();
+  const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const popoverRef = useRef<HTMLDivElement>(null);
+
+  const getInitials = (name?: string) => {
+    if (!name) return "U";
+    const parts = name.trim().split(" ").filter(Boolean);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return parts[0]?.slice(0, 2).toUpperCase() || "U";
+  };
 
   const getStock = (p: any) => {
     if (!p.stock) return 0;
@@ -202,8 +213,20 @@ function HeaderInner() {
             )}
           </div>
 
-          {/* Avatar */}
-          <div className="h-8 w-8 rounded-full bg-gradient-to-tr from-red-500 to-rose-600 ring-2 ring-background border border-border" />
+          {/* Avatar / User Initials / Login */}
+          {user ? (
+            <Link href="/settings" title={user.name || "User Profile"}>
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-tr from-red-500 to-rose-600 ring-2 ring-background border border-border text-xs font-bold text-white uppercase shadow-sm hover:opacity-90 transition-opacity">
+                {getInitials(user.name)}
+              </div>
+            </Link>
+          ) : (
+            <Link href="/login">
+              <Button variant="outline" size="sm" className="h-8 text-xs font-medium">
+                Login
+              </Button>
+            </Link>
+          )}
         </div>
       </header>
     </>
