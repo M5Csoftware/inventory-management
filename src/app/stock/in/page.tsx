@@ -20,6 +20,7 @@ import {
   Search,
   Check,
   ChevronDown,
+  CalendarDays,
 } from "lucide-react";
 import {
   Card,
@@ -45,6 +46,9 @@ export default function StockInPage() {
   const [model, setModel] = useState("");
   const [serialNumber, setSerialNumber] = useState("");
   const [amount, setAmount] = useState("");
+  const [purchaseDate, setPurchaseDate] = useState(() =>
+    new Date().toISOString().slice(0, 10),
+  );
   const [location, setLocation] = useState("Warehouse A (Zone 1)");
   const [notes, setNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -126,7 +130,9 @@ export default function StockInPage() {
     const finalSupplier =
       supplier === "CUSTOM_SUPPLIER" ? customSupplier : supplier;
 
+    // Create notes with all the details including purchase date
     const summaryParts = [
+      purchaseDate ? `Purchase Date: ${purchaseDate}` : "",
       invoiceNumber ? `Invoice: ${invoiceNumber}` : "",
       finalSupplier ? `Supplier: ${finalSupplier}` : "",
       model ? `Model: ${model}` : "",
@@ -135,7 +141,8 @@ export default function StockInPage() {
       notes ? `Notes: ${notes}` : "",
     ].filter(Boolean);
 
-    const fullNotes = summaryParts.length > 0 ? summaryParts.join(" | ") : undefined;
+    const fullNotes =
+      summaryParts.length > 0 ? summaryParts.join(" | ") : undefined;
 
     submittingRef.current = true;
     setIsSubmitting(true);
@@ -147,6 +154,14 @@ export default function StockInPage() {
         parseInt(quantity),
         location,
         fullNotes,
+        {
+          purchaseDate: purchaseDate,
+          amount: amount ? parseFloat(amount) : undefined,
+          supplier: finalSupplier,
+          invoiceNumber: invoiceNumber,
+          model: model,
+          serialNumber: serialNumber,
+        },
       );
 
       if (success) {
@@ -180,7 +195,8 @@ export default function StockInPage() {
               </h1>
               <p className="text-xs text-muted-foreground flex items-center gap-1.5 mt-0.5">
                 <ArrowUpRight className="h-3 w-3 text-emerald-500" />
-                Record incoming catalog inventory with supplier, invoice, model, and serial tracking
+                Record incoming catalog inventory with supplier, invoice, model,
+                and serial tracking
               </p>
             </div>
           </div>
@@ -211,7 +227,8 @@ export default function StockInPage() {
                     Stock Intake Details
                   </CardTitle>
                   <CardDescription className="text-xs mt-1">
-                    Select product name, supplier, invoice, quantity, model, serial numbers, and location
+                    Select product name, supplier, invoice, quantity, model,
+                    serial numbers, and location
                   </CardDescription>
                 </div>
                 <span className="rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-medium text-emerald-600">
@@ -322,8 +339,22 @@ export default function StockInPage() {
                   </div>
                 </div>
 
-                {/* 2. Invoice Number & Model (Optional) */}
-                <div className="grid gap-4 md:grid-cols-2">
+                {/* 2. Purchase Date, Invoice Number & Model (Optional) */}
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div className="space-y-1.5">
+                    <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      <CalendarDays className="h-3 w-3" />
+                      Date <span className="text-destructive">*</span>
+                    </label>
+                    <input
+                      type="date"
+                      value={purchaseDate}
+                      onChange={(e) => setPurchaseDate(e.target.value)}
+                      className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
+                      required
+                    />
+                  </div>
+
                   <div className="space-y-1.5">
                     <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                       <Receipt className="h-3 w-3" />

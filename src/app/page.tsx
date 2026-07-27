@@ -266,22 +266,24 @@ export default function Dashboard() {
         </motion.div>
 
         <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 24 } } }}>
-        <Card className="group relative h-full overflow-hidden bg-gradient-to-br from-card to-card/50 backdrop-blur-xl border-border/50 shadow-sm transition-all hover:shadow-xl hover:shadow-destructive/5 hover:-translate-y-1 duration-300">
-          <div className="absolute inset-0 bg-gradient-to-br from-destructive/10 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"></div>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors">Low Stock Alerts</CardTitle>
-            <div className="p-2 rounded-xl bg-destructive/10 text-destructive ring-1 ring-destructive/20 relative transition-transform duration-300 group-hover:scale-110">
-              <AlertCircle className="h-4 w-4" />
-              {lowStockAlerts > 0 && (
-                <span className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-destructive animate-pulse ring-2 ring-card"></span>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold tracking-tight text-destructive group-hover:scale-105 transform origin-left transition-transform">{lowStockAlerts}</div>
-            <p className="text-xs text-muted-foreground mt-1">Items below minimum threshold</p>
-          </CardContent>
-        </Card>
+          <Link href="/stock/alerts" className="block h-full cursor-pointer">
+            <Card className="group relative h-full overflow-hidden bg-gradient-to-br from-card to-card/50 backdrop-blur-xl border-border/50 shadow-sm transition-all hover:shadow-xl hover:shadow-destructive/10 hover:-translate-y-1 duration-300 hover:border-destructive/30">
+              <div className="absolute inset-0 bg-gradient-to-br from-destructive/10 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"></div>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors">Low Stock Alerts</CardTitle>
+                <div className="p-2 rounded-xl bg-destructive/10 text-destructive ring-1 ring-destructive/20 relative transition-transform duration-300 group-hover:scale-110">
+                  <AlertCircle className="h-4 w-4" />
+                  {lowStockAlerts > 0 && (
+                    <span className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-destructive animate-pulse ring-2 ring-card"></span>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold tracking-tight text-destructive group-hover:scale-105 transform origin-left transition-transform">{lowStockAlerts}</div>
+                <p className="text-xs text-muted-foreground mt-1">Items below minimum threshold &rarr;</p>
+              </CardContent>
+            </Card>
+          </Link>
         </motion.div>
 
         <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 24 } } }}>

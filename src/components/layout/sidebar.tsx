@@ -20,6 +20,7 @@ import {
   BarChart3,
   Laptop,
   IndianRupee,
+  AlertTriangle,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -57,6 +58,7 @@ export const navItems: NavItem[] = [
       { href: "/stock/in", label: "Stock In (Add)", icon: PlusCircle },
       { href: "/stock/out", label: "Stock Out (Remove)", icon: PlusCircle },
       { href: "/stock/transfer", label: "Transfer Stock", icon: Truck },
+      { href: "/stock/alerts", label: "Low Stock Alerts", icon: AlertTriangle },
     ],
   },
   {
