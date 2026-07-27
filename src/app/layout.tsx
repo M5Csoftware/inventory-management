@@ -47,7 +47,7 @@ export default function RootLayout({
                     </main>
                   </div>
                 </div>
-                <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} theme="colored" />
+                <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} theme="dark" />
               </TabProvider>
             </InventoryProvider>
           </AuthGuard>
