@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   UserPlus,
   Mail,
@@ -11,6 +12,9 @@ import {
   Edit2,
   Trash2,
   Search,
+  IndianRupee,
+  Package,
+  Plus,
 } from "lucide-react";
 import {
   Card,
@@ -24,6 +28,7 @@ import { useInventory, Supplier, Product } from "@/context/inventory-context";
 import { ConfirmDeleteModal } from "@/components/confirm-delete-modal";
 
 export default function SuppliersPage() {
+  const pathname = usePathname();
   const { suppliers, products, deleteSupplier, activeBranch } = useInventory();
   const [supplierToDelete, setSupplierToDelete] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -48,21 +53,54 @@ export default function SuppliersPage() {
   });
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
-            Suppliers
-          </h1>
-          <p className="text-muted-foreground mt-1 text-sm sm:text-base">
-            Manage and connect with your suppliers.
-          </p>
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6 animate-in fade-in duration-500 max-w-full">
+      {/* BROWSER-STYLE TAB SYSTEM */}
+      <div className="flex items-center justify-between border-b border-border/60 bg-muted/40 px-2 pt-2 rounded-t-xl overflow-x-auto hide-scrollbar">
+        <div className="flex items-center gap-1">
+          <Link
+            href="/suppliers"
+            className={`flex items-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-t-lg border-t border-x transition-all ${
+              pathname === "/suppliers"
+                ? "bg-background text-primary border-border/60 border-b-2 border-b-primary shadow-sm -mb-px font-bold"
+                : "text-muted-foreground border-transparent hover:bg-background/50 hover:text-foreground"
+            }`}
+          >
+            <Building className="h-4 w-4 text-primary shrink-0" />
+            <span>Suppliers Directory</span>
+          </Link>
+
+          <Link
+            href="/suppliers/rates"
+            className={`flex items-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-t-lg border-t border-x transition-all ${
+              pathname === "/suppliers/rates"
+                ? "bg-background text-emerald-600 dark:text-emerald-400 border-border/60 border-b-2 border-b-emerald-500 shadow-sm -mb-px font-bold"
+                : "text-muted-foreground border-transparent hover:bg-background/50 hover:text-foreground"
+            }`}
+          >
+            <IndianRupee className="h-4 w-4 text-emerald-500 shrink-0" />
+            <span>Supplier Rates</span>
+          </Link>
+
+          <Link
+            href="/suppliers/products"
+            className={`flex items-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-t-lg border-t border-x transition-all ${
+              pathname === "/suppliers/products"
+                ? "bg-background text-blue-600 dark:text-blue-400 border-border/60 border-b-2 border-b-blue-500 shadow-sm -mb-px font-bold"
+                : "text-muted-foreground border-transparent hover:bg-background/50 hover:text-foreground"
+            }`}
+          >
+            <Package className="h-4 w-4 text-blue-500 shrink-0" />
+            <span>Supplier Products</span>
+          </Link>
         </div>
-        <Link href="/suppliers/new" className="w-full sm:w-auto">
-          <Button className="w-full sm:w-auto shadow-lg shadow-primary/20 transition-all hover:shadow-primary/40 hover:-translate-y-0.5">
-            <UserPlus className="mr-2 h-4 w-4" /> Add Supplier
-          </Button>
-        </Link>
+
+        <div className="hidden sm:flex items-center gap-2 pb-1.5 pr-2">
+          <Link href="/suppliers/new">
+            <Button size="sm" className="gap-1.5 h-8 text-xs shadow-sm">
+              <Plus className="h-3.5 w-3.5" /> Add Supplier
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {suppliers.length === 0 ? (
@@ -79,7 +117,7 @@ export default function SuppliersPage() {
               type="search"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search suppliers..."
+              placeholder="Search suppliers by name, contact, email, location..."
               className="w-full rounded-lg border border-border/60 bg-background/60 py-2.5 pl-9 pr-3 text-sm outline-none transition focus:border-primary/60"
             />
           </div>
@@ -88,88 +126,88 @@ export default function SuppliersPage() {
             <Card className="bg-background/60 backdrop-blur-sm border-border/50 p-8 sm:p-12 text-center">
               <p className="text-muted-foreground text-sm">
                 {searchTerm
-                  ? "No suppliers match your search."
+                  ? "No suppliers match your search query."
                   : "No suppliers added yet. Click Add Supplier to start!"}
               </p>
             </Card>
           ) : (
             <div className="grid gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {filteredSuppliers.map((supplier: Supplier) => {
-              const linkedProductsCount = products.filter(
-                (p: Product) =>
-                  p.supplier.toLowerCase() === supplier.name.toLowerCase(),
-              ).length;
+                const linkedProducts = products.filter(
+                  (p: Product) =>
+                    p.supplier?.toLowerCase() === supplier.name.toLowerCase() ||
+                    (p.suppliersList &&
+                      p.suppliersList.some(
+                        (s) => s.supplierName.toLowerCase() === supplier.name.toLowerCase()
+                      ))
+                );
 
                 return (
                   <Card
                     key={supplier.name}
                     className="group bg-background/60 backdrop-blur-sm border-border/50 shadow-sm transition-all hover:shadow-md hover:border-primary/30 flex flex-col justify-between"
                   >
-                  <CardHeader className="pb-4">
-                    <div className="flex items-start gap-3 sm:gap-4 min-w-0">
-                      <div className="p-2.5 sm:p-3 rounded-xl bg-primary/10 text-primary ring-1 ring-primary/20 group-hover:scale-115 transition-transform shrink-0">
-                        <Building className="h-5 w-5 sm:h-6 sm:w-6" />
+                    <CardHeader className="pb-4">
+                      <div className="flex items-start gap-3 sm:gap-4 min-w-0">
+                        <div className="p-2.5 sm:p-3 rounded-xl bg-primary/10 text-primary ring-1 ring-primary/20 group-hover:scale-115 transition-transform shrink-0">
+                          <Building className="h-5 w-5 sm:h-6 sm:w-6" />
+                        </div>
+                        <div className="space-y-1 min-w-0">
+                          <CardTitle className="text-base sm:text-lg group-hover:text-primary transition-colors truncate">
+                            {supplier.name}
+                          </CardTitle>
+                          <CardDescription className="text-xs truncate">
+                            Primary Contact: {supplier.contact}
+                          </CardDescription>
+                        </div>
                       </div>
-                      <div className="space-y-1 min-w-0">
-                        <CardTitle className="text-base sm:text-lg group-hover:text-primary transition-colors truncate">
-                          {supplier.name}
-                        </CardTitle>
-                        <CardDescription className="text-xs truncate">
-                          Primary Contact: {supplier.contact}
-                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="space-y-2 text-sm text-muted-foreground min-w-0">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Mail className="h-4 w-4 text-primary/70 shrink-0" />
+                          <span className="truncate">{supplier.email}</span>
+                        </div>
+                        <div className="flex items-center gap-2 min-w-0">
+                          <MapPin className="h-4 w-4 text-primary/70 shrink-0" />
+                          <span className="truncate">{supplier.location}</span>
+                        </div>
+                        <div className="flex items-center gap-2 mt-1 min-w-0">
+                          <Building className="h-4 w-4 text-primary/70 shrink-0" />
+                          <span className="truncate">
+                            Branch: {supplier.branch && supplier.branch !== "All" ? supplier.branch : "Delhi"}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Phone className="h-4 w-4 text-primary/70 shrink-0" />
+                          <span className="truncate">{supplier.phone}</span>
+                        </div>
                       </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="space-y-2 text-sm text-muted-foreground min-w-0">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <Mail className="h-4 w-4 text-primary/70 shrink-0" />
-                        <span className="truncate">{supplier.email}</span>
-                      </div>
-                      <div className="flex items-center gap-2 min-w-0">
-                        <MapPin className="h-4 w-4 text-primary/70 shrink-0" />
-                        <span className="truncate">{supplier.location}</span>
-                      </div>
-                      <div className="flex items-center gap-2 mt-1 min-w-0">
-                        <Building className="h-4 w-4 text-primary/70 shrink-0" />
-                        <span className="truncate">
-                          {supplier.branch && supplier.branch !== "All"
-                            ? supplier.branch
-                            : "Delhi"}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2 min-w-0">
-                        <Phone className="h-4 w-4 text-primary/70 shrink-0" />
-                        <span className="truncate">{supplier.phone}</span>
-                      </div>
-                    </div>
-                    <div className="flex justify-between items-center gap-2 border-t pt-4 border-border/50 text-xs">
-                      <span className="font-semibold text-primary truncate">
-                        {linkedProductsCount} products linked
-                      </span>
-                      <div className="flex gap-1 shrink-0">
-                        <Link
-                          href={`/suppliers/edit/${encodeURIComponent(supplier.name)}`}
-                        >
+                      <div className="flex justify-between items-center gap-2 border-t pt-4 border-border/50 text-xs">
+                        <Link href="/suppliers/products" className="font-semibold text-primary hover:underline truncate">
+                          {linkedProducts.length} products linked →
+                        </Link>
+                        <div className="flex gap-1 shrink-0">
+                          <Link href={`/suppliers/edit/${encodeURIComponent(supplier.name)}`}>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                            >
+                              <Edit2 className="h-4 w-4" />
+                            </Button>
+                          </Link>
                           <Button
+                            onClick={() => setSupplierToDelete(supplier.name)}
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                            className="h-8 w-8 text-destructive hover:bg-destructive/10"
                           >
-                            <Edit2 className="h-4 w-4" />
+                            <Trash2 className="h-4 w-4" />
                           </Button>
-                        </Link>
-                        <Button
-                          onClick={() => setSupplierToDelete(supplier.name)}
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-destructive hover:bg-destructive/10"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        </div>
                       </div>
-                    </div>
-                  </CardContent>
+                    </CardContent>
                   </Card>
                 );
               })}
