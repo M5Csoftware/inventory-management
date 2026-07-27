@@ -21,6 +21,7 @@ import {
   Search,
   Check,
   ChevronDown,
+  ShieldCheck,
 } from "lucide-react";
 import {
   Card,
@@ -45,6 +46,7 @@ export default function StockInAssetsPage() {
   const [quantity, setQuantity] = useState("");
   const [model, setModel] = useState("");
   const [serialNumber, setSerialNumber] = useState("");
+  const [warranty, setWarranty] = useState("");
   const [amount, setAmount] = useState("");
   const [location, setLocation] = useState("Warehouse A (Zone 1)");
   const [notes, setNotes] = useState("");
@@ -133,6 +135,7 @@ export default function StockInAssetsPage() {
       finalSupplier ? `Supplier: ${finalSupplier}` : "",
       model ? `Model: ${model}` : "",
       serialNumber ? `S/N: ${serialNumber}` : "",
+      warranty ? `Warranty: ${warranty}` : "",
       amount ? `Price: ₹${amount}` : "",
       notes ? `Notes: ${notes}` : "",
     ].filter(Boolean);
@@ -391,8 +394,8 @@ export default function StockInAssetsPage() {
                   </div>
                 </div>
 
-                {/* 4. Serial Number & Storage Location */}
-                <div className="grid gap-4 md:grid-cols-2">
+                {/* 4. Serial Number, Warranty & Storage Location */}
+                <div className="grid gap-4 md:grid-cols-3">
                   <div className="space-y-1.5">
                     <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                       <Barcode className="h-3 w-3" />
@@ -403,6 +406,20 @@ export default function StockInAssetsPage() {
                       value={serialNumber}
                       onChange={(e) => setSerialNumber(e.target.value)}
                       placeholder="e.g. SN-80941A, SN-80942B"
+                      className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all placeholder:text-muted-foreground/50 hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      <ShieldCheck className="h-3 w-3 text-blue-500" />
+                      Warranty <span className="text-[10px] font-normal text-muted-foreground">(Optional)</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={warranty}
+                      onChange={(e) => setWarranty(e.target.value)}
+                      placeholder="e.g. 1 Year / Dec 2027"
                       className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all placeholder:text-muted-foreground/50 hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
                     />
                   </div>

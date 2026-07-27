@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, Search, AlertTriangle, Package, Menu } from "lucide-react";
+import { Bell, AlertTriangle, Package, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePathname } from "next/navigation";
 import { useInventory } from "@/context/inventory-context";
@@ -8,6 +8,7 @@ import { useAuth } from "@/context/auth-context";
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { MobileSidebar } from "./mobile-sidebar";
+import { TabBar } from "./tab-bar";
 
 export function Header() {
   const pathname = usePathname();
@@ -71,9 +72,9 @@ function HeaderInner() {
         isOpen={isMobileMenuOpen}
         onClose={() => setIsMobileMenuOpen(false)}
       />
-      <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background/50 backdrop-blur-xl px-4 md:px-6">
-        {/* Mobile Hamburger & Search */}
-        <div className="flex items-center gap-2 md:gap-4">
+      <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-2 md:gap-4 border-b bg-background/50 backdrop-blur-xl px-4 md:px-6">
+        {/* Mobile Hamburger */}
+        <div className="flex items-center shrink-0">
           <Button
             variant="ghost"
             size="icon"
@@ -82,15 +83,11 @@ function HeaderInner() {
           >
             <Menu className="h-5 w-5" />
           </Button>
+        </div>
 
-          <div className="relative hidden sm:block">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <input
-              type="search"
-              placeholder="Search inventory..."
-              className="h-9 w-64 rounded-md border border-input bg-background/50 pl-9 pr-3 text-sm shadow-sm transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-            />
-          </div>
+        {/* Tab Bar in the Top Header where Search bar was */}
+        <div className="flex-1 min-w-0 h-full flex items-stretch">
+          <TabBar />
         </div>
 
         {/* Right side */}

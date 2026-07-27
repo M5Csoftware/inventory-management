@@ -84,6 +84,7 @@ export interface AssetAssignment {
   status: 'Assigned' | 'Returned';
   quantity: number;
   notes?: string;
+  warranty?: string;
 }
 
 interface InventoryContextType {

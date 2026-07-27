@@ -19,6 +19,7 @@ import {
   ShoppingCart,
   BarChart3,
   Laptop,
+  IndianRupee,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -79,6 +80,8 @@ export const navItems: NavItem[] = [
     icon: Users,
     subItems: [
       { href: "/suppliers", label: "All Suppliers", icon: List },
+      { href: "/suppliers/rates", label: "Supplier Rates", icon: IndianRupee },
+      { href: "/suppliers/products", label: "Supplier Products", icon: Package },
       { href: "/suppliers/new", label: "Add Supplier", icon: PlusCircle },
     ],
   },

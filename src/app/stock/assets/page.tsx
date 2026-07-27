@@ -85,6 +85,7 @@ export default function AssetsPage() {
                   <th className="px-6 py-4 font-medium">ID</th>
                   <th className="px-6 py-4 font-medium">Product</th>
                   <th className="px-6 py-4 font-medium">Assigned To</th>
+                  <th className="px-6 py-4 font-medium">Warranty</th>
                   <th className="px-6 py-4 font-medium">Assigned Date</th>
                   <th className="px-6 py-4 font-medium">Status</th>
                   <th className="px-6 py-4 font-medium text-right">Actions</th>
@@ -93,7 +94,7 @@ export default function AssetsPage() {
               <tbody ref={animationParent} className="divide-y divide-border/50">
                 {filteredAssets.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-6 py-12 text-center text-muted-foreground">
+                    <td colSpan={7} className="px-6 py-12 text-center text-muted-foreground">
                       <div className="flex flex-col items-center justify-center space-y-2">
                         <Laptop className="h-8 w-8 text-muted-foreground/40" />
                         <p>No assets found.</p>
@@ -111,6 +112,9 @@ export default function AssetsPage() {
                       </td>
                       <td className="px-6 py-4">
                         {asset.assignedTo}
+                      </td>
+                      <td className="px-6 py-4 text-xs text-muted-foreground">
+                        {asset.warranty || '—'}
                       </td>
                       <td className="px-6 py-4">
                         {new Date(asset.assignedDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
