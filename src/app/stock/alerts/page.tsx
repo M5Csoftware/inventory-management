@@ -284,7 +284,7 @@ export default function LowStockAlertsPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4">
-          {filteredItems.map((product) => {
+          {filteredItems.map((product, idx) => {
             const stock = getStock(product);
             const deficit = Math.max(0, product.threshold - stock);
             const percent = Math.min(100, Math.round((stock / Math.max(1, product.threshold)) * 100));
@@ -310,7 +310,7 @@ export default function LowStockAlertsPage() {
 
             return (
               <motion.div
-                key={product.id}
+                key={`${product.id}-${idx}`}
                 initial={{ opacity: 0, y: 5 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="rounded-xl border bg-card/70 backdrop-blur-sm p-4 md:p-5 shadow-xs hover:border-border transition-all flex flex-col md:flex-row md:items-center justify-between gap-4"
