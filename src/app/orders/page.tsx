@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useInventory, Order } from "@/context/inventory-context";
 import {
@@ -49,9 +49,15 @@ export default function OrdersPage() {
     "all",
   );
   const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
+  const [completingOrderId, setCompletingOrderId] = useState<string | null>(null);
+  const completingRef = useRef<Set<string>>(new Set());
 
   const handleCompleteOrder = async (order: Order) => {
-    if (order.status === "Completed" || order.status === "Cancelled") return;
+    if (order.status === "Completed" || order.status === "Cancelled" || completingRef.current.has(order.id)) return;
+    
+    completingRef.current.add(order.id);
+    setCompletingOrderId(order.id);
+
     try {
       for (const item of order.items) {
         if (item.productId) {
@@ -69,6 +75,9 @@ export default function OrdersPage() {
     } catch (error) {
       console.error(error);
       toast.error("Failed to complete order and update stock.");
+    } finally {
+      completingRef.current.delete(order.id);
+      setCompletingOrderId(null);
     }
   };
 
@@ -385,11 +394,12 @@ export default function OrdersPage() {
                           <Button
                             variant="outline"
                             size="sm"
+                            disabled={completingOrderId === order.id}
                             onClick={() => handleCompleteOrder(order)}
-                            className="h-8 text-xs gap-2 text-emerald-600 border-emerald-500/30 hover:bg-emerald-500/10 hover:text-emerald-700 whitespace-nowrap"
+                            className="h-8 text-xs gap-2 text-emerald-600 border-emerald-500/30 hover:bg-emerald-500/10 hover:text-emerald-700 whitespace-nowrap disabled:opacity-50 disabled:pointer-events-none"
                           >
                             <CheckCircle className="h-3.5 w-3.5" />
-                            Complete & Stock
+                            {completingOrderId === order.id ? "Completing..." : "Complete & Stock"}
                           </Button>
                         )}
                       </td>

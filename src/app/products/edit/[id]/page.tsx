@@ -1,7 +1,7 @@
 /* src/app/products/edit/[id]/page.tsx */
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from "next/link";
 import { useRouter, useParams } from 'next/navigation';
 import {
@@ -53,6 +53,8 @@ export default function EditProductPage() {
   const [length, setLength] = useState('');
   const [width, setWidth] = useState('');
   const [height, setHeight] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const submittingRef = useRef(false);
 
   // Multi-supplier list state
   const [productSuppliers, setProductSuppliers] = useState<SupplierRow[]>([
@@ -133,44 +135,52 @@ export default function EditProductPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!product || !name || !stock || !category) return;
+    if (submittingRef.current || !product || !name || !stock || !category) return;
 
-    const dimensionStr = (length && width && height) ? `${length} x ${width} x ${height}` : undefined;
+    submittingRef.current = true;
+    setIsSubmitting(true);
 
-    // Process suppliersList
-    const validSuppliers = productSuppliers
-      .map((s) => {
-        const finalName = s.isCustom ? (s.customName || '').trim() : s.supplierName.trim();
-        return {
-          supplierName: finalName,
-          rate: parseFloat(s.rate) || 0,
-        };
-      })
-      .filter((s) => s.supplierName.length > 0);
+    try {
+      const dimensionStr = (length && width && height) ? `${length} x ${width} x ${height}` : undefined;
 
-    const primarySupplierName = validSuppliers.length > 0 ? validSuppliers[0].supplierName : (product.supplier || 'N/A');
-    const derivedPrice = validSuppliers.length > 0 ? validSuppliers[0].rate : product.price;
+      // Process suppliersList
+      const validSuppliers = productSuppliers
+        .map((s) => {
+          const finalName = s.isCustom ? (s.customName || '').trim() : s.supplierName.trim();
+          return {
+            supplierName: finalName,
+            rate: parseFloat(s.rate) || 0,
+          };
+        })
+        .filter((s) => s.supplierName.length > 0);
 
-    const targetBranch = activeBranch === 'All' ? 'Delhi' : activeBranch;
-    const updatedStockMap = typeof product.stock === 'object' && product.stock !== null
-      ? { ...product.stock, [targetBranch]: parseInt(stock || '0') }
-      : { Ahmedabad: 0, Ludhiana: 0, Delhi: parseInt(stock || '0'), Mumbai: 0 };
+      const primarySupplierName = validSuppliers.length > 0 ? validSuppliers[0].supplierName : (product.supplier || 'N/A');
+      const derivedPrice = validSuppliers.length > 0 ? validSuppliers[0].rate : product.price;
 
-    await updateProduct(product.id, {
-      name,
-      category,
-      price: derivedPrice,
-      stock: updatedStockMap,
-      threshold: parseInt(threshold || '10'),
-      supplier: primarySupplierName,
-      suppliersList: validSuppliers,
-      sku: sku || undefined,
-      description: description || undefined,
-      weight: weight ? parseFloat(weight) : undefined,
-      dimensions: dimensionStr
-    });
+      const targetBranch = activeBranch === 'All' ? 'Delhi' : activeBranch;
+      const updatedStockMap = typeof product.stock === 'object' && product.stock !== null
+        ? { ...product.stock, [targetBranch]: parseInt(stock || '0') }
+        : { Ahmedabad: 0, Ludhiana: 0, Delhi: parseInt(stock || '0'), Mumbai: 0 };
 
-    router.push('/products');
+      await updateProduct(product.id, {
+        name,
+        category,
+        price: derivedPrice,
+        stock: updatedStockMap,
+        threshold: parseInt(threshold || '10'),
+        supplier: primarySupplierName,
+        suppliersList: validSuppliers,
+        sku: sku || undefined,
+        description: description || undefined,
+        weight: weight ? parseFloat(weight) : undefined,
+        dimensions: dimensionStr
+      });
+
+      router.push('/products');
+    } finally {
+      submittingRef.current = false;
+      setIsSubmitting(false);
+    }
   };
 
   if (!product) {
@@ -483,10 +493,11 @@ export default function EditProductPage() {
                 </Link>
                 <Button
                   type="submit"
-                  className="group w-full gap-2 bg-gradient-to-r from-primary to-primary/90 shadow-lg shadow-primary/30 transition-all hover:scale-[1.02] hover:shadow-primary/40 sm:w-auto h-9 text-sm"
+                  disabled={isSubmitting}
+                  className="group w-full gap-2 bg-gradient-to-r from-primary to-primary/90 shadow-lg shadow-primary/30 transition-all hover:scale-[1.02] hover:shadow-primary/40 sm:w-auto h-9 text-sm disabled:opacity-50 disabled:pointer-events-none"
                 >
                   <Save className="h-3.5 w-3.5 transition-transform group-hover:scale-110" />
-                  Save Changes
+                  {isSubmitting ? 'Saving...' : 'Save Changes'}
                 </Button>
               </div>
             </form>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Shield, Plus, Edit2, Trash2, X, UserCog, Key } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { useAuth } from '@/context/auth-context';
@@ -27,6 +27,8 @@ export default function ManageRolesPage() {
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const submittingRef = useRef(false);
   
   const [formData, setFormData] = useState({
     id: '',
@@ -36,9 +38,6 @@ export default function ManageRolesPage() {
     role: 'stock_manager',
     branch: 'Ahmedabad'
   });
-
-  const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/inventory';
-  const DB_HEADER = { 'x-database': 'm5c-inventory', 'Content-Type': 'application/json' };
 
   const fetchUsers = async () => {
     try {
@@ -67,6 +66,11 @@ export default function ManageRolesPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submittingRef.current) return;
+
+    submittingRef.current = true;
+    setIsSubmitting(true);
+
     try {
       const token = localStorage.getItem('token');
       const url = modalMode === 'create' 
@@ -91,6 +95,9 @@ export default function ManageRolesPage() {
       }
     } catch (err: any) {
       toast.error('Network error');
+    } finally {
+      submittingRef.current = false;
+      setIsSubmitting(false);
     }
   };
 
@@ -326,9 +333,12 @@ export default function ManageRolesPage() {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl transition-all font-medium shadow-lg shadow-primary/20"
+                  disabled={isSubmitting}
+                  className="flex-1 px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl transition-all font-medium shadow-lg shadow-primary/20 disabled:opacity-50 disabled:pointer-events-none"
                 >
-                  {modalMode === 'create' ? 'Create User' : 'Save Changes'}
+                  {isSubmitting
+                    ? (modalMode === 'create' ? 'Creating User...' : 'Saving Changes...')
+                    : (modalMode === 'create' ? 'Create User' : 'Save Changes')}
                 </button>
               </div>
             </form>

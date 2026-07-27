@@ -13,6 +13,7 @@ import {
   Filter,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useInventory, Category, Product } from "@/context/inventory-context";
 
 interface Transaction {
   id: string;
@@ -34,11 +35,13 @@ const DB_HEADER = {
 };
 
 export default function TransactionsReportPage() {
+  const { categories, products } = useInventory();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
 
   // filter state
   const [branch, setBranch] = useState<string>("All");
+  const [category, setCategory] = useState<string>("All");
   const [productId, setProductId] = useState<string>("");
   const [type, setType] = useState<string>("");
   const [startDate, setStartDate] = useState<Date | null>(null);
@@ -53,6 +56,7 @@ export default function TransactionsReportPage() {
 
       const params = new URLSearchParams();
       if (branch && branch !== "All") params.append("branch", branch);
+      if (category && category !== "All") params.append("category", category);
       if (productId) params.append("productId", productId);
       if (type) params.append("type", type);
       if (startDate) params.append("startDate", startDate.toISOString());
@@ -77,6 +81,19 @@ export default function TransactionsReportPage() {
       const data = await res.json();
       if (data.success) {
         let list: Transaction[] = data.data || [];
+
+        // Apply category filter (if not already handled server-side)
+        if (category && category !== "All") {
+          const catLower = category.toLowerCase();
+          list = list.filter((t) => {
+            const prod = products.find(
+              (p) =>
+                p.id.toLowerCase() === t.productId.toLowerCase() ||
+                p.name.toLowerCase() === t.productName.toLowerCase()
+            );
+            return prod ? prod.category.toLowerCase() === catLower : true;
+          });
+        }
 
         // Apply client side filters if fallback was triggered
         if (productId.trim()) {
@@ -123,17 +140,23 @@ export default function TransactionsReportPage() {
       toast.info("No transaction data to export");
       return;
     }
-    const exportData = transactions.map((t) => ({
-      Date: new Date(t.date).toLocaleDateString(),
-      "Transaction ID": t.id,
-      Branch: t.branch,
-      "Product ID": t.productId,
-      "Product Name": t.productName,
-      Type: t.type,
-      Quantity: t.quantity,
-      "Reason / Location": t.reasonOrLocation,
-      Notes: t.notes || "",
-    }));
+    const exportData = transactions.map((t) => {
+      const prod = products.find(
+        (p) => p.id.toLowerCase() === t.productId.toLowerCase() || p.name.toLowerCase() === t.productName.toLowerCase()
+      );
+      return {
+        Date: new Date(t.date).toLocaleDateString(),
+        "Transaction ID": t.id,
+        Branch: t.branch,
+        Category: prod?.category || "N/A",
+        "Product ID": t.productId,
+        "Product Name": t.productName,
+        Type: t.type,
+        Quantity: t.quantity,
+        "Reason / Location": t.reasonOrLocation,
+        Notes: t.notes || "",
+      };
+    });
 
     const ws = XLSX.utils.json_to_sheet(exportData);
     const wb = XLSX.utils.book_new();
@@ -155,8 +178,8 @@ export default function TransactionsReportPage() {
         </h1>
       </div>
 
-      {/* Filters Bar - Single Row Alignment */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4 bg-card p-4 sm:p-5 rounded-xl shadow-lg border border-border/50">
+      {/* Filters Bar - Grid Layout */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 bg-card p-4 sm:p-5 rounded-xl shadow-lg border border-border/50">
         <div className="space-y-2">
           <label className="text-xs sm:text-sm font-medium">Branch</label>
           <select
@@ -173,7 +196,23 @@ export default function TransactionsReportPage() {
         </div>
 
         <div className="space-y-2">
-          <label className="text-xs sm:text-sm font-medium">Product ID</label>
+          <label className="text-xs sm:text-sm font-medium">Category</label>
+          <select
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            className="w-full h-10 px-3 py-2 bg-background border border-border rounded text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+          >
+            <option value="All">All Categories</option>
+            {categories.map((cat: Category) => (
+              <option key={cat.name} value={cat.name}>
+                {cat.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-xs sm:text-sm font-medium">Product ID / Name</label>
           <input
             type="text"
             value={productId}
@@ -236,7 +275,7 @@ export default function TransactionsReportPage() {
 
       {/* Table & Export Bar */}
       <div className="space-y-2">
-        <div className="overflow-auto max-h-[calc(100vh-220px)] min-h-[500px] bg-card rounded-xl border border-border shadow-sm">
+        <div className="overflow-auto max-h-[calc(100vh-380px)] min-h-[220px] bg-card rounded-xl border border-border shadow-sm">
           <div className="min-w-[640px]">
             <table className="w-full text-sm text-left border-collapse">
               <thead className="bg-muted/90 backdrop-blur-xs text-muted-foreground border-b border-border sticky top-0 z-10 shadow-2xs">

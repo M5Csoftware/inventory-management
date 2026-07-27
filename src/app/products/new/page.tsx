@@ -1,7 +1,7 @@
 /* src/app/products/new/page.tsx */
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from "next/link";
 import { useRouter } from 'next/navigation';
 import {
@@ -48,6 +48,8 @@ export default function NewProductPage() {
   const [uomValue, setUomValue] = useState('1');
   const [uom, setUom] = useState('pcs');
   const [packaging, setPackaging] = useState('boxes');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const submittingRef = useRef(false);
 
   // Multi-supplier list state
   const [productSuppliers, setProductSuppliers] = useState<SupplierRow[]>([
@@ -90,46 +92,54 @@ export default function NewProductPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !stock || !category) return;
+    if (submittingRef.current || !name || !stock || !category) return;
 
-    // Process suppliersList
-    const validSuppliers = productSuppliers
-      .map((s) => {
-        const finalName = s.isCustom ? (s.customName || '').trim() : s.supplierName.trim();
-        return {
-          supplierName: finalName,
-          rate: parseFloat(s.rate) || 0,
-        };
-      })
-      .filter((s) => s.supplierName.length > 0);
+    submittingRef.current = true;
+    setIsSubmitting(true);
 
-    const primarySupplierName = validSuppliers.length > 0 ? validSuppliers[0].supplierName : 'N/A';
-    const derivedPrice = validSuppliers.length > 0 ? validSuppliers[0].rate : 0;
+    try {
+      // Process suppliersList
+      const validSuppliers = productSuppliers
+        .map((s) => {
+          const finalName = s.isCustom ? (s.customName || '').trim() : s.supplierName.trim();
+          return {
+            supplierName: finalName,
+            rate: parseFloat(s.rate) || 0,
+          };
+        })
+        .filter((s) => s.supplierName.length > 0);
 
-    const targetBranch = activeBranch === 'All' ? 'Delhi' : activeBranch;
-    const initialStockMap = {
-      Ahmedabad: targetBranch === 'Ahmedabad' ? parseInt(stock || '0') : 0,
-      Ludhiana: targetBranch === 'Ludhiana' ? parseInt(stock || '0') : 0,
-      Delhi: targetBranch === 'Delhi' ? parseInt(stock || '0') : 0,
-      Mumbai: targetBranch === 'Mumbai' ? parseInt(stock || '0') : 0,
-    };
+      const primarySupplierName = validSuppliers.length > 0 ? validSuppliers[0].supplierName : 'N/A';
+      const derivedPrice = validSuppliers.length > 0 ? validSuppliers[0].rate : 0;
 
-    await addProduct({
-      name,
-      category,
-      price: derivedPrice,
-      stock: initialStockMap,
-      threshold: parseInt(threshold || '10'),
-      supplier: primarySupplierName,
-      suppliersList: validSuppliers,
-      sku: sku || undefined,
-      description: description || undefined,
-      uomValue: parseFloat(uomValue) || 1,
-      uom,
-      packaging,
-    });
+      const targetBranch = activeBranch === 'All' ? 'Delhi' : activeBranch;
+      const initialStockMap = {
+        Ahmedabad: targetBranch === 'Ahmedabad' ? parseInt(stock || '0') : 0,
+        Ludhiana: targetBranch === 'Ludhiana' ? parseInt(stock || '0') : 0,
+        Delhi: targetBranch === 'Delhi' ? parseInt(stock || '0') : 0,
+        Mumbai: targetBranch === 'Mumbai' ? parseInt(stock || '0') : 0,
+      };
 
-    router.push('/products');
+      await addProduct({
+        name,
+        category,
+        price: derivedPrice,
+        stock: initialStockMap,
+        threshold: parseInt(threshold || '10'),
+        supplier: primarySupplierName,
+        suppliersList: validSuppliers,
+        sku: sku || undefined,
+        description: description || undefined,
+        uomValue: parseFloat(uomValue) || 1,
+        uom,
+        packaging,
+      });
+
+      router.push('/products');
+    } finally {
+      submittingRef.current = false;
+      setIsSubmitting(false);
+    }
   };
 
   const hasCategories = categories.length > 0;
@@ -455,10 +465,11 @@ export default function NewProductPage() {
                   </Link>
                   <Button
                     type="submit"
-                    className="group w-full gap-2 bg-gradient-to-r from-primary to-primary/90 shadow-lg shadow-primary/30 transition-all hover:scale-[1.02] hover:shadow-primary/40 sm:w-auto h-9 text-sm"
+                    disabled={isSubmitting}
+                    className="group w-full gap-2 bg-gradient-to-r from-primary to-primary/90 shadow-lg shadow-primary/30 transition-all hover:scale-[1.02] hover:shadow-primary/40 sm:w-auto h-9 text-sm disabled:opacity-50 disabled:pointer-events-none"
                   >
                     <Save className="h-3.5 w-3.5 transition-transform group-hover:scale-110" />
-                    Create Product
+                    {isSubmitting ? 'Creating...' : 'Create Product'}
                     <Plus className="h-3.5 w-3.5 transition-transform group-hover:rotate-90" />
                   </Button>
                 </div>

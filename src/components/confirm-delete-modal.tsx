@@ -22,6 +22,7 @@ export function ConfirmDeleteModal({
   itemName,
 }: ConfirmDeleteModalProps) {
   const [isDeleting, setIsDeleting] = useState(false);
+  const deletingRef = React.useRef(false);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -36,10 +37,13 @@ export function ConfirmDeleteModal({
   if (!isOpen) return null;
 
   const handleConfirm = async () => {
+    if (deletingRef.current || isDeleting) return;
+    deletingRef.current = true;
     try {
       setIsDeleting(true);
       await onConfirm();
     } finally {
+      deletingRef.current = false;
       setIsDeleting(false);
       onClose();
     }

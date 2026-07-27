@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter, useParams } from 'next/navigation';
 import { ArrowLeft, FolderPlus, Tag, FileText, Save, Edit2 } from 'lucide-react';
@@ -17,6 +17,8 @@ export default function EditCategoryPage() {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [isAsset, setIsAsset] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const submittingRef = useRef(false);
 
   useEffect(() => {
     if (decodedName && categories.length > 0) {
@@ -31,10 +33,18 @@ export default function EditCategoryPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !description) return;
+    if (submittingRef.current || !name || !description) return;
 
-    await updateCategory(decodedName, { name, description, isAsset });
-    router.push('/categories');
+    submittingRef.current = true;
+    setIsSubmitting(true);
+
+    try {
+      await updateCategory(decodedName, { name, description, isAsset });
+      router.push('/categories');
+    } finally {
+      submittingRef.current = false;
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -152,10 +162,11 @@ export default function EditCategoryPage() {
                 </Link>
                 <Button
                   type="submit"
-                  className="group w-full gap-2 bg-gradient-to-r from-primary to-primary/90 shadow-lg shadow-primary/30 transition-all hover:scale-[1.02] hover:shadow-primary/40 sm:w-auto h-9 text-sm"
+                  disabled={isSubmitting}
+                  className="group w-full gap-2 bg-gradient-to-r from-primary to-primary/90 shadow-lg shadow-primary/30 transition-all hover:scale-[1.02] hover:shadow-primary/40 sm:w-auto h-9 text-sm disabled:opacity-50 disabled:pointer-events-none"
                 >
                   <Save className="h-3.5 w-3.5 transition-transform group-hover:scale-110" />
-                  Save Changes
+                  {isSubmitting ? 'Saving...' : 'Save Changes'}
                 </Button>
               </div>
             </form>
