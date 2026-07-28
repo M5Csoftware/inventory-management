@@ -97,7 +97,7 @@ export default function LoginPage() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="admin@m5clogistics.com"
+                  placeholder="Enter email"
                   className="h-10 w-full rounded-md border border-input bg-background/50 px-3 text-sm transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                   required
                 />
@@ -158,13 +158,6 @@ export default function LoginPage() {
                 )}
               </Button>
             </form>
-
-            {/* Test Credentials Helper */}
-            <div className="mt-4 p-3 rounded-lg bg-muted/30 text-xs text-muted-foreground">
-              <p className="font-medium mb-1">Test Credentials:</p>
-              <p>Email: admin@m5clogistics.com</p>
-              <p>Password: Admin@123</p>
-            </div>
           </CardContent>
         </Card>
 

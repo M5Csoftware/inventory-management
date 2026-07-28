@@ -104,10 +104,10 @@ export default function LowStockAlertsPage() {
             <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
             <span>Branch View: <strong>{activeBranch}</strong></span>
           </div>
-          <Link href="/stock/in">
-            <Button size="sm" className="gap-2 text-xs h-9">
-              <PlusCircle className="h-4 w-4" />
-              Restock Stock In
+          <Link href="/orders/new">
+            <Button size="sm" className="gap-2 text-xs h-9 font-semibold shadow-xs">
+              <ShoppingCart className="h-4 w-4" />
+              Generate Order
             </Button>
           </Link>
         </div>
@@ -380,17 +380,17 @@ export default function LowStockAlertsPage() {
                     </span>
                   </div>
 
-                  <Link href={`/stock/in`}>
-                    <Button size="sm" variant="default" className="h-9 gap-1.5 text-xs">
-                      <RefreshCw className="h-3.5 w-3.5" />
-                      Restock Now
+                  <Link href={`/orders/new?supplier=${encodeURIComponent(product.supplier)}`}>
+                    <Button size="sm" variant="default" className="h-9 gap-1.5 text-xs font-semibold shadow-xs">
+                      <ShoppingCart className="h-3.5 w-3.5" />
+                      Generate Order
                     </Button>
                   </Link>
 
-                  <Link href={`/orders/new?supplier=${encodeURIComponent(product.supplier)}`}>
+                  <Link href={`/stock/in`}>
                     <Button size="sm" variant="outline" className="h-9 gap-1.5 text-xs">
-                      <ShoppingCart className="h-3.5 w-3.5" />
-                      Order
+                      <RefreshCw className="h-3.5 w-3.5" />
+                      Direct Stock In
                     </Button>
                   </Link>
                 </div>

@@ -3,12 +3,13 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
-interface User {
+export interface User {
   id: string;
   name: string;
   email: string;
   role: string;
   branch: string;
+  permissions?: string[];
 }
 
 interface AuthContextType {
@@ -16,6 +17,7 @@ interface AuthContextType {
   loading: boolean;
   login: (token: string, userData: User) => void;
   logout: () => void;
+  hasPermission: (path: string) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -56,8 +58,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     router.push('/login');
   };
 
+  const hasPermission = (path: string): boolean => {
+    if (!user) return false;
+
+    const isAdminOrMaster = user.id === 'master' || user.role === 'master' || user.role === 'admin';
+
+    // Manage Roles is STRICTLY restricted to Admin and Master Admin only
+    if (path.startsWith('/manage-roles')) {
+      return isAdminOrMaster;
+    }
+
+    // Master and Admin roles have full access to everything
+    if (isAdminOrMaster) return true;
+    if (!user.permissions || user.permissions.length === 0) return false;
+    if (user.permissions.includes('*')) return true;
+
+    // Direct route match
+    if (user.permissions.includes(path)) return true;
+
+    // Check parent route permission matching (e.g., "/stock" covers "/stock/in")
+    return user.permissions.some((p) => p !== '/' && path.startsWith(p));
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, hasPermission }}>
       {children}
     </AuthContext.Provider>
   );
