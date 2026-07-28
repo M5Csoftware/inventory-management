@@ -104,10 +104,10 @@ export default function LowStockAlertsPage() {
             <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
             <span>Branch View: <strong>{activeBranch}</strong></span>
           </div>
-          <Link href="/stock/in">
-            <Button size="sm" className="gap-2 text-xs h-9">
-              <PlusCircle className="h-4 w-4" />
-              Restock Stock In
+          <Link href="/orders/new">
+            <Button size="sm" className="gap-2 text-xs h-9 font-semibold shadow-xs">
+              <ShoppingCart className="h-4 w-4" />
+              Generate Order
             </Button>
           </Link>
         </div>
@@ -284,7 +284,7 @@ export default function LowStockAlertsPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4">
-          {filteredItems.map((product) => {
+          {filteredItems.map((product, idx) => {
             const stock = getStock(product);
             const deficit = Math.max(0, product.threshold - stock);
             const percent = Math.min(100, Math.round((stock / Math.max(1, product.threshold)) * 100));
@@ -310,7 +310,7 @@ export default function LowStockAlertsPage() {
 
             return (
               <motion.div
-                key={product.id}
+                key={`${product.id}-${idx}`}
                 initial={{ opacity: 0, y: 5 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="rounded-xl border bg-card/70 backdrop-blur-sm p-4 md:p-5 shadow-xs hover:border-border transition-all flex flex-col md:flex-row md:items-center justify-between gap-4"
@@ -380,17 +380,17 @@ export default function LowStockAlertsPage() {
                     </span>
                   </div>
 
-                  <Link href={`/stock/in`}>
-                    <Button size="sm" variant="default" className="h-9 gap-1.5 text-xs">
-                      <RefreshCw className="h-3.5 w-3.5" />
-                      Restock Now
+                  <Link href={`/orders/new?supplier=${encodeURIComponent(product.supplier)}`}>
+                    <Button size="sm" variant="default" className="h-9 gap-1.5 text-xs font-semibold shadow-xs">
+                      <ShoppingCart className="h-3.5 w-3.5" />
+                      Generate Order
                     </Button>
                   </Link>
 
-                  <Link href={`/orders/new?supplier=${encodeURIComponent(product.supplier)}`}>
+                  <Link href={`/stock/in`}>
                     <Button size="sm" variant="outline" className="h-9 gap-1.5 text-xs">
-                      <ShoppingCart className="h-3.5 w-3.5" />
-                      Order
+                      <RefreshCw className="h-3.5 w-3.5" />
+                      Direct Stock In
                     </Button>
                   </Link>
                 </div>

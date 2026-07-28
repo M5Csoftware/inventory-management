@@ -30,8 +30,11 @@ const ROUTE_LABELS: Record<string, string> = {
   "/orders/new": "Generate Order",
   "/reports/transactions": "Transaction History",
   "/reports/monthly-stock": "Monthly Stock Summary",
+  "/reports/product-details": "Product Details Report",
+  "/reports/asset-details": "Asset Details Report",
   "/settings": "Settings",
   "/manage-roles": "Manage Roles",
+  "/manage-roles/new": "Create New User",
 };
 
 export function getTabLabel(pathname: string): string {

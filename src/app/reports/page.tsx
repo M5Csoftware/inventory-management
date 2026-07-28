@@ -2,7 +2,7 @@
 "use client";
 
 import Link from "next/link";
-import { FileText, BarChart3, ArrowRight, TrendingUp, History } from "lucide-react";
+import { FileText, BarChart3, ArrowRight, TrendingUp, History, Package, Laptop } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -12,7 +12,7 @@ export default function ReportsHubPage() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Reports &amp; Analytics</h1>
         <p className="text-muted-foreground mt-1">
-          Select a report module below to view detailed inventory movements, audit trails, and monthly stock calculations.
+          Select a report module below to view detailed inventory movements, product master details, asset assignments, and monthly stock calculations.
         </p>
       </div>
 
@@ -85,6 +85,80 @@ export default function ReportsHubPage() {
             <Link href="/reports/monthly-stock" className="block">
               <Button className="w-full justify-between bg-emerald-600 hover:bg-emerald-700 text-white transition-all shadow-md">
                 <span>View Monthly Stock Summary</span>
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+
+        {/* Card 3: Product Details Report */}
+        <Card className="group relative overflow-hidden border-border/60 hover:border-blue-500/50 transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/5 bg-gradient-to-b from-card to-card/50">
+          <div className="absolute top-0 right-0 p-8 text-blue-500/10 group-hover:text-blue-500/20 transition-colors pointer-events-none">
+            <Package className="w-32 h-32 -mr-8 -mt-8" />
+          </div>
+          <CardHeader className="pb-4">
+            <div className="w-12 h-12 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+              <Package className="w-6 h-6" />
+            </div>
+            <CardTitle className="text-xl sm:text-2xl font-bold">
+              Product Details Report
+            </CardTitle>
+            <CardDescription className="text-sm leading-relaxed">
+              Detailed breakdown of product specifications, stock levels across all branches, unit valuations, low stock thresholds, and supplier mapping.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="flex flex-wrap gap-2 text-xs font-medium">
+              <span className="px-2.5 py-1 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                Branch Stock Breakdown
+              </span>
+              <span className="px-2.5 py-1 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                Total Valuation
+              </span>
+              <span className="px-2.5 py-1 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                Stock Status Filter
+              </span>
+            </div>
+            <Link href="/reports/product-details" className="block">
+              <Button className="w-full justify-between bg-blue-600 hover:bg-blue-700 text-white transition-all shadow-md">
+                <span>View Product Details Report</span>
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+
+        {/* Card 4: Asset Details Report */}
+        <Card className="group relative overflow-hidden border-border/60 hover:border-purple-500/50 transition-all duration-300 hover:shadow-xl hover:shadow-purple-500/5 bg-gradient-to-b from-card to-card/50">
+          <div className="absolute top-0 right-0 p-8 text-purple-500/10 group-hover:text-purple-500/20 transition-colors pointer-events-none">
+            <Laptop className="w-32 h-32 -mr-8 -mt-8" />
+          </div>
+          <CardHeader className="pb-4">
+            <div className="w-12 h-12 rounded-xl bg-purple-500/10 text-purple-500 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+              <Laptop className="w-6 h-6" />
+            </div>
+            <CardTitle className="text-xl sm:text-2xl font-bold">
+              Asset Details Report
+            </CardTitle>
+            <CardDescription className="text-sm leading-relaxed">
+              Complete tracking and audit report of IT hardware, equipment, serial numbers, current employee assignments, and asset condition statuses.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="flex flex-wrap gap-2 text-xs font-medium">
+              <span className="px-2.5 py-1 rounded-md bg-purple-500/10 text-purple-600 dark:text-purple-400">
+                Assignment Tracking
+              </span>
+              <span className="px-2.5 py-1 rounded-md bg-purple-500/10 text-purple-600 dark:text-purple-400">
+                Serial Number Audit
+              </span>
+              <span className="px-2.5 py-1 rounded-md bg-purple-500/10 text-purple-600 dark:text-purple-400">
+                Print &amp; Export
+              </span>
+            </div>
+            <Link href="/reports/asset-details" className="block">
+              <Button className="w-full justify-between bg-purple-600 hover:bg-purple-700 text-white transition-all shadow-md">
+                <span>View Asset Details Report</span>
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </Button>
             </Link>
