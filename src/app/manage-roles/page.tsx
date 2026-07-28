@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Shield, Plus, Edit2, Trash2, UserCheck, Key, Lock, CheckCircle2 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { useAuth } from '@/context/auth-context';
+import { Button } from '@/components/ui/button';
 import { ConfirmDeleteModal } from '@/components/confirm-delete-modal';
 
 interface User {

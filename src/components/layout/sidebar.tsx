@@ -283,7 +283,7 @@ export function Sidebar() {
             );
           }
 
-          if (!hasPermission(item.href)) return null;
+          if (!item.href || !hasPermission(item.href)) return null;
 
           // Item with no children (like Dashboard)
           const isActive = pathname === item.href;
