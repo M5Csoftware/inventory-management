@@ -3,13 +3,14 @@
 import React, { useState, useEffect } from 'react';
 import { useInvoice, InvoiceProvider } from '@/context/invoice-context';
 import { useAuth } from '@/context/auth-context';
-import { Invoice, AppConfig, TeamMember, Flag, BankDetails } from '@/types/invoice';
+import { Invoice, AppConfig, TeamMember, Flag, BankDetails, Role } from '@/types/invoice';
 import { DashboardView } from '@/components/invoice/DashboardView';
 import { CheckInView } from '@/components/invoice/CheckInView';
 import { InvoiceTable } from '@/components/invoice/InvoiceTable';
 import { ApprovalsView } from '@/components/invoice/ApprovalsView';
 import { AuditView } from '@/components/invoice/AuditView';
 import { TeamSettingsView } from '@/components/invoice/TeamSettingsView';
+import { Modal } from '@/components/invoice/Modal';
 import { InvoiceDetailModal } from '@/components/invoice/InvoiceDetailModal';
 import { BankDetailsModal } from '@/components/invoice/BankDetailsModal';
 import { exportInvoicesToCSV } from '@/utils/export-invoice';
@@ -22,6 +23,8 @@ import {
   Settings,
   Download,
   RefreshCw,
+  CheckCircle2,
+  AlertTriangle,
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 
@@ -30,30 +33,36 @@ function MasterInvoiceContent() {
   const {
     invoices,
     config,
+    team,
     loading,
     refreshInvoices,
+    saveConfig,
     createInvoice,
     verifyInvoice,
     approveInvoice,
     rejectInvoice,
     payInvoice,
     updateBankDetails,
+    addTeamMember,
+    removeTeamMember,
+    editTeamMember,
   } = useInvoice();
 
   const [activeTab, setActiveTab] = useState<string>('dashboard');
+  const [confirmInvoice, setConfirmInvoice] = useState<Invoice | null>(null);
+  const [rejectInvoiceId, setRejectInvoiceId] = useState<string | null>(null);
+  const [rejectReason, setRejectReason] = useState<string>('');
+  const [rejectError, setRejectError] = useState<string>('');
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [bankModalInvoice, setBankModalInvoice] = useState<Invoice | null>(null);
 
-  // Synthesize current user as TeamMember type
   const currentUser: TeamMember = {
-    id: user?.id || 'user_1',
+    id: user?.id || 'mem_admin',
     name: user?.name || 'Admin',
     username: user?.email ? user.email.split('@')[0] : 'admin',
     password: '',
-    role: user?.role === 'admin' || user?.role === 'master' ? 'Master Admin' : 'User',
+    role: user?.role === 'master' ? 'Master Admin' : user?.role === 'admin' ? 'Admin' : 'User',
   };
-
-  const team: TeamMember[] = [currentUser];
 
   const handleCheckinSubmit = async (formData: {
     vendor: string;
@@ -70,7 +79,25 @@ function MasterInvoiceContent() {
   }) => {
     const success = await createInvoice(formData);
     if (success) {
+      const latest = invoices[invoices.length - 1];
+      if (latest) setConfirmInvoice(latest);
       setActiveTab('register');
+    }
+  };
+
+  const handleRejectConfirm = async () => {
+    if (!rejectInvoiceId) return;
+    const reason = rejectReason.trim();
+    if (!reason) {
+      setRejectError('Please give a reason.');
+      return;
+    }
+
+    const success = await rejectInvoice(rejectInvoiceId, reason);
+    if (success) {
+      setRejectInvoiceId(null);
+      setRejectReason('');
+      setRejectError('');
     }
   };
 
@@ -94,10 +121,10 @@ function MasterInvoiceContent() {
             </div>
             <div>
               <h1 className="text-2xl font-bold tracking-tight text-foreground">
-                Inward Invoice Registration
+                M5 Invoice Registration System
               </h1>
               <p className="text-xs text-muted-foreground">
-                M5 Invoice Registration System &bull; L1 Verification &bull; L2 Dual Approvals &bull; Audit Trail
+                Inward Check-In &bull; Risk Flags &bull; L1 Verification &bull; L2 Dual Approvals &bull; Audit Ledger
               </p>
             </div>
           </div>
@@ -113,7 +140,7 @@ function MasterInvoiceContent() {
         </div>
       </div>
 
-      {/* Top Tab Bar (Nav Tabs) */}
+      {/* Top Navigation Tabs */}
       <div className="flex flex-wrap items-center gap-2 border-b border-border/80 pb-2">
         {navTabs.map((tab) => {
           const Icon = tab.icon;
@@ -135,11 +162,11 @@ function MasterInvoiceContent() {
         })}
       </div>
 
-      {/* Tab Views */}
+      {/* Tab Content Views */}
       {loading ? (
         <div className="p-12 text-center text-muted-foreground border border-border/80 rounded-2xl bg-card">
           <RefreshCw className="h-6 w-6 animate-spin mx-auto mb-2 text-indigo-600" />
-          Loading Invoice System...
+          Loading Invoice Registration System...
         </div>
       ) : (
         <>
@@ -180,15 +207,12 @@ function MasterInvoiceContent() {
                 config={config}
                 lastActionId={null}
                 showActions={true}
-                onVerify={(id: string) => verifyInvoice(id)}
-                onApprove={(id: string) => approveInvoice(id)}
-                onRejectClick={(id: string) => {
-                  const reason = prompt('Enter rejection reason:');
-                  if (reason) rejectInvoice(id, reason);
-                }}
-                onPay={(id: string) => payInvoice(id)}
-                onInvoiceClick={(inv: Invoice) => setSelectedInvoice(inv)}
-                onAddBankDetails={(inv: Invoice) => setBankModalInvoice(inv)}
+                onVerify={(id, notes) => verifyInvoice(id, notes)}
+                onApprove={(id) => approveInvoice(id)}
+                onRejectClick={(id) => setRejectInvoiceId(id)}
+                onPay={(id) => payInvoice(id)}
+                onInvoiceClick={(inv) => setSelectedInvoice(inv)}
+                onAddBankDetails={(inv) => setBankModalInvoice(inv)}
               />
             </div>
           )}
@@ -200,15 +224,12 @@ function MasterInvoiceContent() {
               team={team}
               config={config}
               lastActionId={null}
-              onVerify={(id: string) => verifyInvoice(id)}
-              onApprove={(id: string) => approveInvoice(id)}
-              onRejectClick={(id: string) => {
-                const reason = prompt('Enter rejection reason:');
-                if (reason) rejectInvoice(id, reason);
-              }}
-              onPay={(id: string) => payInvoice(id)}
-              onInvoiceClick={(inv: Invoice) => setSelectedInvoice(inv)}
-              onAddBankDetails={(inv: Invoice) => setBankModalInvoice(inv)}
+              onVerify={(id, notes) => verifyInvoice(id, notes)}
+              onApprove={(id) => approveInvoice(id)}
+              onRejectClick={(id) => setRejectInvoiceId(id)}
+              onPay={(id) => payInvoice(id)}
+              onInvoiceClick={(inv) => setSelectedInvoice(inv)}
+              onAddBankDetails={(inv) => setBankModalInvoice(inv)}
             />
           )}
 
@@ -220,12 +241,10 @@ function MasterInvoiceContent() {
             <TeamSettingsView
               team={team}
               config={config}
-              onAddMember={() => {}}
-              onRemoveMember={() => {}}
-              onEditMember={() => {}}
-              onSaveSettings={(currency, threshold) => {
-                toast.success('Settings updated');
-              }}
+              onAddMember={addTeamMember}
+              onRemoveMember={removeTeamMember}
+              onEditMember={editTeamMember}
+              onSaveSettings={(currency, threshold) => saveConfig({ currency, threshold })}
               currentUserId={currentUser.id}
               isMasterAdmin={true}
             />
@@ -233,7 +252,82 @@ function MasterInvoiceContent() {
         </>
       )}
 
-      {/* Modals */}
+      {/* Confirmation Modal after Check-In */}
+      <Modal
+        isOpen={!!confirmInvoice}
+        onClose={() => setConfirmInvoice(null)}
+        title="Invoice Check-In Confirmation"
+      >
+        {confirmInvoice && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-3 p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-emerald-600 text-xs font-bold">
+              <CheckCircle2 size={20} />
+              <span>Invoice {confirmInvoice.invoiceNumber} registered successfully!</span>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Vendor: <strong className="text-foreground">{confirmInvoice.vendor}</strong> &bull; Total: <strong className="text-foreground">₹{confirmInvoice.amount.toLocaleString()}</strong>
+            </p>
+            <div className="pt-2 flex justify-end">
+              <button
+                onClick={() => setConfirmInvoice(null)}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2 rounded-lg text-xs transition-colors"
+              >
+                Close &amp; View Register
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Rejection Modal */}
+      <Modal
+        isOpen={!!rejectInvoiceId}
+        onClose={() => {
+          setRejectInvoiceId(null);
+          setRejectReason('');
+          setRejectError('');
+        }}
+        title="Reject Invoice"
+      >
+        <div className="space-y-4">
+          <p className="text-xs text-muted-foreground">
+            Please state the reason for rejecting this invoice (required for audit logging).
+          </p>
+          {rejectError && (
+            <p className="text-xs font-bold text-rose-600">{rejectError}</p>
+          )}
+          <textarea
+            rows={3}
+            value={rejectReason}
+            onChange={(e) => {
+              setRejectReason(e.target.value);
+              setRejectError('');
+            }}
+            placeholder="e.g. Incorrect tax calculation or missing PO..."
+            className="w-full bg-background border border-border/80 rounded-lg p-3 text-xs focus:outline-none focus:border-rose-600"
+          />
+          <div className="flex justify-end gap-2 pt-2">
+            <button
+              onClick={() => {
+                setRejectInvoiceId(null);
+                setRejectReason('');
+                setRejectError('');
+              }}
+              className="px-3 py-1.5 rounded-lg border border-border/80 text-xs font-semibold text-muted-foreground hover:bg-muted"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleRejectConfirm}
+              className="px-4 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-xs"
+            >
+              Reject Invoice
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Invoice Details Modal */}
       {selectedInvoice && (
         <InvoiceDetailModal
           invoice={selectedInvoice}
@@ -242,16 +336,14 @@ function MasterInvoiceContent() {
           currentUser={currentUser}
           team={team}
           config={config}
-          onApprove={(id: string) => approveInvoice(id)}
-          onRejectClick={(id: string) => {
-            const reason = prompt('Enter rejection reason:');
-            if (reason) rejectInvoice(id, reason);
-          }}
-          onPay={(id: string) => payInvoice(id)}
-          onAddBankDetails={(inv: Invoice) => setBankModalInvoice(inv)}
+          onApprove={(id) => approveInvoice(id)}
+          onRejectClick={(id) => setRejectInvoiceId(id)}
+          onPay={(id) => payInvoice(id)}
+          onAddBankDetails={(inv) => setBankModalInvoice(inv)}
         />
       )}
 
+      {/* Bank Details Modal */}
       {bankModalInvoice && (
         <BankDetailsModal
           invoice={bankModalInvoice}
