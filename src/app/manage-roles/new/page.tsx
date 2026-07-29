@@ -102,6 +102,13 @@ export const SIDEBAR_TABS_STRUCTURE: SidebarFolderGroup[] = [
     ],
   },
   {
+    folder: "External Services",
+    icon: "🌐",
+    tabs: [
+      { path: "/invoice-registration", label: "Invoice" },
+    ],
+  },
+  {
     folder: "System",
     icon: "⚙️",
     tabs: [

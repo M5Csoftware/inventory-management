@@ -22,6 +22,8 @@ import {
   IndianRupee,
   AlertTriangle,
   Hammer,
+  FileSpreadsheet,
+  ExternalLink,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -187,10 +189,11 @@ export function Sidebar() {
               onChange={(e) => setActiveBranch(e.target.value)}
               className="w-full h-9 bg-accent/50 border border-border/50 text-foreground text-sm rounded-md pl-3 pr-8 appearance-none focus:outline-none focus:ring-1 focus:ring-primary/50 transition-colors cursor-pointer"
             >
-              <option value="Delhi">🏭 Delhi (HO)</option>
               <option value="Ahmedabad">🏭 Ahmedabad</option>
               <option value="Ludhiana">🏭 Ludhiana</option>
+              <option value="Delhi">🏭 Delhi (HO)</option>
               <option value="Mumbai">🏭 Mumbai</option>
+              <option value="All">🌐 All Branches (Global)</option>
             </select>
             <ChevronDown className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
           </div>
@@ -317,18 +320,34 @@ export function Sidebar() {
           <Settings className="h-5 w-5 shrink-0" />
           <span className="truncate">Settings</span>
         </Link>
-        <Link
-          href="/manage-roles"
-          className={cn(
-            "flex items-center gap-3 rounded-lg px-3 py-2 text-sm lg:text-base font-medium transition-all",
-            pathname === "/manage-roles"
-              ? "bg-primary/10 text-primary font-semibold"
-              : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
-          )}
-        >
-          <Users className="h-5 w-5 shrink-0" />
-          <span className="truncate">Manage Roles</span>
-        </Link>
+        {hasPermission("/manage-roles") && (
+          <Link
+            href="/manage-roles"
+            className={cn(
+              "flex items-center gap-3 rounded-lg px-3 py-2 text-sm lg:text-base font-medium transition-all",
+              pathname === "/manage-roles"
+                ? "bg-primary/10 text-primary font-semibold"
+                : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+            )}
+          >
+            <Users className="h-5 w-5 shrink-0" />
+            <span className="truncate">Manage Roles</span>
+          </Link>
+        )}
+        {hasPermission("/invoice-registration") && (
+          <a
+            href={process.env.NEXT_PUBLIC_INVOICE_REGISTRATION_URL || "https://invoice-registration.vercel.app/"}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={cn(
+              "flex items-center gap-3 rounded-lg px-3 py-2 text-sm lg:text-base font-medium transition-all text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+            )}
+          >
+            <FileSpreadsheet className="h-5 w-5 shrink-0 text-blue-500" />
+            <span className="truncate">Invoice</span>
+            <ExternalLink className="h-3.5 w-3.5 ml-auto text-muted-foreground/60" />
+          </a>
+        )}
         <button
           onClick={handleLogout}
           className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm lg:text-base font-medium transition-all text-muted-foreground hover:bg-red-500/10 hover:text-red-500"

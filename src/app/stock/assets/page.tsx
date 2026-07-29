@@ -33,7 +33,12 @@ export default function AssetsPage() {
     return (
       asset.productName.toLowerCase().includes(searchLower) ||
       asset.assignedTo.toLowerCase().includes(searchLower) ||
-      asset.id.toLowerCase().includes(searchLower)
+      asset.id.toLowerCase().includes(searchLower) ||
+      (asset.modelNumber && asset.modelNumber.toLowerCase().includes(searchLower)) ||
+      (asset.serialNumber && asset.serialNumber.toLowerCase().includes(searchLower)) ||
+      (asset.department && asset.department.toLowerCase().includes(searchLower)) ||
+      (asset.approvedBy && asset.approvedBy.toLowerCase().includes(searchLower)) ||
+      (asset.branch && asset.branch.toLowerCase().includes(searchLower))
     );
   });
 
@@ -42,7 +47,7 @@ export default function AssetsPage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-br from-foreground to-muted-foreground bg-clip-text text-transparent">Assets (Assigned)</h1>
-          <p className="text-muted-foreground mt-1">Track items assigned to staff and locations.</p>
+          <p className="text-muted-foreground mt-1">Track items assigned to staff, departments, and locations.</p>
         </div>
         <div className="flex items-center gap-3">
           <Link href="/stock/assets/in">
@@ -69,7 +74,7 @@ export default function AssetsPage() {
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 type="search"
-                placeholder="Search assets..."
+                placeholder="Search assets, dept, approver..."
                 className="pl-9 bg-background"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -85,6 +90,8 @@ export default function AssetsPage() {
                   <th className="px-6 py-4 font-medium">ID</th>
                   <th className="px-6 py-4 font-medium">Product</th>
                   <th className="px-6 py-4 font-medium">Assigned To</th>
+                  <th className="px-6 py-4 font-medium">Department</th>
+                  <th className="px-6 py-4 font-medium">Approved By</th>
                   <th className="px-6 py-4 font-medium">Warranty</th>
                   <th className="px-6 py-4 font-medium">Assigned Date</th>
                   <th className="px-6 py-4 font-medium">Status</th>
@@ -94,7 +101,7 @@ export default function AssetsPage() {
               <tbody ref={animationParent} className="divide-y divide-border/50">
                 {filteredAssets.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-6 py-12 text-center text-muted-foreground">
+                    <td colSpan={9} className="px-6 py-12 text-center text-muted-foreground">
                       <div className="flex flex-col items-center justify-center space-y-2">
                         <Laptop className="h-8 w-8 text-muted-foreground/40" />
                         <p>No assets found.</p>
@@ -113,11 +120,25 @@ export default function AssetsPage() {
                       <td className="px-6 py-4">
                         {asset.assignedTo}
                       </td>
+                      <td className="px-6 py-4">
+                        <span className="inline-flex items-center rounded-md bg-purple-500/10 px-2.5 py-0.5 text-xs font-medium text-purple-600 dark:text-purple-400">
+                          {asset.department || '—'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-xs font-medium text-foreground">
+                        {asset.approvedBy ? (
+                          <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-semibold">
+                            ✓ {asset.approvedBy}
+                          </span>
+                        ) : (
+                          '—'
+                        )}
+                      </td>
                       <td className="px-6 py-4 text-xs text-muted-foreground">
                         {asset.warranty || '—'}
                       </td>
-                      <td className="px-6 py-4">
-                        {new Date(asset.assignedDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      <td className="px-6 py-4 text-xs text-muted-foreground">
+                        {asset.assignedDate ? new Date(asset.assignedDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
                       </td>
                       <td className="px-6 py-4">
                         {asset.status === 'Assigned' ? (
