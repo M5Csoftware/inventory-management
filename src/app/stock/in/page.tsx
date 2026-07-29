@@ -30,7 +30,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useInventory, Product, Supplier } from "@/context/inventory-context";
+import { useInventory, Product, Supplier, BRANCHES } from "@/context/inventory-context";
 
 export default function StockInPage() {
   const { products, categories, suppliers, recordTransaction, activeBranch } =
@@ -39,6 +39,9 @@ export default function StockInPage() {
 
   // Form states matching Asset Stock In
   const [productId, setProductId] = useState("");
+  const [targetBranch, setTargetBranch] = useState(() =>
+    activeBranch === "All" ? "Ahmedabad" : activeBranch,
+  );
   const [supplier, setSupplier] = useState("");
   const [customSupplier, setCustomSupplier] = useState("");
   const [invoiceNumber, setInvoiceNumber] = useState("");
@@ -53,6 +56,12 @@ export default function StockInPage() {
   const [notes, setNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const submittingRef = useRef(false);
+
+  useEffect(() => {
+    if (activeBranch !== "All") {
+      setTargetBranch(activeBranch);
+    }
+  }, [activeBranch]);
 
   // Searchable Select Product dropdown states
   const [productSearchOpen, setProductSearchOpen] = useState(false);
@@ -161,6 +170,7 @@ export default function StockInPage() {
           invoiceNumber: invoiceNumber,
           model: model,
           serialNumber: serialNumber,
+          branch: targetBranch,
         },
       );
 
@@ -218,7 +228,7 @@ export default function StockInPage() {
           </Card>
         ) : (
           /* Main Form Card */
-          <Card className="border-0 shadow-xl shadow-primary/5 bg-gradient-to-br from-card to-card/80 backdrop-blur-sm">
+          <Card className="border-0 shadow-xl shadow-primary/5 bg-gradient-to-br from-card to-card/80 backdrop-blur-sm relative z-20 overflow-visible">
             <CardHeader className="border-b border-border/50 pb-3">
               <div className="flex items-start justify-between">
                 <div>
@@ -237,11 +247,11 @@ export default function StockInPage() {
               </div>
             </CardHeader>
 
-            <CardContent className="pt-4">
+            <CardContent className="pt-4 overflow-visible">
               <form onSubmit={handleSubmit} className="space-y-4">
                 {/* 1. Item Name & Supplier */}
                 <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-1.5">
+                  <div className="space-y-1.5 relative z-30">
                     <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                       <Package className="h-3 w-3" />
                       Item Name <span className="text-destructive">*</span>
@@ -263,7 +273,7 @@ export default function StockInPage() {
                       </button>
 
                       {productSearchOpen && (
-                        <div className="absolute z-20 mt-1.5 w-full rounded-lg border-2 border-gray-300 bg-white shadow-lg dark:border-gray-600 dark:bg-gray-900 overflow-hidden">
+                        <div className="absolute z-50 mt-1.5 w-full rounded-lg border-2 border-gray-300 bg-white shadow-xl dark:border-gray-600 dark:bg-gray-900 overflow-hidden">
                           <div className="flex items-center gap-2 border-b border-border/50 px-2.5 py-2">
                             <Search className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                             <input
@@ -420,8 +430,32 @@ export default function StockInPage() {
                   </div>
                 </div>
 
-                {/* 4. Serial / Batch Number & Storage Location */}
-                <div className="grid gap-4 md:grid-cols-2">
+                {/* 4. Branch, Serial / Batch Number & Storage Location */}
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div className="space-y-1.5">
+                    <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      <Building2 className="h-3 w-3 text-primary" />
+                      Target Branch <span className="text-destructive">*</span>
+                    </label>
+                    {activeBranch === "All" ? (
+                      <select
+                        value={targetBranch}
+                        onChange={(e) => setTargetBranch(e.target.value)}
+                        className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22currentColor%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E')] bg-[length:16px] bg-[right_10px_center] bg-no-repeat hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500 font-medium cursor-pointer"
+                      >
+                        {BRANCHES.map((b: string) => (
+                          <option key={b} value={b}>
+                            🏢 {b} Branch
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <div className="h-9 w-full rounded-lg border-2 border-gray-200 bg-muted/40 px-3 text-sm flex items-center font-semibold text-foreground">
+                        🏢 {activeBranch} Branch
+                      </div>
+                    )}
+                  </div>
+
                   <div className="space-y-1.5">
                     <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                       <Barcode className="h-3 w-3" />

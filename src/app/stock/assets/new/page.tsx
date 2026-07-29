@@ -3,10 +3,10 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useInventory, Product } from '@/context/inventory-context';
+import { useInventory, Product, ASSET_DEPARTMENTS, ASSET_APPROVED_BY } from '@/context/inventory-context';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Laptop, User, FileText, Package, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, Laptop, User, FileText, Package, ShieldCheck, Building2, CheckCircle2 } from 'lucide-react';
 
 export default function NewAssetAssignmentPage() {
   const { products, categories, assignAsset, activeBranch } = useInventory();
@@ -14,6 +14,10 @@ export default function NewAssetAssignmentPage() {
 
   const [productId, setProductId] = useState('');
   const [assignedTo, setAssignedTo] = useState('');
+  const [department, setDepartment] = useState<string>(ASSET_DEPARTMENTS[0]);
+  const [approvedBy, setApprovedBy] = useState<string>(ASSET_APPROVED_BY[0]);
+  const [modelNumber, setModelNumber] = useState('');
+  const [serialNumber, setSerialNumber] = useState('');
   const [notes, setNotes] = useState('');
   const [warranty, setWarranty] = useState('');
   const [quantity, setQuantity] = useState('1');
@@ -46,6 +50,10 @@ export default function NewAssetAssignmentPage() {
         productId: selectedProduct.id,
         productName: selectedProduct.name,
         assignedTo,
+        department,
+        approvedBy,
+        modelNumber: modelNumber || undefined,
+        serialNumber: serialNumber || undefined,
         quantity: parseInt(quantity),
         notes: notes || undefined,
         warranty: warranty || undefined,
@@ -155,17 +163,82 @@ export default function NewAssetAssignmentPage() {
                   </div>
                 </div>
 
+                <div className="grid gap-6 md:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      <Building2 className="h-3 w-3" />
+                      Department <span className="text-destructive">*</span>
+                    </label>
+                    <select
+                      value={department}
+                      onChange={(e) => setDepartment(e.target.value)}
+                      className="h-10 w-full rounded-lg border-2 border-muted bg-background px-3 text-sm shadow-sm transition-all appearance-none focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 cursor-pointer"
+                      required
+                    >
+                      {ASSET_DEPARTMENTS.map((dept) => (
+                        <option key={dept} value={dept}>
+                          {dept}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      <CheckCircle2 className="h-3 w-3 text-emerald-500" />
+                      Approved By <span className="text-destructive">*</span>
+                    </label>
+                    <select
+                      value={approvedBy}
+                      onChange={(e) => setApprovedBy(e.target.value)}
+                      className="h-10 w-full rounded-lg border-2 border-muted bg-background px-3 text-sm shadow-sm transition-all appearance-none focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 cursor-pointer"
+                      required
+                    >
+                      {ASSET_APPROVED_BY.map((approver) => (
+                        <option key={approver} value={approver}>
+                          {approver}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid gap-6 md:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      Model Number (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={modelNumber}
+                      onChange={(e) => setModelNumber(e.target.value)}
+                      placeholder="e.g. Latitude 5420 / M5-X1"
+                      className="h-10 w-full rounded-lg border-2 border-muted bg-background px-3 text-sm shadow-sm transition-all placeholder:text-muted-foreground/50 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      Serial Number (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={serialNumber}
+                      onChange={(e) => setSerialNumber(e.target.value)}
+                      placeholder="e.g. SN-88392019"
+                      className="h-10 w-full rounded-lg border-2 border-muted bg-background px-3 text-sm shadow-sm transition-all placeholder:text-muted-foreground/50 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 font-mono"
+                    />
+                  </div>
+                </div>
+
                 <div className="space-y-1.5">
                   <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                     <ShieldCheck className="h-3 w-3" />
-                    Warranty (Optional)
+                    Warranty Expires At (Optional)
                   </label>
                   <input
-                    type="text"
+                    type="date"
                     value={warranty}
                     onChange={(e) => setWarranty(e.target.value)}
-                    placeholder="e.g. 1 Year / Expires Dec 2026"
-                    className="h-10 w-full rounded-lg border-2 border-muted bg-background px-3 text-sm shadow-sm transition-all placeholder:text-muted-foreground/50 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    className="h-10 w-full rounded-lg border-2 border-muted bg-background px-3 text-sm shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 cursor-pointer"
                   />
                 </div>
 

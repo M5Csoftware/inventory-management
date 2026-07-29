@@ -80,11 +80,43 @@ export interface Order {
   createdAt?: string;
 }
 
+export const BRANCHES = [
+  "Ahmedabad",
+  "Ludhiana",
+  "Delhi",
+  "Mumbai",
+] as const;
+
+export const ASSET_DEPARTMENTS = [
+  "Operations",
+  "Collections",
+  "Customer support",
+  "Sales support",
+  "Accounts",
+  "Billing",
+  "HR",
+  "Management",
+] as const;
+
+export const ASSET_APPROVED_BY = [
+  "Dheeraj",
+  "Chirag",
+  "Neha",
+  "Mandeep",
+  "Sangeeta",
+  "Rahul",
+] as const;
+
 export interface AssetAssignment {
   id: string;
   productId: string;
   productName: string;
   assignedTo: string;
+  department?: string;
+  approvedBy?: string;
+  branch?: string;
+  modelNumber?: string;
+  serialNumber?: string;
   assignedDate: string;
   returnedDate?: string;
   status: "Assigned" | "Returned";
@@ -161,6 +193,7 @@ interface InventoryContextType {
       invoiceNumber?: string;
       model?: string;
       serialNumber?: string;
+      branch?: string;
     },
   ) => Promise<boolean>;
   transferStock: (
@@ -458,9 +491,14 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
       invoiceNumber?: string;
       model?: string;
       serialNumber?: string;
+      branch?: string;
     },
   ): Promise<boolean> => {
     try {
+      const selectedBranch =
+        additionalData?.branch ||
+        (activeBranch === "All" ? "Ahmedabad" : activeBranch);
+
       const res = await fetch(`${API_BASE}/transactions`, {
         method: "POST",
         headers: DB_HEADER,
@@ -470,7 +508,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
           quantity,
           reasonOrLocation,
           notes,
-          branch: activeBranch,
+          branch: selectedBranch,
           purchaseDate: additionalData?.purchaseDate,
           amount: additionalData?.amount,
           supplier: additionalData?.supplier,
