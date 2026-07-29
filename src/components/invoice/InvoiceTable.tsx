@@ -152,14 +152,14 @@ export function InvoiceTable({
   };
 
   return (
-    <Card className="border-border/60 shadow-sm overflow-hidden">
+    <Card className="border-0 shadow-xl shadow-primary/5 bg-gradient-to-br from-card to-card/80 backdrop-blur-sm overflow-hidden">
       {/* Table Toolbar */}
-      <div className="p-4 bg-muted/30 border-b border-border/60 space-y-3">
+      <div className="p-4 bg-muted/40 border-b border-border/50 space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <FileSpreadsheet className="h-5 w-5 text-purple-600" />
-            <h3 className="font-bold text-base text-foreground">{title || 'Registered Inward Invoices'}</h3>
-            <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-bold">
+            <FileSpreadsheet className="h-5 w-5 text-primary" />
+            <h3 className="font-bold text-base text-foreground">{title || 'Invoices'}</h3>
+            <span className="text-xs px-2.5 py-0.5 rounded-full bg-primary/10 text-primary font-bold">
               {filteredInvoices.length}
             </span>
           </div>
@@ -170,12 +170,12 @@ export function InvoiceTable({
               <Input
                 type="search"
                 placeholder="Search vendor, inv #, PO #..."
-                className="pl-9 h-9 text-xs bg-background"
+                className="pl-9 h-9 text-xs bg-white/90 dark:bg-gray-900/90 border-2 border-gray-300 dark:border-gray-600 rounded-lg font-medium focus:border-primary"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            <Button variant="outline" size="sm" onClick={exportCSV} className="gap-1.5 text-xs h-9">
+            <Button variant="outline" size="sm" onClick={exportCSV} className="gap-1.5 text-xs h-9 shadow-sm">
               <Download className="h-3.5 w-3.5" /> Export CSV
             </Button>
           </div>
@@ -197,7 +197,7 @@ export function InvoiceTable({
               className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors cursor-pointer ${
                 statusFilter === f.id
                   ? 'bg-primary text-primary-foreground shadow-sm'
-                  : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground'
+                  : 'bg-muted/80 text-muted-foreground hover:bg-muted hover:text-foreground'
               }`}
             >
               {f.label}
@@ -209,7 +209,7 @@ export function InvoiceTable({
       {/* Table Body */}
       <div className="overflow-x-auto">
         <table className="w-full text-sm text-left">
-          <thead className="bg-muted/50 text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b border-border/60">
+          <thead className="bg-muted/40 text-xs font-semibold text-muted-foreground border-b border-border/40">
             <tr>
               <th className="py-3 px-4">Invoice ID</th>
               <th className="py-3 px-4">Vendor Name</th>
@@ -223,7 +223,7 @@ export function InvoiceTable({
               <th className="py-3 px-4 text-center">Action</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-border/40 text-xs">
+          <tbody className="divide-y divide-border/20 text-xs">
             {filteredInvoices.length === 0 ? (
               <tr>
                 <td colSpan={10} className="py-12 text-center text-muted-foreground">

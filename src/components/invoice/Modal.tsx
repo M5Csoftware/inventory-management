@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface ModalProps {
   isOpen: boolean;
@@ -28,22 +29,24 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/65 backdrop-blur-sm transition-opacity duration-300">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
       {/* Backdrop clickable */}
       <div className="absolute inset-0" onClick={onClose} />
 
       {/* Content panel */}
-      <div className="relative w-full max-w-lg bg-slate-50 border border-slate-300 rounded-xl shadow-2xl p-6 overflow-hidden transform transition-all duration-200">
-        <div className="flex justify-between items-start mb-4">
-          <h3 className="text-base font-bold text-slate-900">
+      <div className="relative w-full max-w-lg bg-card border border-border/80 rounded-2xl shadow-2xl p-6 overflow-hidden transform transition-all duration-200 z-10 space-y-4">
+        <div className="flex justify-between items-center border-b border-border/60 pb-3">
+          <h3 className="text-base font-bold text-foreground">
             {title}
           </h3>
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={onClose}
-            className="text-slate-500 hover:text-slate-900 hover:bg-slate-200 p-1.5 rounded-lg transition-colors duration-200"
+            className="h-8 w-8 rounded-full"
           >
             <X size={18} />
-          </button>
+          </Button>
         </div>
         <div className="relative z-10">{children}</div>
       </div>

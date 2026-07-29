@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useInvoice, InvoiceProvider } from '@/context/invoice-context';
 import { useAuth } from '@/context/auth-context';
-import { Invoice, AppConfig, TeamMember, Flag, BankDetails, Role } from '@/types/invoice';
+import { Invoice, AppConfig, TeamMember, Flag, BankDetails } from '@/types/invoice';
 import { DashboardView } from '@/components/invoice/DashboardView';
 import { CheckInView } from '@/components/invoice/CheckInView';
 import { InvoiceTable } from '@/components/invoice/InvoiceTable';
@@ -14,6 +14,8 @@ import { Modal } from '@/components/invoice/Modal';
 import { InvoiceDetailModal } from '@/components/invoice/InvoiceDetailModal';
 import { BankDetailsModal } from '@/components/invoice/BankDetailsModal';
 import { exportInvoicesToCSV } from '@/utils/export-invoice';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import {
   LayoutDashboard,
   FilePlus,
@@ -24,9 +26,8 @@ import {
   Download,
   RefreshCw,
   CheckCircle2,
-  AlertTriangle,
+  Plus,
 } from 'lucide-react';
-import { toast } from 'react-toastify';
 
 function MasterInvoiceContent() {
   const { user } = useAuth();
@@ -111,37 +112,37 @@ function MasterInvoiceContent() {
   ];
 
   return (
-    <div className="min-h-screen bg-background p-4 sm:p-6 space-y-6 animate-in fade-in duration-300">
-      {/* Header bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/80 pb-4">
+    <div className="p-6 sm:p-8 space-y-8 animate-in fade-in duration-300 min-h-screen bg-background">
+      {/* Top Header Matching Stock & Products Management Pages */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border/40 pb-6">
         <div>
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-sm font-bold">
-              <Receipt size={20} />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight text-foreground">
-                Invoice System
-              </h1>
-              <p className="text-xs text-muted-foreground">
-                Check-In &bull; Risk Flags &bull; Approvals &bull; Audit Trail
-              </p>
-            </div>
-          </div>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground flex items-center gap-3">
+            <Receipt className="h-8 w-8 text-primary" />
+            Invoice System
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Inward check-in, automated risk flags, verification, dual-approval workflow, and audit ledger.
+          </p>
         </div>
-
-        <div className="flex items-center gap-2">
-          <button
+        <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
             onClick={refreshInvoices}
-            className="flex items-center gap-2 bg-muted hover:bg-muted/80 text-foreground border border-border/80 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer shadow-xs"
+            className="shadow-sm"
           >
-            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
-          </button>
+            <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} /> Refresh
+          </Button>
+          <Button
+            onClick={() => setActiveTab('checkin')}
+            className="shadow-lg shadow-primary/20 transition-all hover:shadow-primary/40 hover:-translate-y-0.5"
+          >
+            <Plus className="mr-2 h-4 w-4" /> New Invoice
+          </Button>
         </div>
       </div>
 
-      {/* Top Navigation Tabs */}
-      <div className="flex flex-wrap items-center gap-2 border-b border-border/80 pb-2">
+      {/* Navigation Sub-Tab Bar matching Inventory Management pills */}
+      <div className="inline-flex p-1.5 bg-muted/60 backdrop-blur-sm rounded-2xl border border-border/40 flex-wrap gap-1">
         {navTabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -149,25 +150,25 @@ function MasterInvoiceContent() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all duration-150 cursor-pointer ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-150 cursor-pointer ${
                 isActive
-                  ? 'bg-indigo-600 text-white shadow-md'
-                  : 'bg-card border border-border/80 text-muted-foreground hover:text-foreground hover:bg-muted/40'
+                  ? 'bg-background text-foreground shadow-sm font-bold border border-border/50'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-background/40'
               }`}
             >
-              <Icon size={16} />
+              <Icon size={16} className={isActive ? 'text-primary' : ''} />
               <span>{tab.label}</span>
             </button>
           );
         })}
       </div>
 
-      {/* Tab Content Views */}
+      {/* View Content */}
       {loading ? (
-        <div className="p-12 text-center text-muted-foreground border border-border/80 rounded-2xl bg-card">
-          <RefreshCw className="h-6 w-6 animate-spin mx-auto mb-2 text-indigo-600" />
-          Loading Invoice Registration System...
-        </div>
+        <Card className="p-12 text-center text-muted-foreground border border-border/50 bg-background/60 backdrop-blur-sm">
+          <RefreshCw className="h-6 w-6 animate-spin mx-auto mb-2 text-primary" />
+          Loading Invoice Data...
+        </Card>
       ) : (
         <>
           {activeTab === 'dashboard' && (
@@ -190,15 +191,20 @@ function MasterInvoiceContent() {
           {activeTab === 'register' && (
             <div className="w-full space-y-4">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                <h2 className="text-xl font-bold text-foreground">
-                  Inward Invoice Register
-                </h2>
-                <button
+                <div>
+                  <h2 className="text-xl font-bold tracking-tight text-foreground">
+                    Inward Register
+                  </h2>
+                  <p className="text-xs text-muted-foreground">Search and manage all recorded inward invoices</p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={() => exportInvoicesToCSV(invoices, 'Invoices_Export')}
-                  className="flex items-center gap-1.5 bg-card hover:bg-muted border border-border/80 text-foreground px-3.5 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer shadow-xs"
+                  className="gap-1.5 shadow-sm"
                 >
-                  <Download size={14} /> Export All to CSV
-                </button>
+                  <Download size={14} /> Export CSV
+                </Button>
               </div>
               <InvoiceTable
                 invoices={invoices}
@@ -252,15 +258,15 @@ function MasterInvoiceContent() {
         </>
       )}
 
-      {/* Confirmation Modal after Check-In */}
+      {/* Confirmation Modal */}
       <Modal
         isOpen={!!confirmInvoice}
         onClose={() => setConfirmInvoice(null)}
-        title="Invoice Check-In Confirmation"
+        title="Check-In Confirmation"
       >
         {confirmInvoice && (
           <div className="space-y-4">
-            <div className="flex items-center gap-3 p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-emerald-600 text-xs font-bold">
+            <div className="flex items-center gap-3 p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-600 text-xs font-bold">
               <CheckCircle2 size={20} />
               <span>Invoice {confirmInvoice.invoiceNumber} registered successfully!</span>
             </div>
@@ -268,18 +274,18 @@ function MasterInvoiceContent() {
               Vendor: <strong className="text-foreground">{confirmInvoice.vendor}</strong> &bull; Total: <strong className="text-foreground">₹{confirmInvoice.amount.toLocaleString()}</strong>
             </p>
             <div className="pt-2 flex justify-end">
-              <button
+              <Button
                 onClick={() => setConfirmInvoice(null)}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2 rounded-lg text-xs transition-colors"
+                size="sm"
               >
                 Close &amp; View Register
-              </button>
+              </Button>
             </div>
           </div>
         )}
       </Modal>
 
-      {/* Rejection Modal */}
+      {/* Rejection Reason Modal */}
       <Modal
         isOpen={!!rejectInvoiceId}
         onClose={() => {
@@ -291,10 +297,10 @@ function MasterInvoiceContent() {
       >
         <div className="space-y-4">
           <p className="text-xs text-muted-foreground">
-            Please state the reason for rejecting this invoice (required for audit logging).
+            Please state the reason for rejecting this invoice (required for audit log).
           </p>
           {rejectError && (
-            <p className="text-xs font-bold text-rose-600">{rejectError}</p>
+            <p className="text-xs font-bold text-destructive">{rejectError}</p>
           )}
           <textarea
             rows={3}
@@ -304,30 +310,32 @@ function MasterInvoiceContent() {
               setRejectError('');
             }}
             placeholder="e.g. Incorrect tax calculation or missing PO..."
-            className="w-full bg-background border border-border/80 rounded-lg p-3 text-xs focus:outline-none focus:border-rose-600"
+            className="w-full bg-background border-2 border-gray-300 dark:border-gray-600 rounded-xl p-3 text-xs focus:outline-none focus:border-primary text-foreground"
           />
           <div className="flex justify-end gap-2 pt-2">
-            <button
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => {
                 setRejectInvoiceId(null);
                 setRejectReason('');
                 setRejectError('');
               }}
-              className="px-3 py-1.5 rounded-lg border border-border/80 text-xs font-semibold text-muted-foreground hover:bg-muted"
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
+              size="sm"
+              variant="destructive"
               onClick={handleRejectConfirm}
-              className="px-4 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-xs"
             >
               Reject Invoice
-            </button>
+            </Button>
           </div>
         </div>
       </Modal>
 
-      {/* Invoice Details Modal */}
+      {/* Detail Modal */}
       {selectedInvoice && (
         <InvoiceDetailModal
           invoice={selectedInvoice}
