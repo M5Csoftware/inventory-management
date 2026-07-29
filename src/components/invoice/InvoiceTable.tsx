@@ -139,9 +139,9 @@ export function InvoiceTable({
   const getStatusBadge = (status: Invoice['status']) => {
     switch (status) {
       case 'pending_verification':
-        return <Badge variant="outline" className="bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30">Pending L1</Badge>;
+        return <Badge variant="outline" className="bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30">Pending Verification</Badge>;
       case 'pending_approval':
-        return <Badge variant="outline" className="bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/30">Pending L2</Badge>;
+        return <Badge variant="outline" className="bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/30">Pending Approval</Badge>;
       case 'approved':
         return <Badge variant="outline" className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30">Approved</Badge>;
       case 'paid':
@@ -185,8 +185,8 @@ export function InvoiceTable({
         <div className="flex flex-wrap items-center gap-1.5 text-xs pt-1">
           {[
             { id: 'all', label: 'All Invoices' },
-            { id: 'pending_verification', label: 'Pending L1' },
-            { id: 'pending_approval', label: 'Pending L2' },
+            { id: 'pending_verification', label: 'Pending Verification' },
+            { id: 'pending_approval', label: 'Pending Approval' },
             { id: 'approved', label: 'Approved' },
             { id: 'paid', label: 'Paid' },
             { id: 'rejected', label: 'Rejected' },

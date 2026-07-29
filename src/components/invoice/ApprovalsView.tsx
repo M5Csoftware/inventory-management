@@ -57,7 +57,7 @@ export const ApprovalsView: React.FC<ApprovalsViewProps> = ({
           <h3 className="text-xs font-bold uppercase tracking-wider text-amber-700 dark:text-amber-300 flex items-center gap-2">
             <Clock className="h-4 w-4 text-amber-500" /> Awaiting Verification ({pendingVerification.length})
           </h3>
-          <span className="text-xs text-muted-foreground font-medium">Step 1 of 3 &bull; L1 Verification Review</span>
+          <span className="text-xs text-muted-foreground font-medium">Step 1 of 3 &bull; Verification Review</span>
         </div>
         <InvoiceTable
           invoices={pendingVerification}

@@ -39,7 +39,7 @@ function ApprovalsWorkflowContent() {
           <CardContent className="p-5 flex items-center justify-between">
             <div>
               <p className="text-xs font-bold uppercase tracking-wider text-amber-700 dark:text-amber-300 flex items-center gap-1.5">
-                <Clock className="h-4 w-4" /> L1 Verification Queue
+                <Clock className="h-4 w-4" /> Verification Queue
               </p>
               <p className="text-2xl font-extrabold text-amber-800 dark:text-amber-200 mt-1">{pendingL1List.length} Pending</p>
               <p className="text-[11px] text-muted-foreground mt-0.5">Awaiting initial document &amp; details verification</p>
@@ -51,7 +51,7 @@ function ApprovalsWorkflowContent() {
           <CardContent className="p-5 flex items-center justify-between">
             <div>
               <p className="text-xs font-bold uppercase tracking-wider text-purple-700 dark:text-purple-300 flex items-center gap-1.5">
-                <ShieldCheck className="h-4 w-4" /> L2 Admin Sign-Off Queue
+                <ShieldCheck className="h-4 w-4" /> Admin Approval Queue
               </p>
               <p className="text-2xl font-extrabold text-purple-800 dark:text-purple-200 mt-1">{pendingL2List.length} Pending</p>
               <p className="text-[11px] text-muted-foreground mt-0.5">Awaiting final admin threshold approval</p>
@@ -63,17 +63,17 @@ function ApprovalsWorkflowContent() {
       {/* L1 Queue Table */}
       <div className="space-y-3 w-full">
         <h3 className="text-sm font-bold uppercase tracking-wider text-foreground flex items-center gap-2">
-          <Clock className="h-4 w-4 text-amber-600" /> L1 Pending Verification ({pendingL1List.length})
+          <Clock className="h-4 w-4 text-amber-600" /> Pending Verification ({pendingL1List.length})
         </h3>
-        <InvoiceTable invoices={pendingL1List} title="L1 Verification Queue" defaultStatusFilter="pending_verification" />
+        <InvoiceTable invoices={pendingL1List} title="Verification Queue" defaultStatusFilter="pending_verification" />
       </div>
 
       {/* L2 Queue Table */}
       <div className="space-y-3 pt-4 w-full">
         <h3 className="text-sm font-bold uppercase tracking-wider text-foreground flex items-center gap-2">
-          <ShieldCheck className="h-4 w-4 text-purple-600" /> L2 Pending Admin Sign-Off ({pendingL2List.length})
+          <ShieldCheck className="h-4 w-4 text-purple-600" /> Pending Admin Sign-Off ({pendingL2List.length})
         </h3>
-        <InvoiceTable invoices={pendingL2List} title="L2 Admin Sign-Off Queue" defaultStatusFilter="pending_approval" />
+        <InvoiceTable invoices={pendingL2List} title="Admin Sign-Off Queue" defaultStatusFilter="pending_approval" />
       </div>
     </div>
   );

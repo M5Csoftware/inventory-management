@@ -67,15 +67,15 @@ export function InvoiceDetailModal({
   const getStatusBadge = (status: Invoice['status']) => {
     switch (status) {
       case 'pending_verification':
-        return <Badge variant="outline" className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30">Pending L1 Verification</Badge>;
+        return <Badge variant="outline" className="bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30">Pending Verification</Badge>;
       case 'pending_approval':
-        return <Badge variant="outline" className="bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/30">Pending L2 Approval</Badge>;
+        return <Badge variant="outline" className="bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/30">Pending Approval</Badge>;
       case 'approved':
-        return <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30">Approved</Badge>;
+        return <Badge variant="outline" className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30">Approved</Badge>;
       case 'paid':
-        return <Badge variant="outline" className="bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30">Paid</Badge>;
+        return <Badge variant="outline" className="bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/30">Paid</Badge>;
       case 'rejected':
-        return <Badge variant="outline" className="bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30">Rejected</Badge>;
+        return <Badge variant="outline" className="bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/30">Rejected</Badge>;
     }
   };
 
@@ -239,25 +239,25 @@ export function InvoiceDetailModal({
           </div>
 
           <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-            {/* L1 Verification Button */}
+            {/* Verification Button */}
             {invoice.status === 'pending_verification' && (
               <Button
                 size="sm"
                 className="bg-amber-600 hover:bg-amber-700 text-white gap-1.5 w-full sm:w-auto shadow-sm"
                 onClick={() => onVerify?.(invoice.id)}
               >
-                <CheckCircle2 className="h-4 w-4" /> Complete L1 Verification
+                <CheckCircle2 className="h-4 w-4" /> Verify Invoice
               </Button>
             )}
 
-            {/* L2 Sign-Off Button */}
+            {/* Approval Button */}
             {invoice.status === 'pending_approval' && isAdminOrMaster && (
               <Button
                 size="sm"
                 className="bg-purple-600 hover:bg-purple-700 text-white gap-1.5 w-full sm:w-auto shadow-sm"
                 onClick={() => onApprove?.(invoice.id)}
               >
-                <ShieldCheck className="h-4 w-4" /> Grant L2 Sign-Off
+                <ShieldCheck className="h-4 w-4" /> Approve Invoice
               </Button>
             )}
 
