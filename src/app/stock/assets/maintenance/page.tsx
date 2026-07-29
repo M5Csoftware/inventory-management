@@ -9,7 +9,7 @@ import {
   Trash2,
   Plus,
   Search,
-  DollarSign,
+  IndianRupee,
   User,
   Building2,
   CheckCircle,
@@ -291,7 +291,7 @@ const SearchableSelect = ({
                   type="text"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Search products..."
+                  placeholder="Search IT hardware assets & equipment..."
                   className="h-8 w-full rounded-md border border-border bg-background pl-9 pr-3 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                   onClick={(e) => e.stopPropagation()}
                 />
@@ -300,7 +300,7 @@ const SearchableSelect = ({
             <div className="max-h-60 overflow-y-auto p-1">
               {filteredOptions.length === 0 ? (
                 <div className="px-2 py-4 text-center text-sm text-muted-foreground">
-                  No products found
+                  No IT hardware assets found
                 </div>
               ) : (
                 filteredOptions.map((option) => (
@@ -331,7 +331,7 @@ const SearchableSelect = ({
 };
 
 export default function MaintenancePage() {
-  const { assets, products } = useInventory();
+  const { assets, products, categories } = useInventory();
   const [maintenanceRecords, setMaintenanceRecords] = useState<
     MaintenanceRecord[]
   >([]);
@@ -377,16 +377,83 @@ export default function MaintenancePage() {
     status: "Pending" as MaintenanceRecord["status"],
   });
 
-  // Convert ALL products to select options with deduplication
+  // Convert ONLY hardware & IT equipment assets to select options
   const productOptions = useMemo(() => {
-    // Ensure products is an array
     const productArray = Array.isArray(products) ? products : [];
+    const categoryArray = Array.isArray(categories) ? categories : [];
 
-    // Create a Map to deduplicate by id
+    // Map of asset category names (where isAsset === true)
+    const assetCategoryNames = new Set(
+      categoryArray
+        .filter((c) => c.isAsset === true)
+        .map((c) => c.name.toLowerCase().trim())
+    );
+
+    // Hardware / IT Asset keywords
+    const assetKeywords = [
+      "laptop",
+      "desktop",
+      "monitor",
+      "keyboard",
+      "mouse",
+      "printer",
+      "hardware",
+      "equipment",
+      "electronics",
+      "phone",
+      "server",
+      "switch",
+      "router",
+      "display",
+      "macbook",
+      "pc",
+      "tablet",
+      "cpu",
+      "ups",
+      "scanner",
+      "projector",
+      "camera",
+    ];
+
+    // Non-asset consumables & packaging to strictly exclude
+    const nonAssetKeywords = [
+      "bag",
+      "box",
+      "tape",
+      "packaging",
+      "stationery",
+      "paper",
+      "consumable",
+      "carton",
+      "bubble",
+      "wrap",
+      "pouch",
+      "envelope",
+      "marker",
+      "pen",
+    ];
+
     const productMap = new Map<string, Product>();
+
     productArray.forEach((product) => {
-      if (product && product.id) {
-        // Only add if not already present or if this is a more complete version
+      if (!product || !product.id) return;
+
+      const catLower = (product.category || "").toLowerCase().trim();
+      const nameLower = (product.name || "").toLowerCase().trim();
+
+      // Exclude non-asset packaging/consumables (e.g. Bags, Boxes, Tapes)
+      const isNonAsset = nonAssetKeywords.some(
+        (kw) => catLower.includes(kw) || nameLower.includes(kw)
+      );
+      if (isNonAsset) return;
+
+      // Include if it belongs to an asset category OR matches hardware equipment keywords
+      const isExplicitAssetCat = assetCategoryNames.has(catLower);
+      const isHardwareAsset = assetKeywords.some(
+        (kw) => catLower.includes(kw) || nameLower.includes(kw)
+      );
+
+      if (isExplicitAssetCat || isHardwareAsset || (assetCategoryNames.size === 0 && !isNonAsset)) {
         if (
           !productMap.has(product.id) ||
           productMap.get(product.id)?.name !== product.name
@@ -396,26 +463,22 @@ export default function MaintenancePage() {
       }
     });
 
-    // Convert Map back to array and create options
     return Array.from(productMap.values()).map((product) => {
-      // Get total stock across all branches or use single stock value
       let totalStock = 0;
       if (typeof product.stock === "number") {
         totalStock = product.stock;
       } else if (product.stock && typeof product.stock === "object") {
         totalStock = Object.values(product.stock).reduce(
           (sum, val) => sum + (typeof val === "number" ? val : 0),
-          0,
+          0
         );
       }
 
-      // Create a unique label with more identifying information
       const labelParts = [
-        product.name,
+        `💻 ${product.name}`,
         product.sku ? `(${product.sku})` : "",
         `Stock: ${totalStock}`,
         product.category ? `| ${product.category}` : "",
-        product.price ? `₹${product.price}` : "",
       ].filter((part) => part !== "");
 
       return {
@@ -423,7 +486,7 @@ export default function MaintenancePage() {
         label: labelParts.join(" "),
       };
     });
-  }, [products]);
+  }, [products, categories]);
 
   const filteredRecords = maintenanceRecords.filter((record) => {
     const matchesSearch =
@@ -763,7 +826,7 @@ export default function MaintenancePage() {
                   </p>
                 </div>
                 <div className="rounded-full bg-red-500/20 p-2">
-                  <DollarSign className="h-5 w-5 text-red-500" />
+                  <IndianRupee className="h-5 w-5 text-red-500" />
                 </div>
               </div>
             </CardContent>
@@ -1017,7 +1080,7 @@ export default function MaintenancePage() {
                   Cost (₹) <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
-                  <DollarSign className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <IndianRupee className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <input
                     type="number"
                     step="0.01"
@@ -1368,7 +1431,7 @@ export default function MaintenancePage() {
                       Salvage Value (₹)
                     </label>
                     <div className="relative">
-                      <DollarSign className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <IndianRupee className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                       <input
                         type="number"
                         step="0.01"
@@ -1473,7 +1536,7 @@ export default function MaintenancePage() {
                       Recovery Value (₹)
                     </label>
                     <div className="relative">
-                      <DollarSign className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <IndianRupee className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                       <input
                         type="number"
                         step="0.01"

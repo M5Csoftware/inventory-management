@@ -1,9 +1,11 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { Shield, Plus, Edit2, Trash2, X, UserCog, Key } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { Shield, Plus, Edit2, Trash2, UserCheck, Key, Lock, CheckCircle2 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { useAuth } from '@/context/auth-context';
+import { Button } from '@/components/ui/button';
 import { ConfirmDeleteModal } from '@/components/confirm-delete-modal';
 
 interface User {
@@ -12,6 +14,7 @@ interface User {
   email: string;
   role: string;
   branch?: string;
+  permissions?: string[];
   status?: 'active' | 'inactive';
   lastLogin?: string;
 }
@@ -24,20 +27,8 @@ export default function ManageRolesPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
-  
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const submittingRef = useRef(false);
-  
-  const [formData, setFormData] = useState({
-    id: '',
-    name: '',
-    email: '',
-    password: '',
-    role: 'stock_manager',
-    branch: 'Ahmedabad'
-  });
+
+  const isAdminOrMaster = currentUser?.id === 'master' || currentUser?.role === 'master' || currentUser?.role === 'admin';
 
   const fetchUsers = async () => {
     try {
@@ -64,56 +55,21 @@ export default function ManageRolesPage() {
     fetchUsers();
   }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (submittingRef.current) return;
-
-    submittingRef.current = true;
-    setIsSubmitting(true);
-
-    try {
-      const token = localStorage.getItem('token');
-      const url = modalMode === 'create' 
-        ? `${API_BASE}/users` 
-        : `${API_BASE}/users/${formData.id}`;
-      
-      const res = await fetch(url, {
-        method: modalMode === 'create' ? 'POST' : 'PUT',
-        headers: {
-          ...DB_HEADER,
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(formData)
-      });
-      const data = await res.json();
-      if (data.success) {
-        toast.success(`User ${modalMode === 'create' ? 'created' : 'updated'} successfully!`);
-        setIsModalOpen(false);
-        fetchUsers();
-      } else {
-        toast.error(data.message || 'Failed to save user');
-      }
-    } catch (err: any) {
-      toast.error('Network error');
-    } finally {
-      submittingRef.current = false;
-      setIsSubmitting(false);
-    }
-  };
-
   const handleDelete = async (id: string) => {
+    if (!id) return;
     try {
       const token = localStorage.getItem('token');
-      const res = await fetch(`${API_BASE}/users/${id}`, {
+      const res = await fetch(`${API_BASE}/users/${encodeURIComponent(id)}`, {
         method: 'DELETE',
         headers: {
-          ...DB_HEADER,
+          'x-database': 'm5c-inventory',
           'Authorization': `Bearer ${token}`
         }
       });
       const data = await res.json();
       if (data.success) {
         toast.success('User deleted successfully');
+        setUsers((prev) => prev.filter((u) => u.id !== id && (u as any)._id !== id));
         fetchUsers();
       } else {
         toast.error(data.message || 'Failed to delete user');
@@ -123,240 +79,189 @@ export default function ManageRolesPage() {
     }
   };
 
-  const openCreateModal = () => {
-    setModalMode('create');
-    setFormData({ id: '', name: '', email: '', password: '', role: 'stock_manager', branch: 'Ahmedabad' });
-    setIsModalOpen(true);
-  };
-
-  const openEditModal = (user: User) => {
-    setModalMode('edit');
-    setFormData({ id: user.id, name: user.name, email: user.email, password: '', role: user.role, branch: user.branch ?? '' });
-    setIsModalOpen(true);
-  };
+  if (currentUser && !isAdminOrMaster) {
+    return (
+      <div className="p-12 text-center space-y-4 max-w-lg mx-auto">
+        <div className="w-16 h-16 rounded-full bg-red-500/10 text-red-500 flex items-center justify-center mx-auto text-2xl font-bold border border-red-500/20">
+          🛡️
+        </div>
+        <h2 className="text-2xl font-bold text-foreground">Access Restricted</h2>
+        <p className="text-muted-foreground text-sm">
+          User &amp; Role Management is strictly restricted to System Administrators and Master Admins only.
+        </p>
+        <Link href="/" className="inline-block mt-2">
+          <Button className="gap-2">Return to Dashboard</Button>
+        </Link>
+      </div>
+    );
+  }
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="p-4 sm:p-8 w-full space-y-8 animate-in fade-in duration-500">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b pb-5">
         <div>
-          <h1 className="text-4xl font-bold tracking-tight bg-linear-to-br from-foreground to-muted-foreground bg-clip-text text-transparent">
-            Manage Roles
-          </h1>
-          <p className="text-muted-foreground mt-2">
-            Create and manage user accounts and their permissions.
+          <div className="flex items-center gap-2">
+            <h1 className="text-3xl font-bold tracking-tight">
+              User Roles &amp; Permissions
+            </h1>
+            <span className="inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-semibold bg-primary/10 text-primary border-primary/20">
+              <Shield className="w-3.5 h-3.5" /> Access Control
+            </span>
+          </div>
+          <p className="text-sm text-muted-foreground mt-1">
+            Configure system user accounts, branch assignments, and granular sidebar folder/tab permissions.
           </p>
         </div>
-        <button
-          onClick={openCreateModal}
-          className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-xl font-medium hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-0.5"
+
+        <Link
+          href="/manage-roles/new"
+          className="inline-flex items-center justify-center gap-2 bg-primary text-primary-foreground px-4 py-2.5 rounded-xl font-semibold text-sm hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-0.5"
         >
-          <Plus className="w-5 h-5" />
-          Create User
-        </button>
+          <Plus className="w-4 h-4" />
+          Create New User
+        </Link>
       </div>
 
+      {/* Users Table Card */}
       <div className="bg-card rounded-2xl shadow-xl border border-border/50 overflow-hidden backdrop-blur-xl">
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left">
-            <thead className="text-xs uppercase bg-muted/50 text-muted-foreground border-b border-border/50">
+            <thead className="text-xs uppercase bg-muted/50 text-muted-foreground border-b border-border/50 font-semibold tracking-wider">
               <tr>
-                  <th className="text-left font-semibold p-4 text-muted-foreground w-1/4">User Details</th>
-                  <th className="text-left font-semibold p-4 text-muted-foreground w-1/6">Role</th>
-                  <th className="text-left font-semibold p-4 text-muted-foreground w-1/6">Branch</th>
-                  <th className="text-left font-semibold p-4 text-muted-foreground w-1/4">Last Login</th>
-                <th className="px-6 py-4 font-semibold text-right">Actions</th>
+                <th className="p-4 text-left">User Details</th>
+                <th className="p-4 text-left">System Role</th>
+                <th className="p-4 text-left">Branch Scope</th>
+                <th className="p-4 text-left">Folder &amp; Tab Permissions</th>
+                <th className="p-4 text-left">Last Active</th>
+                <th className="p-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/50">
               {loading ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-8 text-center text-muted-foreground">
+                  <td colSpan={6} className="px-6 py-12 text-center text-muted-foreground">
                     <div className="flex items-center justify-center gap-2">
-                      <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                      Loading users...
+                      <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                      Loading user directory...
                     </div>
                   </td>
                 </tr>
               ) : users.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-8 text-center text-muted-foreground">
-                    No users found.
+                  <td colSpan={6} className="px-6 py-12 text-center text-muted-foreground">
+                    No custom user accounts found. Click "Create New User" to get started.
                   </td>
                 </tr>
               ) : (
-                users.map((user) => (
-                  <tr key={user.id} className="hover:bg-muted/30 transition-colors group">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
-                          {user.name.charAt(0).toUpperCase()}
+                users.map((u) => {
+                  const isAdmin = u.role === 'admin';
+                  const permCount = u.permissions?.length || 0;
+                  const isFullAccess = isAdmin || u.permissions?.includes('*');
+
+                  return (
+                    <tr key={u.id} className="hover:bg-muted/30 transition-colors group">
+                      <td className="p-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm border border-primary/20 shrink-0">
+                            {u.name.charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <div className="font-semibold text-foreground flex items-center gap-1.5">
+                              {u.name}
+                              <span className="font-mono text-[11px] text-muted-foreground">({u.id})</span>
+                            </div>
+                            <div className="text-xs text-muted-foreground">{u.email}</div>
+                          </div>
                         </div>
-                        <div>
-                          <div className="font-medium text-foreground">{user.name}</div>
-                          <div className="text-xs text-muted-foreground">{user.email}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="p-4">
-                      <div className="flex items-center gap-2">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          user.role === 'admin' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
-                        }`}>
-                          {user.role === 'admin' ? 'Admin' : 'Stock Manager'}
+                      </td>
+
+                      <td className="p-4">
+                        <span
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                            isAdmin
+                              ? 'bg-purple-500/15 text-purple-700 dark:text-purple-400 border border-purple-500/20'
+                              : 'bg-blue-500/15 text-blue-700 dark:text-blue-400 border border-blue-500/20'
+                          }`}
+                        >
+                          {isAdmin ? 'Admin' : 'Stock Manager'}
                         </span>
-                      </div>
-                    </td>
-                    <td className="p-4">
-                      <span className="text-sm font-medium text-muted-foreground">
-                        {user.role === 'admin' && user.id === 'master' ? '🌐 All Branches' : `🏭 ${user.branch || 'Unknown'}`}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-muted-foreground">
-                      {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never'}
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button
-                          onClick={() => openEditModal(user)}
-                          className="p-2 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
-                          title="Edit User"
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => setUserToDelete(user)}
-                          className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
-                          title="Delete User"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                      </td>
+
+                      <td className="p-4">
+                        <span className="text-xs font-medium text-foreground bg-muted/50 px-2.5 py-1 rounded-md border border-border/40">
+                          🏭 {u.branch || 'Ahmedabad'}
+                        </span>
+                      </td>
+
+                      <td className="p-4">
+                        {isFullAccess ? (
+                          <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">
+                            <CheckCircle2 className="w-3.5 h-3.5" /> Full Access (All Tabs)
+                          </span>
+                        ) : permCount > 0 ? (
+                          <span className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 dark:text-blue-400 bg-blue-500/10 px-2.5 py-1 rounded-full border border-blue-500/20">
+                            <Lock className="w-3 h-3" /> {permCount} Tabs Allowed
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/20">
+                            No Tabs Configured
+                          </span>
+                        )}
+                      </td>
+
+                      <td className="p-4 text-xs text-muted-foreground">
+                        {u.lastLogin
+                          ? new Date(u.lastLogin).toLocaleDateString('en-IN', {
+                              day: '2-digit',
+                              month: 'short',
+                              year: 'numeric',
+                            })
+                          : 'Never'}
+                      </td>
+
+                      <td className="p-4 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <Link
+                            href={`/manage-roles/edit/${u.id}`}
+                            className="px-2.5 py-1.5 text-xs font-semibold text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg transition-colors inline-flex items-center gap-1.5 border border-border/40"
+                            title="Edit User & Permissions"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                            <span>Edit</span>
+                          </Link>
+                          <button
+                            type="button"
+                            onClick={() => setUserToDelete(u)}
+                            className="px-2.5 py-1.5 text-xs font-semibold text-destructive hover:bg-destructive/10 rounded-lg transition-colors inline-flex items-center gap-1.5 border border-destructive/20 cursor-pointer"
+                            title="Delete User Account"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            <span>Delete</span>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
         </div>
       </div>
 
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-card w-full max-w-md rounded-2xl shadow-2xl border border-border overflow-hidden animate-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between p-6 border-b border-border/50">
-              <h3 className="text-xl font-semibold">
-                {modalMode === 'create' ? 'Create New User' : 'Edit User'}
-              </h3>
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="text-muted-foreground hover:text-foreground transition-colors p-1"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Full Name</label>
-                <input
-                  type="text"
-                  required
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-4 py-2 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-                  placeholder="e.g. Jane Doe"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Email Address</label>
-                <input
-                  type="email"
-                  required
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full px-4 py-2 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-                  placeholder="jane@example.com"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium">
-                  {modalMode === 'create' ? 'Password' : 'New Password (Leave blank to keep current)'}
-                </label>
-                <div className="relative">
-                  <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <input
-                    type="password"
-                    required={modalMode === 'create'}
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    className="w-full pl-9 pr-4 py-2 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-                    placeholder="Enter password"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Role</label>
-                <select
-                  value={formData.role}
-                  onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                  className="w-full px-4 py-2 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-                >
-                  <option value="stock_manager">Stock Manager</option>
-                  <option value="admin">Admin</option>
-                </select>
-              </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Assigned Branch</label>
-                  <select
-                    value={formData.branch}
-                    onChange={(e) => setFormData({ ...formData, branch: e.target.value })}
-                    className="w-full px-4 py-2 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-                  >
-                    <option value="Ahmedabad">Ahmedabad</option>
-                    <option value="Ludhiana">Ludhiana</option>
-                    <option value="Delhi">Delhi</option>
-                    <option value="Mumbai">Mumbai</option>
-                  </select>
-                </div>
-
-              <div className="pt-4 flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="flex-1 px-4 py-2 border border-border hover:bg-muted text-foreground rounded-xl transition-all font-medium"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="flex-1 px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl transition-all font-medium shadow-lg shadow-primary/20 disabled:opacity-50 disabled:pointer-events-none"
-                >
-                  {isSubmitting
-                    ? (modalMode === 'create' ? 'Creating User...' : 'Saving Changes...')
-                    : (modalMode === 'create' ? 'Create User' : 'Save Changes')}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
       <ConfirmDeleteModal
-        isOpen={userToDelete !== null}
-        onClose={() => setUserToDelete(null)}
-        onConfirm={async () => {
+        isOpen={!!userToDelete}
+        title="Delete User Account"
+        description={`Are you sure you want to delete account "${userToDelete?.name}" (${userToDelete?.email})? This action cannot be undone.`}
+        onConfirm={() => {
           if (userToDelete) {
-            await handleDelete(userToDelete.id);
+            const targetId = userToDelete.id || (userToDelete as any)._id;
+            handleDelete(targetId);
+            setUserToDelete(null);
           }
         }}
-        title="Delete User Account"
-        description="Are you sure you want to revoke access and delete this user? They will no longer be able to log in."
-        itemName={userToDelete ? `${userToDelete.name} (${userToDelete.email})` : ''}
+        onClose={() => setUserToDelete(null)}
       />
     </div>
   );

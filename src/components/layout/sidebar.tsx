@@ -115,6 +115,16 @@ export const navItems: NavItem[] = [
         label: "Monthly Stock Summary",
         icon: BarChart3,
       },
+      {
+        href: "/reports/product-details",
+        label: "Product Details",
+        icon: Package,
+      },
+      {
+        href: "/reports/asset-details",
+        label: "Asset Details",
+        icon: Laptop,
+      },
     ],
   },
 ];
@@ -123,7 +133,7 @@ export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { activeBranch, setActiveBranch } = useInventory();
-  const { user, logout } = useAuth();
+  const { user, logout, hasPermission } = useAuth();
 
   const handleLogout = () => {
     logout();
@@ -196,8 +206,13 @@ export function Sidebar() {
           const Icon = item.icon;
 
           if (item.subItems) {
+            const allowedSubItems = item.subItems.filter((sub) =>
+              hasPermission(sub.href),
+            );
+            if (allowedSubItems.length === 0) return null;
+
             const isExpanded = openSubMenus[item.label];
-            const hasActiveChild = item.subItems.some(
+            const hasActiveChild = allowedSubItems.some(
               (sub) => pathname === sub.href,
             );
 
@@ -241,7 +256,7 @@ export function Sidebar() {
                       className="overflow-hidden"
                     >
                       <div className="pl-4 lg:pl-6 space-y-1 mt-1 border-l ml-5 border-border">
-                        {item.subItems.map((sub) => {
+                        {allowedSubItems.map((sub) => {
                           const SubIcon = sub.icon;
                           const isActive = pathname === sub.href;
                           return (
@@ -267,6 +282,8 @@ export function Sidebar() {
               </div>
             );
           }
+
+          if (!item.href || !hasPermission(item.href)) return null;
 
           // Item with no children (like Dashboard)
           const isActive = pathname === item.href;

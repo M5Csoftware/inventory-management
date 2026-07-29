@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, AlertTriangle, Package, Menu } from "lucide-react";
+import { Bell, AlertTriangle, Package, Menu, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePathname } from "next/navigation";
 import { useInventory } from "@/context/inventory-context";
@@ -189,12 +189,13 @@ function HeaderInner() {
                 {lowStockProducts.length > 0 && (
                   <div className="border-t border-border px-4 py-3 flex gap-2">
                     <Link
-                      href="/stock/in"
+                      href="/orders/new"
                       className="flex-1"
                       onClick={() => setOpen(false)}
                     >
-                      <Button size="sm" className="w-full text-xs h-8">
-                        Restock Now
+                      <Button size="sm" className="w-full text-xs h-8 gap-1.5 font-semibold">
+                        <ShoppingCart className="w-3.5 h-3.5" />
+                        Generate Order
                       </Button>
                     </Link>
                     <Link
