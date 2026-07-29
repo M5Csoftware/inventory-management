@@ -102,13 +102,13 @@ export const SIDEBAR_TABS_STRUCTURE: SidebarFolderGroup[] = [
     ],
   },
   {
-    folder: "Invoices",
+    folder: "Invoice",
     icon: "🧾",
     tabs: [
-      { path: "/invoice", label: "Invoice Dashboard & Register" },
-      { path: "/invoice/new", label: "Register Inward Invoice" },
-      { path: "/invoice/approvals", label: "Invoice Approvals" },
-      { path: "/invoice/audit", label: "Invoice Audit History" },
+      { path: "/invoice", label: "Dashboard" },
+      { path: "/invoice/new", label: "New Invoice" },
+      { path: "/invoice/approvals", label: "Approvals" },
+      { path: "/invoice/audit", label: "Invoice Audit" },
     ],
   },
   {

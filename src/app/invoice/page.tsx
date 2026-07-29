@@ -103,11 +103,11 @@ function MasterInvoiceContent() {
 
   const navTabs = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'checkin', label: 'Check In Invoice', icon: FilePlus },
-    { id: 'register', label: 'Inward Register', icon: Receipt },
-    { id: 'approvals', label: 'Approvals Queue', icon: ClipboardCheck },
-    { id: 'audit', label: 'Audit Trail', icon: History },
-    { id: 'team', label: 'Policy & Settings', icon: Settings },
+    { id: 'checkin', label: 'New Invoice', icon: FilePlus },
+    { id: 'register', label: 'Register', icon: Receipt },
+    { id: 'approvals', label: 'Approvals', icon: ClipboardCheck },
+    { id: 'audit', label: 'Invoice Audit', icon: History },
+    { id: 'team', label: 'Settings', icon: Settings },
   ];
 
   return (
@@ -121,10 +121,10 @@ function MasterInvoiceContent() {
             </div>
             <div>
               <h1 className="text-2xl font-bold tracking-tight text-foreground">
-                M5 Invoice Registration System
+                Invoice System
               </h1>
               <p className="text-xs text-muted-foreground">
-                Inward Check-In &bull; Risk Flags &bull; L1 Verification &bull; L2 Dual Approvals &bull; Audit Ledger
+                Check-In &bull; Risk Flags &bull; Approvals &bull; Audit Trail
               </p>
             </div>
           </div>
