@@ -26,6 +26,11 @@ import {
   Scissors,
   Package,
   AlertTriangle,
+  Barcode,
+  ShieldCheck,
+  FileText,
+  Download,
+  Printer,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -43,6 +48,7 @@ interface MaintenanceRecord {
   description: string;
   vendor?: string;
   vendorContact?: string;
+  serialNumber?: string;
   repairDetails?: {
     issue: string;
     partsReplaced?: string[];
@@ -87,6 +93,17 @@ interface Product {
   stock?: number | Record<string, number>;
   suppliersList?: Array<{ supplierName: string; rate: number }>;
   [key: string]: any;
+}
+
+// Represents one physical unit's serial number
+interface SerialEntry {
+  value: string;
+  label: string;
+  model?: string;
+  warrantyText?: string;
+  purchaseDate?: string;
+  invoiceNumber?: string;
+  supplier?: string;
 }
 
 // ── API config ──
@@ -224,16 +241,22 @@ const SearchableSelect = ({
   value,
   onChange,
   placeholder = "Search and select...",
+  searchPlaceholder = "Search...",
+  emptyLabel = "No options found",
   label,
   required = false,
+  disabled = false,
   className = "",
 }: {
   options: Array<{ value: string; label: string }>;
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
+  searchPlaceholder?: string;
+  emptyLabel?: string;
   label?: string;
   required?: boolean;
+  disabled?: boolean;
   className?: string;
 }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -269,8 +292,11 @@ const SearchableSelect = ({
       <div className="relative">
         <button
           type="button"
-          onClick={() => setIsOpen(!isOpen)}
-          className="flex h-10 w-full items-center justify-between rounded-lg border border-border bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+          disabled={disabled}
+          onClick={() => !disabled && setIsOpen(!isOpen)}
+          className={`flex h-10 w-full items-center justify-between rounded-lg border border-border bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary ${
+            disabled ? "opacity-60 cursor-not-allowed" : ""
+          }`}
         >
           <span
             className={
@@ -282,7 +308,7 @@ const SearchableSelect = ({
           <ChevronDown className="h-4 w-4 opacity-50" />
         </button>
 
-        {isOpen && (
+        {isOpen && !disabled && (
           <div className="absolute z-50 mt-1 w-full rounded-lg border border-border bg-popover shadow-lg">
             <div className="p-2 border-b border-border">
               <div className="relative">
@@ -291,7 +317,7 @@ const SearchableSelect = ({
                   type="text"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Search IT hardware assets & equipment..."
+                  placeholder={searchPlaceholder}
                   className="h-8 w-full rounded-md border border-border bg-background pl-9 pr-3 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                   onClick={(e) => e.stopPropagation()}
                 />
@@ -300,7 +326,7 @@ const SearchableSelect = ({
             <div className="max-h-60 overflow-y-auto p-1">
               {filteredOptions.length === 0 ? (
                 <div className="px-2 py-4 text-center text-sm text-muted-foreground">
-                  No IT hardware assets found
+                  {emptyLabel}
                 </div>
               ) : (
                 filteredOptions.map((option) => (
@@ -330,8 +356,101 @@ const SearchableSelect = ({
   );
 };
 
+// Parses a warranty string like "2 Years 3 Months" into total days
+const parseWarrantyDurationDays = (text: string): number | null => {
+  if (!text) return null;
+
+  let totalDays = 0;
+
+  // Parse Years
+  const yearsMatch = text.match(/(\d+)\s*(?:year|years|yr|yrs)/i);
+  if (yearsMatch) {
+    totalDays += parseInt(yearsMatch[1]) * 365;
+  }
+
+  // Parse Months
+  const monthsMatch = text.match(/(\d+)\s*(?:month|months|mon|mons)/i);
+  if (monthsMatch) {
+    totalDays += parseInt(monthsMatch[1]) * 30;
+  }
+
+  // Parse Days
+  const daysMatch = text.match(/(\d+)\s*(?:day|days|d)/i);
+  if (daysMatch) {
+    totalDays += parseInt(daysMatch[1]);
+  }
+
+  return totalDays > 0 ? totalDays : null;
+};
+
+// Pulls the "Warranty: X" fragment out of a Stock In transaction's combined notes/reason text
+const extractWarrantyFromText = (text: string): string => {
+  if (!text) return "";
+  const match = text.match(/Warranty:\s*([^|]+)/i);
+  return match && match[1] ? match[1].trim() : "";
+};
+
+// Fallback: pulls serial numbers out of the "S/Ns (n): 0987654, 0987655" fragment in notes
+const extractSerialsFromText = (text: string): string[] => {
+  if (!text) return [];
+  const match = text.match(/S\/Ns\s*\([^)]*\)\s*:\s*([^|]+)/i);
+  if (!match || !match[1]) return [];
+  return match[1]
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+};
+
+// Transaction dates are saved as "YYYY-MM-DD HH:MM"
+const parseTxDate = (value?: string): Date | null => {
+  if (!value) return null;
+  const normalized = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(value)
+    ? value.replace(" ", "T")
+    : value;
+  const d = new Date(normalized);
+  return isNaN(d.getTime()) ? null : d;
+};
+
+interface WarrantyStatus {
+  warrantyText: string;
+  remainingDays: number | null;
+  expired: boolean | null;
+  expiryDate: Date | null;
+}
+
+// Given a serial's stock-in record, figures out whether its warranty is still active
+const getWarrantyStatus = (entry?: SerialEntry): WarrantyStatus | null => {
+  if (!entry || !entry.warrantyText) return null;
+
+  const durationDays = parseWarrantyDurationDays(entry.warrantyText);
+  const purchase = parseTxDate(entry.purchaseDate);
+
+  if (!durationDays || !purchase) {
+    return {
+      warrantyText: entry.warrantyText,
+      remainingDays: null,
+      expired: null,
+      expiryDate: null,
+    };
+  }
+
+  const expiry = new Date(purchase);
+  expiry.setDate(expiry.getDate() + durationDays);
+  const now = new Date();
+  const remainingDays = Math.ceil(
+    (expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
+  );
+
+  return {
+    warrantyText: entry.warrantyText,
+    remainingDays,
+    expired: remainingDays <= 0,
+    expiryDate: expiry,
+  };
+};
+
 export default function MaintenancePage() {
-  const { assets, products, categories } = useInventory();
+  const { assets, products, categories, activeBranch } = useInventory();
   const [maintenanceRecords, setMaintenanceRecords] = useState<
     MaintenanceRecord[]
   >([]);
@@ -343,10 +462,15 @@ export default function MaintenancePage() {
     useState<MaintenanceRecord | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
 
-  // Form state for new maintenance record
+  const [serialOptions, setSerialOptions] = useState<SerialEntry[]>([]);
+  const [isLoadingSerials, setIsLoadingSerials] = useState(false);
+  const [serialRefreshTick, setSerialRefreshTick] = useState(0);
+
   const [formData, setFormData] = useState({
     assetId: "",
+    serialNumber: "",
     type: "Repair" as MaintenanceRecord["type"],
     date: new Date().toISOString().slice(0, 10),
     cost: "",
@@ -365,7 +489,6 @@ export default function MaintenancePage() {
     salvageValue: "",
     retireReason: "",
     retiredBy: "",
-    // Dismantle fields
     dismantleReason: "",
     partsRecovered: "",
     recoveryValue: "",
@@ -382,14 +505,12 @@ export default function MaintenancePage() {
     const productArray = Array.isArray(products) ? products : [];
     const categoryArray = Array.isArray(categories) ? categories : [];
 
-    // Map of asset category names (where isAsset === true)
     const assetCategoryNames = new Set(
       categoryArray
         .filter((c) => c.isAsset === true)
-        .map((c) => c.name.toLowerCase().trim())
+        .map((c) => c.name.toLowerCase().trim()),
     );
 
-    // Hardware / IT Asset keywords
     const assetKeywords = [
       "laptop",
       "desktop",
@@ -415,7 +536,6 @@ export default function MaintenancePage() {
       "camera",
     ];
 
-    // Non-asset consumables & packaging to strictly exclude
     const nonAssetKeywords = [
       "bag",
       "box",
@@ -441,19 +561,21 @@ export default function MaintenancePage() {
       const catLower = (product.category || "").toLowerCase().trim();
       const nameLower = (product.name || "").toLowerCase().trim();
 
-      // Exclude non-asset packaging/consumables (e.g. Bags, Boxes, Tapes)
       const isNonAsset = nonAssetKeywords.some(
-        (kw) => catLower.includes(kw) || nameLower.includes(kw)
+        (kw) => catLower.includes(kw) || nameLower.includes(kw),
       );
       if (isNonAsset) return;
 
-      // Include if it belongs to an asset category OR matches hardware equipment keywords
       const isExplicitAssetCat = assetCategoryNames.has(catLower);
       const isHardwareAsset = assetKeywords.some(
-        (kw) => catLower.includes(kw) || nameLower.includes(kw)
+        (kw) => catLower.includes(kw) || nameLower.includes(kw),
       );
 
-      if (isExplicitAssetCat || isHardwareAsset || (assetCategoryNames.size === 0 && !isNonAsset)) {
+      if (
+        isExplicitAssetCat ||
+        isHardwareAsset ||
+        (assetCategoryNames.size === 0 && !isNonAsset)
+      ) {
         if (
           !productMap.has(product.id) ||
           productMap.get(product.id)?.name !== product.name
@@ -470,7 +592,7 @@ export default function MaintenancePage() {
       } else if (product.stock && typeof product.stock === "object") {
         totalStock = Object.values(product.stock).reduce(
           (sum, val) => sum + (typeof val === "number" ? val : 0),
-          0
+          0,
         );
       }
 
@@ -488,6 +610,11 @@ export default function MaintenancePage() {
     });
   }, [products, categories]);
 
+  const serialSelectOptions = useMemo(
+    () => serialOptions.map((s) => ({ value: s.value, label: s.label })),
+    [serialOptions],
+  );
+
   const filteredRecords = maintenanceRecords.filter((record) => {
     const matchesSearch =
       record.assetName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -499,7 +626,6 @@ export default function MaintenancePage() {
     return matchesSearch && matchesType && matchesStatus;
   });
 
-  // Load maintenance records from the real API
   const fetchMaintenanceRecords = async () => {
     setIsLoading(true);
     try {
@@ -524,27 +650,254 @@ export default function MaintenancePage() {
     fetchMaintenanceRecords();
   }, []);
 
+  // Fetch serial numbers from asset-serials endpoint
+  useEffect(() => {
+    const fetchSerialsForProduct = async () => {
+      if (!formData.assetId) {
+        setSerialOptions([]);
+        return;
+      }
+
+      setIsLoadingSerials(true);
+      try {
+        const productArray = Array.isArray(products) ? products : [];
+        const selectedProd = productArray.find(
+          (p: Product) => p.id === formData.assetId,
+        );
+
+        // Fetch from asset-serials endpoint
+        const res = await fetch(
+          `${API_BASE}/asset-serials/product/${formData.assetId}`,
+          {
+            headers: getAuthHeaders(),
+          },
+        );
+
+        const json = await res.json();
+
+        if (json.success && json.data) {
+          const assetSerials = json.data;
+
+          const entries: SerialEntry[] = assetSerials.map((asset: any) => ({
+            value: asset.serialNumber,
+            label: `${asset.serialNumber}${asset.model ? ` — ${asset.model}` : ""}`,
+            model: asset.model,
+            warrantyText: asset.warranty,
+            purchaseDate: asset.purchaseDate,
+            invoiceNumber: asset.invoiceNumber,
+            supplier: asset.supplier,
+          }));
+
+          setSerialOptions(entries);
+
+          if (entries.length === 0) {
+            toast.info(
+              `No serial numbers found for "${selectedProd?.name || "this product"}"`,
+            );
+          }
+          setIsLoadingSerials(false);
+          return;
+        }
+
+        // Fallback: try the old transactions method
+        const fallbackRes = await fetch(`${API_BASE}/transactions`, {
+          headers: getAuthHeaders(),
+        });
+        const fallbackJson = await fallbackRes.json();
+
+        if (fallbackJson.success && fallbackJson.data) {
+          const allTxs = fallbackJson.data;
+          const stockInTxs = allTxs.filter((t: any) => {
+            const type = (t.type || "").toString().trim().toLowerCase();
+            return type === "stock in" || type === "stockin";
+          });
+
+          const normalizedAssetId = formData.assetId.trim().toLowerCase();
+          const normalizedProductName = (selectedProd?.name || "")
+            .trim()
+            .toLowerCase();
+
+          const matchedTxs = stockInTxs.filter((t: any) => {
+            const txProductId = (t.productId || "")
+              .toString()
+              .trim()
+              .toLowerCase();
+            const txProductName = (t.productName || "")
+              .toString()
+              .trim()
+              .toLowerCase();
+            return (
+              txProductId === normalizedAssetId ||
+              (!!normalizedProductName &&
+                txProductName === normalizedProductName)
+            );
+          });
+
+          const entries: SerialEntry[] = [];
+
+          matchedTxs.forEach((tx: any) => {
+            const combinedText = `${tx.notes || ""} ${tx.reasonOrLocation || ""} ${tx.reason || ""}`;
+            let serials: string[] = [];
+
+            if (tx.serialNumber) {
+              if (typeof tx.serialNumber === "string") {
+                if (tx.serialNumber.includes(",")) {
+                  serials = tx.serialNumber
+                    .split(",")
+                    .map((s: string) => s.trim())
+                    .filter(Boolean);
+                } else {
+                  serials = [tx.serialNumber.trim()];
+                }
+              } else if (Array.isArray(tx.serialNumber)) {
+                serials = tx.serialNumber
+                  .map((s: any) => String(s).trim())
+                  .filter(Boolean);
+              }
+            }
+
+            if (serials.length === 0) {
+              serials = extractSerialsFromText(combinedText);
+            }
+
+            if (serials.length === 0) return;
+
+            const warrantyText = extractWarrantyFromText(combinedText);
+            const purchaseDate = tx.purchaseDate || tx.date || tx.createdAt;
+
+            serials.forEach((sn: string) => {
+              const exists = entries.some((e) => e.value === sn);
+              if (!exists) {
+                entries.push({
+                  value: sn,
+                  label: `${sn}${tx.model ? ` — ${tx.model}` : ""}`,
+                  model: tx.model,
+                  warrantyText,
+                  purchaseDate,
+                  invoiceNumber: tx.invoiceNumber,
+                  supplier: tx.supplier,
+                });
+              }
+            });
+          });
+
+          setSerialOptions(entries);
+        } else {
+          setSerialOptions([]);
+        }
+      } catch (error) {
+        console.error("[Serial lookup] Failed to load serial numbers:", error);
+        setSerialOptions([]);
+      } finally {
+        setIsLoadingSerials(false);
+      }
+    };
+
+    fetchSerialsForProduct();
+  }, [formData.assetId, products, serialRefreshTick]);
+
+  // Shows a toast telling the user how much warranty is left
+  const checkWarrantyForSelectedSerial = () => {
+    if (!formData.serialNumber) {
+      toast.warn("Please select a Serial Number first to check its warranty.");
+      return;
+    }
+
+    const entry = serialOptions.find((s) => s.value === formData.serialNumber);
+    const status = getWarrantyStatus(entry);
+
+    if (!status) {
+      toast.warn(
+        `No warranty information was recorded for serial number ${formData.serialNumber}.`,
+      );
+      return;
+    }
+
+    if (status.remainingDays === null) {
+      toast.info(
+        `Serial ${formData.serialNumber} has warranty: "${status.warrantyText}".`,
+      );
+      return;
+    }
+
+    if (status.expired) {
+      toast.error(
+        `⚠️ Serial ${formData.serialNumber}: warranty ("${status.warrantyText}") expired ${Math.abs(
+          status.remainingDays,
+        )} day(s) ago.`,
+        {
+          position: "top-center",
+          autoClose: 5000,
+        },
+      );
+    } else {
+      toast.success(
+        `✅ Serial ${formData.serialNumber}: warranty ("${status.warrantyText}") — ${status.remainingDays} day(s) remaining.`,
+        {
+          position: "top-center",
+          autoClose: 5000,
+        },
+      );
+    }
+  };
+
+  // Handle serial number change with auto warranty check
+  const handleSerialChange = (value: string) => {
+    setFormData({ ...formData, serialNumber: value });
+
+    if (formData.warrantyClaim && value) {
+      const entry = serialOptions.find((s) => s.value === value);
+      const status = getWarrantyStatus(entry);
+
+      if (status && status.remainingDays !== null && !status.expired) {
+        toast.info(
+          `🛡️ Serial ${value} has ${status.remainingDays} days of warranty remaining.`,
+          {
+            position: "bottom-center",
+            autoClose: 3000,
+          },
+        );
+      } else if (status && status.expired) {
+        toast.warning(`⚠️ Serial ${value} warranty has expired.`, {
+          position: "bottom-center",
+          autoClose: 3000,
+        });
+      }
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      // Find the selected product
       const productArray = Array.isArray(products) ? products : [];
       const selectedProduct = productArray.find(
         (p: Product) => p.id === formData.assetId,
       );
 
+      // For Dismantle type, cost is optional (default to 0)
+      const costValue =
+        formData.type === "Dismantle"
+          ? parseFloat(formData.cost) || 0
+          : parseFloat(formData.cost) || 0;
+
       const payload: Record<string, any> = {
         assetId: formData.assetId,
         assetName: selectedProduct?.name || "Unknown Product",
+        serialNumber: formData.serialNumber || undefined,
         type: formData.type,
         date: formData.date,
-        cost: parseFloat(formData.cost) || 0,
+        cost: costValue,
         description: formData.description,
         vendor: formData.vendor || undefined,
         vendorContact: formData.vendorContact || undefined,
         status: formData.status,
         notes: formData.notes || undefined,
       };
+
+      // For Dismantle type, if description is empty, auto-generate it
+      if (formData.type === "Dismantle" && !formData.description) {
+        payload.description = `Dismantled ${selectedProduct?.name || "product"} - ${formData.dismantleReason || "No reason provided"}`;
+      }
 
       if (formData.type === "Repair") {
         payload.repairDetails = {
@@ -586,6 +939,7 @@ export default function MaintenancePage() {
         };
       }
 
+      // Create the maintenance record
       const res = await fetch(`${API_BASE}/maintenance`, {
         method: "POST",
         headers: getAuthHeaders(),
@@ -595,6 +949,59 @@ export default function MaintenancePage() {
 
       if (json.success) {
         setMaintenanceRecords([json.data, ...maintenanceRecords]);
+
+        // If type is Dismantle and there's a serial number, delete it from AssetSerial
+        if (formData.type === "Dismantle" && formData.serialNumber) {
+          try {
+            // First, find the asset serial by serial number and product ID
+            const findRes = await fetch(
+              `${API_BASE}/asset-serials?serialNumber=${encodeURIComponent(formData.serialNumber)}&productId=${formData.assetId}`,
+              {
+                headers: getAuthHeaders(),
+              },
+            );
+            const findJson = await findRes.json();
+
+            if (findJson.success && findJson.data && findJson.data.length > 0) {
+              const assetSerial = findJson.data[0];
+
+              // Delete the asset serial
+              const deleteRes = await fetch(
+                `${API_BASE}/asset-serials/${assetSerial.id}`,
+                {
+                  method: "DELETE",
+                  headers: getAuthHeaders(),
+                },
+              );
+              const deleteJson = await deleteRes.json();
+
+              if (deleteJson.success) {
+                toast.success(
+                  `Serial number ${formData.serialNumber} has been removed from inventory due to dismantling.`,
+                );
+
+                // Also update the serial options to remove this serial
+                setSerialOptions((prev) =>
+                  prev.filter((s) => s.value !== formData.serialNumber),
+                );
+              } else {
+                toast.warning(
+                  `Maintenance record created but failed to remove serial number: ${deleteJson.message}`,
+                );
+              }
+            } else {
+              toast.warning(
+                `Serial number ${formData.serialNumber} not found in asset inventory. It may have already been removed.`,
+              );
+            }
+          } catch (error) {
+            console.error("Failed to delete asset serial:", error);
+            toast.warning(
+              "Maintenance record created but failed to remove serial number from inventory.",
+            );
+          }
+        }
+
         toast.success("Maintenance record created successfully!");
         setIsModalOpen(false);
         resetForm();
@@ -610,6 +1017,7 @@ export default function MaintenancePage() {
   const resetForm = () => {
     setFormData({
       assetId: "",
+      serialNumber: "",
       type: "Repair",
       date: new Date().toISOString().slice(0, 10),
       cost: "",
@@ -638,6 +1046,7 @@ export default function MaintenancePage() {
       notes: "",
       status: "Pending",
     });
+    setSerialOptions([]);
   };
 
   const getStatusBadge = (status: string) => {
@@ -691,7 +1100,6 @@ export default function MaintenancePage() {
     }
   };
 
-  // Format currency in Rupees
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-IN", {
       style: "currency",
@@ -699,6 +1107,38 @@ export default function MaintenancePage() {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(amount);
+  };
+
+  // Get the model/asset category for a product
+  const getProductDetails = (assetId: string) => {
+    const product = products.find((p: Product) => p.id === assetId);
+    return {
+      model: product?.sku || product?.name || "N/A",
+      category: product?.category || "N/A",
+    };
+  };
+
+  // Get the assigned person from notes or description
+  const getAssignedTo = (record: MaintenanceRecord) => {
+    if (record.repairDetails?.technician)
+      return record.repairDetails.technician;
+    if (record.retireDetails?.retiredBy) return record.retireDetails.retiredBy;
+    if (record.dismantleDetails?.dismantledBy)
+      return record.dismantleDetails.dismantledBy;
+    return "N/A";
+  };
+
+  // Get the approved by (vendor or notes)
+  const getApprovedBy = (record: MaintenanceRecord) => {
+    if (record.vendor) return record.vendor;
+    return "N/A";
+  };
+
+  // Get remarks (description or notes)
+  const getRemarks = (record: MaintenanceRecord) => {
+    if (record.notes) return record.notes;
+    if (record.description) return record.description;
+    return "N/A";
   };
 
   return (
@@ -729,6 +1169,14 @@ export default function MaintenancePage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <Button
+              onClick={() => setIsReportModalOpen(true)}
+              variant="outline"
+              className="border-blue-500 text-blue-600 hover:bg-blue-50 h-9 text-sm"
+            >
+              <FileText className="h-4 w-4 mr-1" />
+              Report
+            </Button>
             <Button
               onClick={() => {
                 resetForm();
@@ -958,6 +1406,9 @@ export default function MaintenancePage() {
                             <p className="font-medium">{record.assetName}</p>
                             <p className="text-xs text-muted-foreground">
                               {record.assetId}
+                              {record.serialNumber
+                                ? ` • S/N: ${record.serialNumber}`
+                                : ""}
                             </p>
                           </div>
                         </td>
@@ -1008,6 +1459,178 @@ export default function MaintenancePage() {
         </Card>
       </div>
 
+      {/* Report Modal */}
+      <Dialog open={isReportModalOpen} onOpenChange={setIsReportModalOpen}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <DialogTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5 text-blue-500" />
+                  Maintenance Report
+                </DialogTitle>
+                <DialogDescription>
+                  Complete maintenance records with all details
+                </DialogDescription>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => window.print()}
+                  className="h-8"
+                >
+                  <Printer className="h-4 w-4 mr-1" />
+                  Print
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const headers = [
+                      "Model Number",
+                      "Asset Category",
+                      "Product Serial Number",
+                      "Assigned To",
+                      "Approved By",
+                      "Remarks",
+                      "Status",
+                    ];
+                    const rows = maintenanceRecords.map((record) => {
+                      const productDetails = getProductDetails(record.assetId);
+                      return [
+                        productDetails.model,
+                        productDetails.category,
+                        record.serialNumber || "N/A",
+                        getAssignedTo(record),
+                        getApprovedBy(record),
+                        getRemarks(record),
+                        `${record.type} - ${record.status}`,
+                      ];
+                    });
+
+                    const csvContent = [
+                      headers.join(","),
+                      ...rows.map((row) => row.join(",")),
+                    ].join("\n");
+
+                    const blob = new Blob([csvContent], { type: "text/csv" });
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = `maintenance_report_${new Date().toISOString().slice(0, 10)}.csv`;
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+
+                    toast.success("Report exported successfully!");
+                  }}
+                  className="h-8"
+                >
+                  <Download className="h-4 w-4 mr-1" />
+                  Export CSV
+                </Button>
+              </div>
+            </div>
+          </DialogHeader>
+
+          <div className="mt-4">
+            {maintenanceRecords.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                No maintenance records found
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b-2 border-border bg-muted/50">
+                      <th className="px-4 py-3 text-left font-semibold text-muted-foreground">
+                        Model Number
+                      </th>
+                      <th className="px-4 py-3 text-left font-semibold text-muted-foreground">
+                        Asset Category
+                      </th>
+                      <th className="px-4 py-3 text-left font-semibold text-muted-foreground">
+                        Product Serial Number
+                      </th>
+                      <th className="px-4 py-3 text-left font-semibold text-muted-foreground">
+                        Assigned To
+                      </th>
+                      <th className="px-4 py-3 text-left font-semibold text-muted-foreground">
+                        Approved By
+                      </th>
+                      <th className="px-4 py-3 text-left font-semibold text-muted-foreground">
+                        Remarks
+                      </th>
+                      <th className="px-4 py-3 text-left font-semibold text-muted-foreground">
+                        Status
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {maintenanceRecords.map((record) => {
+                      const productDetails = getProductDetails(record.assetId);
+                      return (
+                        <tr
+                          key={record.id}
+                          className="border-b border-border hover:bg-muted/30 transition-colors"
+                        >
+                          <td className="px-4 py-3 font-mono text-xs">
+                            {productDetails.model}
+                          </td>
+                          <td className="px-4 py-3">
+                            <Badge variant="outline" className="text-xs">
+                              {productDetails.category}
+                            </Badge>
+                          </td>
+                          <td className="px-4 py-3 font-mono text-xs">
+                            {record.serialNumber || "N/A"}
+                          </td>
+                          <td className="px-4 py-3 text-sm">
+                            {getAssignedTo(record)}
+                          </td>
+                          <td className="px-4 py-3 text-sm">
+                            {getApprovedBy(record)}
+                          </td>
+                          <td className="px-4 py-3 text-sm max-w-[200px] truncate">
+                            {getRemarks(record)}
+                          </td>
+                          <td className="px-4 py-3">
+                            <Badge
+                              className={`border ${getTypeColor(record.type)} px-2 py-0.5 text-xs font-medium`}
+                            >
+                              {getTypeIcon(record.type)}
+                              <span className="ml-1">{record.type}</span>
+                              <span className="mx-1 text-muted-foreground">
+                                •
+                              </span>
+                              {getStatusBadge(record.status)}
+                            </Badge>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            <div className="mt-4 text-xs text-muted-foreground text-right">
+              Total Records: {maintenanceRecords.length} | Generated:{" "}
+              {new Date().toLocaleString("en-IN")}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsReportModalOpen(false)}
+            >
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Create Maintenance Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
@@ -1023,21 +1646,123 @@ export default function MaintenancePage() {
           </DialogHeader>
 
           <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-            {/* Basic Information */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Product selection with searchable dropdown - showing ALL products */}
+              {/* Product selection - Full width */}
               <SearchableSelect
                 options={productOptions}
                 value={formData.assetId}
                 onChange={(value) =>
-                  setFormData({ ...formData, assetId: value })
+                  setFormData({ ...formData, assetId: value, serialNumber: "" })
                 }
                 label="Product"
                 placeholder="Search for a product..."
+                searchPlaceholder="Search IT hardware assets & equipment..."
+                emptyLabel="No IT hardware assets found"
                 required={true}
                 className="md:col-span-2"
               />
 
+              {/* Serial Number - Full width */}
+              <div className="md:col-span-2 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-medium text-muted-foreground">
+                    Serial Number
+                  </label>
+                  {formData.assetId && (
+                    <button
+                      type="button"
+                      onClick={() => setSerialRefreshTick((n) => n + 1)}
+                      disabled={isLoadingSerials}
+                      className="text-[11px] text-primary hover:underline disabled:opacity-50 flex items-center gap-1"
+                    >
+                      <RefreshCw
+                        className={`h-3 w-3 ${isLoadingSerials ? "animate-spin" : ""}`}
+                      />
+                      Refresh
+                    </button>
+                  )}
+                </div>
+                <SearchableSelect
+                  options={serialSelectOptions}
+                  value={formData.serialNumber}
+                  onChange={handleSerialChange}
+                  placeholder={
+                    !formData.assetId
+                      ? "Select a product first"
+                      : isLoadingSerials
+                        ? "Loading serial numbers..."
+                        : serialSelectOptions.length === 0
+                          ? "No serial numbers found for this product"
+                          : "Search and select serial number..."
+                  }
+                  searchPlaceholder="Search serial numbers..."
+                  emptyLabel="No serial numbers found"
+                  disabled={!formData.assetId}
+                />
+
+                {formData.serialNumber && (
+                  <div className="mt-2 p-2 rounded-lg bg-muted/30 border border-border">
+                    {(() => {
+                      const entry = serialOptions.find(
+                        (s) => s.value === formData.serialNumber,
+                      );
+                      const status = getWarrantyStatus(entry);
+                      if (!status) {
+                        return (
+                          <p className="text-xs text-muted-foreground flex items-center gap-1">
+                            <AlertTriangle className="h-3 w-3 text-amber-500" />
+                            No warranty information available for this serial
+                            number
+                          </p>
+                        );
+                      }
+                      if (status.remainingDays === null) {
+                        return (
+                          <p className="text-xs text-muted-foreground flex items-center gap-1">
+                            <ShieldCheck className="h-3 w-3 text-blue-500" />
+                            Warranty: {status.warrantyText}
+                          </p>
+                        );
+                      }
+                      if (status.expired) {
+                        return (
+                          <p className="text-xs text-red-600 flex items-center gap-1">
+                            <AlertCircle className="h-3 w-3" />
+                            Warranty expired {Math.abs(
+                              status.remainingDays,
+                            )}{" "}
+                            days ago
+                          </p>
+                        );
+                      }
+                      return (
+                        <p className="text-xs text-green-600 flex items-center gap-1">
+                          <ShieldCheck className="h-3 w-3" />
+                          Warranty: {status.remainingDays} days remaining
+                        </p>
+                      );
+                    })()}
+                  </div>
+                )}
+
+                {formData.assetId &&
+                !isLoadingSerials &&
+                serialSelectOptions.length === 0 ? (
+                  <p className="text-[11px] text-amber-600 flex items-start gap-1">
+                    <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />
+                    No serial numbers on record for this product. Serials are
+                    only captured for stock added via the Stock In Assets intake
+                    page.
+                  </p>
+                ) : (
+                  <p className="text-[11px] text-muted-foreground flex items-center gap-1">
+                    <Barcode className="h-3 w-3" />
+                    Pulled from Stock In Asset intake records for this product
+                  </p>
+                )}
+              </div>
+
+              {/* Maintenance Type */}
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground">
                   Maintenance Type <span className="text-red-500">*</span>
@@ -1060,6 +1785,7 @@ export default function MaintenancePage() {
                 </select>
               </div>
 
+              {/* Date */}
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground">
                   Date <span className="text-red-500">*</span>
@@ -1075,9 +1801,18 @@ export default function MaintenancePage() {
                 />
               </div>
 
+              {/* Cost - Optional for Dismantle */}
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground">
-                  Cost (₹) <span className="text-red-500">*</span>
+                  Cost (₹){" "}
+                  {formData.type !== "Dismantle" && (
+                    <span className="text-red-500">*</span>
+                  )}
+                  {formData.type === "Dismantle" && (
+                    <span className="text-xs text-muted-foreground">
+                      (Optional)
+                    </span>
+                  )}
                 </label>
                 <div className="relative">
                   <IndianRupee className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -1089,28 +1824,16 @@ export default function MaintenancePage() {
                     onChange={(e) =>
                       setFormData({ ...formData, cost: e.target.value })
                     }
-                    placeholder="0.00"
+                    placeholder={
+                      formData.type === "Dismantle" ? "Optional" : "0.00"
+                    }
                     className="h-10 w-full rounded-lg border border-border bg-background pl-9 pr-3 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                    required
+                    required={formData.type !== "Dismantle"}
                   />
                 </div>
               </div>
 
-              <div className="space-y-1.5 md:col-span-2">
-                <label className="text-xs font-medium text-muted-foreground">
-                  Description <span className="text-red-500">*</span>
-                </label>
-                <textarea
-                  value={formData.description}
-                  onChange={(e) =>
-                    setFormData({ ...formData, description: e.target.value })
-                  }
-                  placeholder="Describe the maintenance issue or reason"
-                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary resize-y min-h-[60px]"
-                  required
-                />
-              </div>
-
+              {/* Vendor */}
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground">
                   Vendor / Service Provider
@@ -1129,6 +1852,7 @@ export default function MaintenancePage() {
                 </div>
               </div>
 
+              {/* Vendor Contact */}
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground">
                   Vendor Contact
@@ -1150,6 +1874,7 @@ export default function MaintenancePage() {
                 </div>
               </div>
 
+              {/* Status */}
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground">
                   Status
@@ -1172,6 +1897,7 @@ export default function MaintenancePage() {
                 </select>
               </div>
 
+              {/* Notes */}
               <div className="space-y-1.5">
                 <label className="text-xs font-medium text-muted-foreground">
                   Notes
@@ -1184,6 +1910,34 @@ export default function MaintenancePage() {
                   }
                   placeholder="Additional notes..."
                   className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+              </div>
+
+              {/* Description - Full width */}
+              <div className="space-y-1.5 md:col-span-2">
+                <label className="text-xs font-medium text-muted-foreground">
+                  Description{" "}
+                  {formData.type !== "Dismantle" && (
+                    <span className="text-red-500">*</span>
+                  )}
+                  {formData.type === "Dismantle" && (
+                    <span className="text-xs text-muted-foreground">
+                      (Optional - auto-generated if empty)
+                    </span>
+                  )}
+                </label>
+                <textarea
+                  value={formData.description}
+                  onChange={(e) =>
+                    setFormData({ ...formData, description: e.target.value })
+                  }
+                  placeholder={
+                    formData.type === "Dismantle"
+                      ? "Optional description..."
+                      : "Describe the maintenance issue or reason"
+                  }
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary resize-y min-h-[60px]"
+                  required={formData.type !== "Dismantle"}
                 />
               </div>
             </div>
@@ -1302,23 +2056,36 @@ export default function MaintenancePage() {
                     />
                   </div>
 
-                  <div className="space-y-1.5 flex items-center">
+                  <div className="space-y-1.5 flex items-center gap-2">
                     <label className="flex items-center gap-2 text-sm cursor-pointer">
                       <input
                         type="checkbox"
                         checked={formData.warrantyClaim}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            warrantyClaim: e.target.checked,
-                          })
-                        }
+                        onChange={(e) => {
+                          const checked = e.target.checked;
+                          setFormData({ ...formData, warrantyClaim: checked });
+                          if (checked) {
+                            checkWarrantyForSelectedSerial();
+                          }
+                        }}
                         className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
                       />
                       <span className="text-xs text-muted-foreground">
                         Warranty Claim
                       </span>
                     </label>
+                    {formData.warrantyClaim && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={checkWarrantyForSelectedSerial}
+                        className="h-7 px-2 text-xs text-primary"
+                      >
+                        <ShieldCheck className="h-3.5 w-3.5 mr-1" />
+                        Check Warranty
+                      </Button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1473,7 +2240,6 @@ export default function MaintenancePage() {
               </div>
             )}
 
-            {/* Dismantle Section - NEW */}
             {formData.type === "Dismantle" && (
               <div className="space-y-4 border-t border-border pt-4">
                 <div className="flex items-center justify-between">
@@ -1702,6 +2468,16 @@ export default function MaintenancePage() {
                     {getStatusBadge(selectedRecord.status)}
                   </div>
                 </div>
+                {selectedRecord.serialNumber && (
+                  <div>
+                    <p className="text-xs text-muted-foreground">
+                      Serial Number
+                    </p>
+                    <p className="text-sm font-mono font-medium mt-1">
+                      {selectedRecord.serialNumber}
+                    </p>
+                  </div>
+                )}
                 <div>
                   <p className="text-xs text-muted-foreground">Date</p>
                   <p className="text-sm font-medium mt-1">
@@ -1913,7 +2689,6 @@ export default function MaintenancePage() {
                 </div>
               )}
 
-              {/* Dismantle Details View */}
               {selectedRecord.dismantleDetails && (
                 <div className="border-t border-border pt-4">
                   <h4 className="text-sm font-semibold flex items-center gap-2 mb-2">
