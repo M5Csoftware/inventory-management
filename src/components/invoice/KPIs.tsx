@@ -1,4 +1,7 @@
+'use client';
+
 import React from 'react';
+import { Card, CardContent } from '@/components/ui/card';
 import { ShieldAlert, Hourglass, Landmark, CheckCircle, AlertOctagon } from 'lucide-react';
 
 interface KPIsProps {
@@ -21,71 +24,65 @@ export const KPIs: React.FC<KPIsProps> = ({
       label: 'Awaiting First Approval',
       value: pendingL1,
       icon: Hourglass,
-      colorClass: 'border-l-indigo-600',
-      textColor: 'text-slate-900 dark:text-slate-100',
+      badgeStyle: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
+      valueStyle: 'text-amber-700 dark:text-amber-300',
     },
     {
       label: 'Awaiting Second Approval',
       value: pendingL2,
       icon: ShieldAlert,
-      colorClass: 'border-l-indigo-600',
-      textColor: 'text-slate-900 dark:text-slate-100',
+      badgeStyle: 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20',
+      valueStyle: 'text-purple-700 dark:text-purple-300',
     },
     {
       label: 'Approved - Ready to Pay',
       value: approved,
       icon: Landmark,
-      colorClass: 'border-l-indigo-600',
-      textColor: 'text-slate-900 dark:text-slate-100',
+      badgeStyle: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20',
+      valueStyle: 'text-blue-700 dark:text-blue-300',
     },
     {
       label: 'Paid',
       value: paid,
       icon: CheckCircle,
-      colorClass: 'border-l-emerald-600',
-      textColor: 'text-emerald-600 dark:text-emerald-400',
+      badgeStyle: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
+      valueStyle: 'text-emerald-700 dark:text-emerald-300',
     },
     {
       label: 'Flagged For Review',
       value: flagged,
       icon: AlertOctagon,
-      colorClass: 'border-l-rose-600',
-      textColor: 'text-rose-600 dark:text-rose-400',
+      badgeStyle: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20',
+      valueStyle: 'text-rose-700 dark:text-rose-300',
       highlight: flagged > 0,
     },
   ];
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5 sm:gap-4">
       {cards.map((card, index) => {
         const Icon = card.icon;
-        const isRed = card.textColor.includes('rose');
-        const isGreen = card.textColor.includes('emerald');
-
-        let badgeBg = 'bg-slate-100 text-slate-700';
-        if (isRed) badgeBg = 'bg-rose-500/10 text-rose-600 border border-rose-500/20';
-        else if (isGreen) badgeBg = 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20';
-        else badgeBg = 'bg-indigo-500/10 text-indigo-600 border border-indigo-500/20';
-
         return (
-          <div
+          <Card
             key={index}
-            className={`bg-card border border-border/80 border-l-4 ${card.colorClass} rounded-xl p-4 flex flex-col justify-between shadow-sm hover:shadow-md transition-all duration-200 ${
-              card.highlight ? 'bg-rose-500/5' : ''
+            className={`border border-border/60 bg-card/80 backdrop-blur-xs rounded-2xl shadow-xs hover:shadow-md transition-all duration-200 ${
+              card.highlight ? 'border-rose-500/40 bg-rose-500/5' : ''
             }`}
           >
-            <div className="flex justify-between items-center">
-              <span className={`text-2xl font-extrabold leading-none ${card.textColor}`}>
-                {card.value}
-              </span>
-              <div className={`p-2 rounded-full flex items-center justify-center ${badgeBg}`}>
-                <Icon size={15} />
+            <CardContent className="p-4 flex flex-col justify-between h-full">
+              <div className="flex justify-between items-center">
+                <span className={`text-2xl font-black tracking-tight ${card.valueStyle}`}>
+                  {card.value}
+                </span>
+                <div className={`h-8 w-8 rounded-xl flex items-center justify-center border shrink-0 ${card.badgeStyle}`}>
+                  <Icon size={16} />
+                </div>
               </div>
-            </div>
-            <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground mt-4 block leading-tight">
-              {card.label}
-            </span>
-          </div>
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mt-3 block leading-tight">
+                {card.label}
+              </span>
+            </CardContent>
+          </Card>
         );
       })}
     </div>

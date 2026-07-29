@@ -1,8 +1,14 @@
+'use client';
+
 import React, { useState } from 'react';
 import type { TeamMember, AppConfig, Role } from '@/types/invoice';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 import {
   Users, Trash2, Settings, UserPlus, Info, ShieldCheck,
-  User, Eye, EyeOff, Pencil, X, Check,
+  User, Eye, EyeOff, Pencil, X, Check, Save,
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 
@@ -18,10 +24,10 @@ interface TeamSettingsViewProps {
 }
 
 const roleColors: Record<Role, string> = {
-  'Master Admin': 'bg-amber-500/10 text-amber-600 border border-amber-500/20 font-bold',
-  Admin: 'bg-indigo-500/10 text-indigo-600 border border-indigo-500/20',
-  Verifier: 'bg-blue-500/10 text-blue-600 border border-blue-500/20',
-  User: 'bg-muted text-muted-foreground border border-border/60',
+  'Master Admin': 'bg-amber-500/10 text-amber-600 border-amber-500/30 font-bold',
+  Admin: 'bg-purple-500/10 text-purple-600 border-purple-500/30',
+  Verifier: 'bg-blue-500/10 text-blue-600 border-blue-500/30',
+  User: 'bg-muted text-muted-foreground border-border/60',
 };
 
 const roleIcons: Record<Role, React.ReactNode> = {
@@ -41,73 +47,9 @@ export const TeamSettingsView: React.FC<TeamSettingsViewProps> = ({
   currentUserId,
   isMasterAdmin = false,
 }) => {
-  // --- Add member state ---
-  const [memberName, setMemberName] = useState('');
-  const [memberUsername, setMemberUsername] = useState('');
-  const [memberPassword, setMemberPassword] = useState('');
-  const [memberRole, setMemberRole] = useState<Role>('User');
-  const [showPw, setShowPw] = useState(false);
-  const [formError, setFormError] = useState('');
-
-  // --- Edit member state ---
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editName, setEditName] = useState('');
-  const [editUsername, setEditUsername] = useState('');
-  const [editPassword, setEditPassword] = useState('');
-  const [editRole, setEditRole] = useState<Role>('User');
-  const [showEditPw, setShowEditPw] = useState(false);
-  const [editError, setEditError] = useState('');
-
   // --- Settings state ---
   const [currency, setCurrency] = useState<AppConfig['currency']>(config.currency);
   const [threshold, setThreshold] = useState<string>(config.threshold.toString());
-
-  const openEdit = (m: TeamMember) => {
-    setEditingId(m.id);
-    setEditName(m.name);
-    setEditUsername(m.username);
-    setEditPassword('');
-    setEditRole(m.role === 'Admin' ? 'Admin' : m.role);
-    setEditError('');
-    setShowEditPw(false);
-  };
-
-  const cancelEdit = () => {
-    setEditingId(null);
-    setEditError('');
-  };
-
-  const handleAddMemberSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setFormError('');
-    if (!memberName.trim()) return setFormError('Name is required.');
-    if (!memberUsername.trim()) return setFormError('Username is required.');
-    if (memberPassword.length < 6) return setFormError('Password must be at least 6 characters.');
-    if (team.some((m) => m.username.toLowerCase() === memberUsername.trim().toLowerCase())) {
-      return setFormError('Username already taken.');
-    }
-    onAddMember(memberName.trim(), memberUsername.trim(), memberPassword, memberRole);
-    toast.success(`Account created for ${memberName.trim()} (@${memberUsername.trim()}) as ${memberRole}`);
-    setMemberName('');
-    setMemberUsername('');
-    setMemberPassword('');
-    setMemberRole('User');
-  };
-
-  const handleEditSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingId) return;
-    setEditError('');
-    if (!editName.trim()) return setEditError('Name is required.');
-    if (!editUsername.trim()) return setEditError('Username is required.');
-
-    const dup = team.find((m) => m.id !== editingId && m.username.toLowerCase() === editUsername.trim().toLowerCase());
-    if (dup) return setEditError('Username already taken by another member.');
-
-    onEditMember(editingId, editName.trim(), editUsername.trim(), editPassword, editRole);
-    toast.success(`Account for @${editUsername.trim()} updated successfully.`);
-    setEditingId(null);
-  };
 
   const handleSettingsSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -118,91 +60,119 @@ export const TeamSettingsView: React.FC<TeamSettingsViewProps> = ({
   };
 
   return (
-    <div className="w-full space-y-8">
-      {/* Policy Threshold Settings */}
-      <div className="bg-card border border-border/80 rounded-xl p-6 shadow-sm space-y-4">
-        <h3 className="text-base font-bold text-foreground flex items-center gap-2">
-          <Settings size={18} className="text-indigo-600" /> System Threshold & Currency
-        </h3>
-        <form onSubmit={handleSettingsSubmit} className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
-          <div>
-            <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1 block">
-              Currency
-            </label>
-            <select
-              value={currency}
-              onChange={(e) => setCurrency(e.target.value as AppConfig['currency'])}
-              className="w-full bg-background border border-border/80 rounded-lg px-3 py-2 text-xs sm:text-sm font-semibold text-foreground cursor-pointer"
-            >
-              <option value="INR">INR (₹)</option>
-              <option value="USD">USD ($)</option>
-              <option value="EUR">EUR (€)</option>
-            </select>
-          </div>
-          <div>
-            <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1 block">
-              Second Approval Threshold
-            </label>
-            <input
-              type="number"
-              value={threshold}
-              onChange={(e) => setThreshold(e.target.value)}
-              className="w-full bg-background border border-border/80 rounded-lg px-3 py-2 text-xs sm:text-sm font-mono font-bold text-foreground"
-            />
-          </div>
-          <div>
-            <button
-              type="submit"
-              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2 rounded-lg text-xs sm:text-sm transition-all cursor-pointer shadow-xs"
-            >
-              Save Policy Settings
-            </button>
-          </div>
-        </form>
-      </div>
-
-      {/* Team Roster */}
-      <div className="bg-card border border-border/80 rounded-xl p-6 shadow-sm space-y-4">
-        <h3 className="text-base font-bold text-foreground flex items-center gap-2">
-          <Users size={18} className="text-indigo-600" /> Team Accounts & Roles ({team.length})
-        </h3>
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs sm:text-sm text-left">
-            <thead>
-              <tr className="border-b border-border/80 bg-muted/30">
-                <th className="py-2.5 px-3 font-bold uppercase text-muted-foreground">Name</th>
-                <th className="py-2.5 px-3 font-bold uppercase text-muted-foreground">Username</th>
-                <th className="py-2.5 px-3 font-bold uppercase text-muted-foreground">Role</th>
-                <th className="py-2.5 px-3 font-bold uppercase text-muted-foreground text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/40">
-              {team.map((m) => (
-                <tr key={m.id} className="hover:bg-muted/20">
-                  <td className="py-2.5 px-3 font-semibold text-foreground">{m.name}</td>
-                  <td className="py-2.5 px-3 font-mono text-muted-foreground">@{m.username}</td>
-                  <td className="py-2.5 px-3">
-                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold ${roleColors[m.role] || ''}`}>
-                      {roleIcons[m.role]} {m.role}
-                    </span>
-                  </td>
-                  <td className="py-2.5 px-3 text-right">
-                    {m.role !== 'Master Admin' && (
-                      <button
-                        onClick={() => onRemoveMember(m.id)}
-                        className="text-rose-600 hover:bg-rose-500/10 p-1 rounded-lg transition-colors"
-                        title="Remove member"
-                      >
-                        <Trash2 size={15} />
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+    <div className="w-full space-y-6">
+      <div className="flex items-center gap-2.5 border-b border-border/60 pb-3">
+        <div className="h-9 w-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold shrink-0">
+          <Settings size={20} />
+        </div>
+        <div>
+          <h2 className="text-xl font-bold tracking-tight text-foreground">
+            Settings &amp; Policy
+          </h2>
+          <p className="text-xs text-muted-foreground">Configure approval thresholds, currency, and user role access</p>
         </div>
       </div>
+
+      {/* Policy Threshold Settings */}
+      <Card className="border border-border/60 bg-card/80 backdrop-blur-xs rounded-2xl shadow-xs overflow-hidden">
+        <CardHeader className="bg-muted/30 pb-3 border-b border-border/40">
+          <CardTitle className="text-base font-bold flex items-center gap-2">
+            <Settings size={18} className="text-primary" /> System Threshold &amp; Currency
+          </CardTitle>
+          <CardDescription className="text-xs text-muted-foreground">
+            Invoices exceeding the second approval threshold will require L2 admin sign-off.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-6">
+          <form onSubmit={handleSettingsSubmit} className="grid grid-cols-1 sm:grid-cols-3 gap-5 items-end">
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Currency Symbol
+              </label>
+              <select
+                value={currency}
+                onChange={(e) => setCurrency(e.target.value as AppConfig['currency'])}
+                className="h-10 w-full bg-background border-2 border-gray-300 dark:border-gray-600 rounded-xl px-3 text-xs font-semibold text-foreground cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/30"
+              >
+                <option value="INR">INR (₹)</option>
+                <option value="USD">USD ($)</option>
+                <option value="EUR">EUR (€)</option>
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                L2 Approval Threshold Amount
+              </label>
+              <Input
+                type="number"
+                value={threshold}
+                onChange={(e) => setThreshold(e.target.value)}
+                className="h-10 text-xs bg-background rounded-xl border-2 border-gray-300 dark:border-gray-600 font-mono font-bold"
+              />
+            </div>
+            <div>
+              <Button
+                type="submit"
+                className="w-full font-bold h-10 text-xs shadow-md gap-2"
+              >
+                <Save size={15} /> Save Policy Settings
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+
+      {/* Team Roster */}
+      <Card className="border border-border/60 bg-card/80 backdrop-blur-xs rounded-2xl shadow-xs overflow-hidden">
+        <CardHeader className="bg-muted/30 pb-3 border-b border-border/40">
+          <CardTitle className="text-base font-bold flex items-center gap-2">
+            <Users size={18} className="text-primary" /> Active Accounts &amp; Roles ({team.length})
+          </CardTitle>
+          <CardDescription className="text-xs text-muted-foreground">
+            User accounts with permission to verify, approve, and manage inward invoices.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs sm:text-sm text-left">
+              <thead>
+                <tr className="border-b border-border/60 bg-muted/20 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  <th className="py-3 px-4">Name</th>
+                  <th className="py-3 px-4">Username</th>
+                  <th className="py-3 px-4">Role</th>
+                  <th className="py-3 px-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/40 text-xs">
+                {team.map((m) => (
+                  <tr key={m.id} className="hover:bg-muted/30 transition-colors">
+                    <td className="py-3 px-4 font-bold text-foreground">{m.name}</td>
+                    <td className="py-3 px-4 font-mono font-semibold text-muted-foreground">@{m.username}</td>
+                    <td className="py-3 px-4">
+                      <Badge variant="outline" className={`inline-flex items-center gap-1.5 ${roleColors[m.role] || ''}`}>
+                        {roleIcons[m.role]} {m.role}
+                      </Badge>
+                    </td>
+                    <td className="py-3 px-4 text-right">
+                      {m.role !== 'Master Admin' && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => onRemoveMember(m.id)}
+                          className="h-7 w-7 text-rose-600 hover:bg-rose-500/10"
+                          title="Remove member"
+                        >
+                          <Trash2 size={15} />
+                        </Button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };

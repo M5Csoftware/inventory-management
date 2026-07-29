@@ -1,8 +1,12 @@
+'use client';
+
 import React from 'react';
 import type { Invoice, AppConfig, TeamMember } from '@/types/invoice';
 import { KPIs } from './KPIs';
 import { InvoiceTable } from './InvoiceTable';
-import { Shield, Download } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Shield, Download, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { formatAmount } from './InvoiceTable';
 import { exportInvoicesToCSV } from '@/utils/export-invoice';
 
@@ -44,54 +48,65 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         flagged={flaggedCount}
       />
 
-      <div className="bg-card border border-border/80 rounded-xl p-5 shadow-sm space-y-4">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-          <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
+      <Card className="border border-border/60 bg-card/80 backdrop-blur-xs rounded-2xl shadow-xs overflow-hidden">
+        <CardHeader className="bg-muted/30 pb-3 border-b border-border/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <CardTitle className="text-base font-bold text-foreground flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 text-amber-500" />
             Needs Attention
-          </h2>
+          </CardTitle>
           {flaggedList.length > 0 && (
-            <button
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => exportInvoicesToCSV(flaggedList, 'Flagged_Invoices')}
-              className="flex items-center gap-1.5 bg-muted hover:bg-muted/80 border border-border text-foreground px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer shadow-xs"
+              className="gap-1.5 text-xs h-8"
             >
-              <Download size={14} /> Export Flagged to CSV
-            </button>
+              <Download size={14} /> Export Flagged CSV
+            </Button>
           )}
-        </div>
-        {flaggedList.length === 0 ? (
-          <p className="text-muted-foreground text-xs italic bg-muted/20 border border-border/60 rounded-xl p-6 shadow-xs">
-            Nothing flagged right now — the register is clean.
-          </p>
-        ) : (
-          <InvoiceTable
-            invoices={flaggedList}
-            currentUser={null}
-            team={team}
-            config={config}
-            lastActionId={null}
-            showActions={false}
-            onVerify={() => {}}
-            onApprove={() => {}}
-            onRejectClick={() => {}}
-            onPay={() => {}}
-            onInvoiceClick={onInvoiceClick}
-          />
-        )}
-      </div>
+        </CardHeader>
+        <CardContent className="p-4">
+          {flaggedList.length === 0 ? (
+            <div className="flex items-center justify-center p-8 bg-muted/10 border border-dashed border-border/60 rounded-xl text-center">
+              <div className="space-y-1">
+                <CheckCircle2 className="h-8 w-8 text-emerald-500 mx-auto opacity-80" />
+                <p className="text-sm font-semibold text-foreground">Clean Register</p>
+                <p className="text-xs text-muted-foreground">Nothing flagged right now — all invoice checks passed cleanly.</p>
+              </div>
+            </div>
+          ) : (
+            <InvoiceTable
+              invoices={flaggedList}
+              currentUser={null}
+              team={team}
+              config={config}
+              lastActionId={null}
+              showActions={false}
+              onVerify={() => {}}
+              onApprove={() => {}}
+              onRejectClick={() => {}}
+              onPay={() => {}}
+              onInvoiceClick={onInvoiceClick}
+            />
+          )}
+        </CardContent>
+      </Card>
 
-      {/* Audit policy note */}
-      <div className="border border-border/80 border-l-4 border-l-indigo-600 bg-card p-5 rounded-xl shadow-sm">
-        <h3 className="font-semibold text-sm text-foreground uppercase tracking-wider flex items-center gap-2">
-          <Shield size={16} className="text-indigo-600" />
-          Audit Policy
-        </h3>
-        <ul className="list-disc pl-5 mt-3 space-y-2 text-xs sm:text-sm text-muted-foreground font-medium">
-          <li>No user may approve or pay an invoice they submitted.</li>
-          <li>Invoices of {formatAmount(config.threshold, config.currency)} or more require admin sign-off after verification.</li>
-          <li>Every action is timestamped and permanently recorded in the Audit Trail.</li>
-          <li>Duplicate invoice numbers, changed bank details, and near-threshold amounts are flagged automatically.</li>
-        </ul>
-      </div>
+      {/* Audit Policy Card */}
+      <Card className="border border-primary/20 bg-primary/5 rounded-2xl shadow-xs overflow-hidden">
+        <CardContent className="p-5">
+          <h3 className="font-bold text-xs uppercase tracking-wider text-primary flex items-center gap-2">
+            <Shield size={16} />
+            Audit &amp; Security Policy
+          </h3>
+          <ul className="list-disc pl-5 mt-3 space-y-1.5 text-xs text-muted-foreground font-medium">
+            <li>No user may approve or pay an invoice they submitted.</li>
+            <li>Invoices of <strong className="text-foreground">{formatAmount(config.threshold, config.currency)}</strong> or more require admin sign-off after verification.</li>
+            <li>Every action is timestamped and permanently recorded in the Audit Trail.</li>
+            <li>Duplicate invoice numbers, changed bank details, and near-threshold amounts are flagged automatically.</li>
+          </ul>
+        </CardContent>
+      </Card>
     </div>
   );
 };

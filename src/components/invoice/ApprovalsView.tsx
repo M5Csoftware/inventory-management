@@ -1,7 +1,10 @@
+'use client';
+
 import React from 'react';
 import type { Invoice, TeamMember, AppConfig } from '@/types/invoice';
 import { InvoiceTable, formatAmount } from './InvoiceTable';
-import { ClipboardCheck } from 'lucide-react';
+import { ClipboardCheck, Clock, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
 
 interface ApprovalsViewProps {
   invoices: Invoice[];
@@ -35,20 +38,27 @@ export const ApprovalsView: React.FC<ApprovalsViewProps> = ({
   const approved = invoices.filter((i) => i.status === 'approved');
 
   return (
-    <div className="w-full space-y-8">
-      <div className="flex items-center gap-2 border-b border-border/80 pb-2">
-        <ClipboardCheck size={20} className="text-indigo-600" />
-        <h2 className="text-xl font-bold text-foreground">
-          Approvals Queue
-        </h2>
+    <div className="w-full space-y-6">
+      <div className="flex items-center gap-2.5 border-b border-border/60 pb-3">
+        <div className="h-9 w-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold shrink-0">
+          <ClipboardCheck size={20} />
+        </div>
+        <div>
+          <h2 className="text-xl font-bold tracking-tight text-foreground">
+            Approvals Queue
+          </h2>
+          <p className="text-xs text-muted-foreground">Review, verify, and grant sign-offs for inward invoices</p>
+        </div>
       </div>
 
       {/* Step 1: Verifier queue */}
-      <div className="space-y-2">
-        <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground border-l-2 border-l-blue-500 pl-2">
-          Awaiting Verification ({pendingVerification.length})
-          <span className="text-xs text-muted-foreground font-normal ml-2">— Verifier reviews invoice with vendor</span>
-        </h3>
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-amber-700 dark:text-amber-300 flex items-center gap-2">
+            <Clock className="h-4 w-4 text-amber-500" /> Awaiting Verification ({pendingVerification.length})
+          </h3>
+          <span className="text-xs text-muted-foreground font-medium">Step 1 of 3 &bull; L1 Verification Review</span>
+        </div>
         <InvoiceTable
           invoices={pendingVerification}
           currentUser={currentUser}
@@ -66,13 +76,15 @@ export const ApprovalsView: React.FC<ApprovalsViewProps> = ({
       </div>
 
       {/* Step 2: Admin approval queue */}
-      <div className="space-y-2">
-        <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground border-l-2 border-l-indigo-600 pl-2 flex items-center gap-2">
-          Awaiting Admin Approval ({pendingApproval.length})
-          <span className="text-xs text-muted-foreground font-normal font-mono">
-            (threshold ≥ {formatAmount(config.threshold, config.currency)} requires second sign-off)
+      <div className="space-y-3 pt-2">
+        <div className="flex items-center justify-between">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-purple-700 dark:text-purple-300 flex items-center gap-2">
+            <ShieldCheck className="h-4 w-4 text-purple-500" /> Awaiting Admin Approval ({pendingApproval.length})
+          </h3>
+          <span className="text-xs text-muted-foreground font-mono font-medium">
+            (Threshold ≥ {formatAmount(config.threshold, config.currency)} requires sign-off)
           </span>
-        </h3>
+        </div>
         <InvoiceTable
           invoices={pendingApproval}
           currentUser={currentUser}
@@ -90,10 +102,13 @@ export const ApprovalsView: React.FC<ApprovalsViewProps> = ({
       </div>
 
       {/* Step 3: Pay queue */}
-      <div className="space-y-2">
-        <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground border-l-2 border-l-emerald-600 pl-2">
-          Approved — Ready to Pay ({approved.length})
-        </h3>
+      <div className="space-y-3 pt-2">
+        <div className="flex items-center justify-between">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300 flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4 text-emerald-500" /> Approved — Ready to Pay ({approved.length})
+          </h3>
+          <span className="text-xs text-muted-foreground font-medium">Step 3 of 3 &bull; Final Payout Queue</span>
+        </div>
         <InvoiceTable
           invoices={approved}
           currentUser={currentUser}

@@ -1,5 +1,10 @@
+'use client';
+
 import React, { useState } from 'react';
 import type { Invoice, AppConfig } from '@/types/invoice';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { History, Clock, FileSpreadsheet, Download, Eye } from 'lucide-react';
 import { Modal } from './Modal';
 import { formatAmount } from './InvoiceTable';
@@ -54,94 +59,105 @@ export const AuditView: React.FC<AuditViewProps> = ({ invoices, config }) => {
   if (displayInvoices.length === 0) {
     return (
       <div className="w-full space-y-4">
-        <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
-          <History size={18} className="text-indigo-600" />
-          Audit Trail
-          <span className="text-xs font-medium text-muted-foreground select-none">— permanent ledger</span>
-        </h2>
-        <div className="flex flex-col items-center justify-center bg-card border border-border/80 rounded-xl p-10 shadow-sm mt-4">
-          <div className="w-16 h-16 bg-muted/30 rounded-full flex items-center justify-center mb-3">
-            <FileSpreadsheet size={32} className="text-muted-foreground" />
+        <div className="flex items-center gap-2.5 border-b border-border/60 pb-3">
+          <div className="h-9 w-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold shrink-0">
+            <History size={20} />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold tracking-tight text-foreground">
+              Invoice Audit
+            </h2>
+            <p className="text-xs text-muted-foreground">Permanent ledger of processed invoices</p>
+          </div>
+        </div>
+        <Card className="border border-border/60 bg-card/80 backdrop-blur-xs rounded-2xl p-10 shadow-xs text-center">
+          <div className="w-14 h-14 bg-muted/40 rounded-full flex items-center justify-center mx-auto mb-3">
+            <FileSpreadsheet size={28} className="text-muted-foreground" />
           </div>
           <p className="text-foreground font-bold text-sm">No records found</p>
-          <p className="text-muted-foreground text-xs mt-1 text-center">No approved or paid invoices to display in the audit trail yet.</p>
-        </div>
+          <p className="text-muted-foreground text-xs mt-1">No approved or paid invoices to display in the audit trail yet.</p>
+        </Card>
       </div>
     );
   }
 
   return (
     <div className="w-full space-y-6">
-      <div className="bg-card border border-border/80 rounded-xl p-4 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <Card className="border border-border/60 bg-card/80 backdrop-blur-xs rounded-2xl p-4 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-600 shrink-0">
+          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-600 shrink-0">
             <FileSpreadsheet size={20} />
           </div>
           <div>
             <h3 className="text-sm font-bold text-foreground">Download Audit Records</h3>
             <p className="text-xs text-muted-foreground">
-              Export all {entriesForExport.length} system audit event logs as a formatted Excel spreadsheet (.csv).
+              Export all {entriesForExport.length} system audit event logs as a formatted CSV spreadsheet.
             </p>
           </div>
         </div>
-        <button
+        <Button
           onClick={handleExportExcel}
-          className="w-full sm:w-auto flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-xs font-bold px-4 py-2.5 rounded-lg shadow-sm transition-all cursor-pointer shrink-0"
+          size="sm"
+          className="w-full sm:w-auto gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold h-9 text-xs"
         >
           <Download size={15} />
-          Export Excel File
-        </button>
-      </div>
+          Export CSV File
+        </Button>
+      </Card>
 
-      <div className="border-b border-border/80 pb-2">
-        <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
-          <History size={18} className="text-indigo-600" />
+      <div className="border-b border-border/60 pb-3">
+        <h2 className="text-xl font-bold tracking-tight text-foreground flex items-center gap-2">
+          <History size={20} className="text-primary" />
           Processed Invoices Ledger
         </h2>
-        <p className="text-xs font-medium text-muted-foreground select-none mt-0.5">
+        <p className="text-xs text-muted-foreground mt-0.5">
           Showing 1 row per invoice (Approved and Paid). Click to view full audit logs.
         </p>
       </div>
 
-      <div className="overflow-x-auto w-full border border-border/80 rounded-xl bg-card shadow-sm">
-        <table className="w-full border-collapse text-left text-xs sm:text-sm">
-          <thead>
-            <tr className="border-b border-border/80 bg-muted/40 select-none">
-              <th className="text-xs uppercase font-bold tracking-wider text-muted-foreground px-4 py-3">Vendor</th>
-              <th className="text-xs uppercase font-bold tracking-wider text-muted-foreground px-4 py-3">Invoice #</th>
-              <th className="text-xs uppercase font-bold tracking-wider text-muted-foreground px-4 py-3">Amount</th>
-              <th className="text-xs uppercase font-bold tracking-wider text-muted-foreground px-4 py-3">Status</th>
-              <th className="text-xs uppercase font-bold tracking-wider text-muted-foreground px-4 py-3 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border/40">
-            {displayInvoices.map((inv) => (
-              <tr key={inv.id} className="hover:bg-muted/30 transition-colors">
-                <td className="px-4 py-3 font-bold text-foreground">{inv.vendor}</td>
-                <td className="px-4 py-3 font-mono text-muted-foreground">{inv.invoiceNumber}</td>
-                <td className="px-4 py-3 font-mono font-semibold text-foreground">
-                  {formatAmount(inv.amount, config.currency)}
-                </td>
-                <td className="px-4 py-3">
-                  <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-bold font-mono ${
-                    inv.status === 'paid' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-indigo-500/10 text-indigo-600'
-                  }`}>
-                    {inv.status === 'paid' ? 'PAID' : 'APPROVED'}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-right">
-                  <button
-                    onClick={() => setSelectedInvoice(inv)}
-                    className="inline-flex items-center gap-1 bg-background border border-border/80 hover:border-indigo-600 hover:text-indigo-600 text-foreground px-3 py-1.5 rounded-lg transition-colors text-xs font-semibold"
-                  >
-                    <Eye size={14} /> Full Log
-                  </button>
-                </td>
+      <Card className="border border-border/60 bg-card/80 backdrop-blur-xs rounded-2xl shadow-xs overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs sm:text-sm">
+            <thead>
+              <tr className="border-b border-border/60 bg-muted/30 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                <th className="px-4 py-3">Vendor</th>
+                <th className="px-4 py-3">Invoice #</th>
+                <th className="px-4 py-3">Amount</th>
+                <th className="px-4 py-3">Status</th>
+                <th className="px-4 py-3 text-right">Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody className="divide-y divide-border/40 text-xs">
+              {displayInvoices.map((inv) => (
+                <tr key={inv.id} className="hover:bg-muted/30 transition-colors">
+                  <td className="px-4 py-3 font-bold text-foreground">{inv.vendor}</td>
+                  <td className="px-4 py-3 font-mono font-semibold text-foreground">{inv.invoiceNumber}</td>
+                  <td className="px-4 py-3 font-mono font-bold text-foreground">
+                    {formatAmount(inv.amount, config.currency)}
+                  </td>
+                  <td className="px-4 py-3">
+                    {inv.status === 'paid' ? (
+                      <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30">PAID</Badge>
+                    ) : (
+                      <Badge variant="outline" className="bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30">APPROVED</Badge>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setSelectedInvoice(inv)}
+                      className="gap-1 text-xs h-7 px-2.5"
+                    >
+                      <Eye size={14} /> Full Log
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Card>
 
       <Modal
         isOpen={!!selectedInvoice}
@@ -150,29 +166,29 @@ export const AuditView: React.FC<AuditViewProps> = ({ invoices, config }) => {
       >
         {selectedInvoice && (
           <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
-            <div className="bg-muted/30 border border-border/60 rounded-lg p-4 mb-4">
+            <div className="bg-muted/30 border border-border/60 rounded-xl p-4 mb-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <span className="block text-xs font-bold text-muted-foreground uppercase tracking-wider">Vendor</span>
-                  <span className="text-sm font-semibold text-foreground">{selectedInvoice.vendor}</span>
+                  <span className="block text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Vendor</span>
+                  <span className="text-sm font-bold text-foreground">{selectedInvoice.vendor}</span>
                 </div>
                 <div>
-                  <span className="block text-xs font-bold text-muted-foreground uppercase tracking-wider">Amount</span>
-                  <span className="text-sm font-semibold font-mono text-foreground">{formatAmount(selectedInvoice.amount, config.currency)}</span>
+                  <span className="block text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Amount</span>
+                  <span className="text-sm font-extrabold font-mono text-foreground">{formatAmount(selectedInvoice.amount, config.currency)}</span>
                 </div>
               </div>
             </div>
 
-            <div className="relative pl-4 border-l-2 border-border/80 space-y-6">
+            <div className="relative pl-4 border-l-2 border-primary/40 space-y-5">
               {[...(selectedInvoice.history || [])].sort((a, b) => b.at - a.at).map((ev, idx) => (
                 <div key={idx} className="relative">
-                  <div className="absolute -left-[21px] mt-0.5 w-2.5 h-2.5 rounded-full bg-indigo-600 border-2 border-background ring-2 ring-indigo-500/20"></div>
+                  <div className="absolute -left-[21px] mt-0.5 w-2.5 h-2.5 rounded-full bg-primary border-2 border-background ring-2 ring-primary/20"></div>
                   <div className="flex justify-between items-start mb-1">
                     <span className="font-mono text-xs text-muted-foreground flex items-center gap-1.5">
                       <Clock size={12} />
                       {new Date(ev.at).toLocaleString('en-IN')}
                     </span>
-                    <span className="bg-indigo-500/10 text-indigo-600 text-[10px] font-bold font-mono px-1.5 py-0.5 rounded">
+                    <span className="bg-primary/10 text-primary text-[10px] font-bold font-mono px-1.5 py-0.5 rounded-md">
                       {ev.action}
                     </span>
                   </div>
@@ -180,7 +196,7 @@ export const AuditView: React.FC<AuditViewProps> = ({ invoices, config }) => {
                     Actor: <span className="font-semibold text-foreground">{ev.actorName}</span> <span className="font-mono">({ev.actorRole})</span>
                   </div>
                   {ev.note && (
-                    <div className="mt-1.5 text-xs bg-background border border-border/60 p-2.5 rounded-lg text-foreground max-w-full break-words leading-relaxed italic shadow-xs">
+                    <div className="mt-1.5 text-xs bg-background border border-border/60 p-2.5 rounded-xl text-foreground max-w-full break-words leading-relaxed italic shadow-xs">
                       {ev.note}
                     </div>
                   )}
