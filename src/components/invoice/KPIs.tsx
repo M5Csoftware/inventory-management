@@ -1,11 +1,7 @@
-'use client';
-
 import React from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Clock, ShieldCheck, CheckCircle2, DollarSign, AlertTriangle, FileText } from 'lucide-react';
+import { ShieldAlert, Hourglass, Landmark, CheckCircle, AlertOctagon } from 'lucide-react';
 
 interface KPIsProps {
-  total: number;
   pendingL1: number;
   pendingL2: number;
   approved: number;
@@ -13,86 +9,85 @@ interface KPIsProps {
   flagged: number;
 }
 
-export function KPIs({ total, pendingL1, pendingL2, approved, paid, flagged }: KPIsProps) {
+export const KPIs: React.FC<KPIsProps> = ({
+  pendingL1,
+  pendingL2,
+  approved,
+  paid,
+  flagged,
+}) => {
+  const cards = [
+    {
+      label: 'Awaiting First Approval',
+      value: pendingL1,
+      icon: Hourglass,
+      colorClass: 'border-l-indigo-600',
+      textColor: 'text-slate-900 dark:text-slate-100',
+    },
+    {
+      label: 'Awaiting Second Approval',
+      value: pendingL2,
+      icon: ShieldAlert,
+      colorClass: 'border-l-indigo-600',
+      textColor: 'text-slate-900 dark:text-slate-100',
+    },
+    {
+      label: 'Approved - Ready to Pay',
+      value: approved,
+      icon: Landmark,
+      colorClass: 'border-l-indigo-600',
+      textColor: 'text-slate-900 dark:text-slate-100',
+    },
+    {
+      label: 'Paid',
+      value: paid,
+      icon: CheckCircle,
+      colorClass: 'border-l-emerald-600',
+      textColor: 'text-emerald-600 dark:text-emerald-400',
+    },
+    {
+      label: 'Flagged For Review',
+      value: flagged,
+      icon: AlertOctagon,
+      colorClass: 'border-l-rose-600',
+      textColor: 'text-rose-600 dark:text-rose-400',
+      highlight: flagged > 0,
+    },
+  ];
+
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
-      {/* Total Invoices */}
-      <Card className="border border-border/50 bg-card shadow-sm hover:shadow-md transition-shadow">
-        <CardContent className="p-3.5 flex items-center justify-between">
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Total Registered</p>
-            <p className="text-xl sm:text-2xl font-extrabold text-foreground mt-0.5">{total}</p>
-          </div>
-          <div className="h-9 w-9 rounded-xl bg-blue-500/10 text-blue-600 flex items-center justify-center shrink-0">
-            <FileText className="h-4 sm:h-5 w-4 sm:w-5" />
-          </div>
-        </CardContent>
-      </Card>
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+      {cards.map((card, index) => {
+        const Icon = card.icon;
+        const isRed = card.textColor.includes('rose');
+        const isGreen = card.textColor.includes('emerald');
 
-      {/* Pending L1 Verification */}
-      <Card className="border border-amber-500/20 bg-amber-500/5 shadow-sm hover:shadow-md transition-shadow">
-        <CardContent className="p-3.5 flex items-center justify-between">
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-700 dark:text-amber-300">Pending L1 (Verify)</p>
-            <p className="text-xl sm:text-2xl font-extrabold text-amber-700 dark:text-amber-300 mt-0.5">{pendingL1}</p>
-          </div>
-          <div className="h-9 w-9 rounded-xl bg-amber-500/15 text-amber-600 flex items-center justify-center shrink-0">
-            <Clock className="h-4 sm:h-5 w-4 sm:w-5" />
-          </div>
-        </CardContent>
-      </Card>
+        let badgeBg = 'bg-slate-100 text-slate-700';
+        if (isRed) badgeBg = 'bg-rose-500/10 text-rose-600 border border-rose-500/20';
+        else if (isGreen) badgeBg = 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20';
+        else badgeBg = 'bg-indigo-500/10 text-indigo-600 border border-indigo-500/20';
 
-      {/* Pending L2 Approval */}
-      <Card className="border border-purple-500/20 bg-purple-500/5 shadow-sm hover:shadow-md transition-shadow">
-        <CardContent className="p-3.5 flex items-center justify-between">
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-purple-700 dark:text-purple-300">Pending L2 (Sign-Off)</p>
-            <p className="text-xl sm:text-2xl font-extrabold text-purple-700 dark:text-purple-300 mt-0.5">{pendingL2}</p>
+        return (
+          <div
+            key={index}
+            className={`bg-card border border-border/80 border-l-4 ${card.colorClass} rounded-xl p-4 flex flex-col justify-between shadow-sm hover:shadow-md transition-all duration-200 ${
+              card.highlight ? 'bg-rose-500/5' : ''
+            }`}
+          >
+            <div className="flex justify-between items-center">
+              <span className={`text-2xl font-extrabold leading-none ${card.textColor}`}>
+                {card.value}
+              </span>
+              <div className={`p-2 rounded-full flex items-center justify-center ${badgeBg}`}>
+                <Icon size={15} />
+              </div>
+            </div>
+            <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground mt-4 block leading-tight">
+              {card.label}
+            </span>
           </div>
-          <div className="h-9 w-9 rounded-xl bg-purple-500/15 text-purple-600 flex items-center justify-center shrink-0">
-            <ShieldCheck className="h-4 sm:h-5 w-4 sm:w-5" />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Approved */}
-      <Card className="border border-emerald-500/20 bg-emerald-500/5 shadow-sm hover:shadow-md transition-shadow">
-        <CardContent className="p-3.5 flex items-center justify-between">
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">Approved</p>
-            <p className="text-xl sm:text-2xl font-extrabold text-emerald-700 dark:text-emerald-300 mt-0.5">{approved}</p>
-          </div>
-          <div className="h-9 w-9 rounded-xl bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0">
-            <CheckCircle2 className="h-4 sm:h-5 w-4 sm:w-5" />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Paid */}
-      <Card className="border border-blue-500/20 bg-blue-500/5 shadow-sm hover:shadow-md transition-shadow">
-        <CardContent className="p-3.5 flex items-center justify-between">
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-blue-700 dark:text-blue-300">Paid</p>
-            <p className="text-xl sm:text-2xl font-extrabold text-blue-700 dark:text-blue-300 mt-0.5">{paid}</p>
-          </div>
-          <div className="h-9 w-9 rounded-xl bg-blue-500/15 text-blue-600 flex items-center justify-center shrink-0">
-            <DollarSign className="h-4 sm:h-5 w-4 sm:w-5" />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* High Flagged */}
-      <Card className="border border-rose-500/20 bg-rose-500/5 shadow-sm hover:shadow-md transition-shadow">
-        <CardContent className="p-3.5 flex items-center justify-between">
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-rose-700 dark:text-rose-300">Flagged Risk</p>
-            <p className="text-xl sm:text-2xl font-extrabold text-rose-700 dark:text-rose-300 mt-0.5">{flagged}</p>
-          </div>
-          <div className="h-9 w-9 rounded-xl bg-rose-500/15 text-rose-600 flex items-center justify-center shrink-0">
-            <AlertTriangle className="h-4 sm:h-5 w-4 sm:w-5" />
-          </div>
-        </CardContent>
-      </Card>
+        );
+      })}
     </div>
   );
-}
+};

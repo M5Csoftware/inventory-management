@@ -22,13 +22,52 @@ import { InvoiceDetailModal } from './InvoiceDetailModal';
 import { BankDetailsModal } from './BankDetailsModal';
 import { useInvoice } from '@/context/invoice-context';
 
-interface InvoiceTableProps {
+import { TeamMember, AppConfig } from '@/types/invoice';
+
+export const formatAmount = (amount: number, currency: 'INR' | 'USD' | 'EUR' = 'INR') => {
+  const symbols = { INR: '₹', USD: '$', EUR: '€' };
+  return (
+    (symbols[currency] || '₹') +
+    Number(amount || 0).toLocaleString('en-IN', {
+      maximumFractionDigits: 2,
+      minimumFractionDigits: 2,
+    })
+  );
+};
+
+export interface InvoiceTableProps {
   invoices: Invoice[];
   title?: string;
   defaultStatusFilter?: string;
+  currentUser?: TeamMember | null;
+  team?: TeamMember[];
+  config?: AppConfig;
+  lastActionId?: string | null;
+  showActions?: boolean;
+  onVerify?: (id: string, notes?: string) => void;
+  onApprove?: (id: string) => void;
+  onRejectClick?: (id: string) => void;
+  onPay?: (id: string) => void;
+  onInvoiceClick?: (invoice: Invoice) => void;
+  onAddBankDetails?: (invoice: Invoice) => void;
 }
 
-export function InvoiceTable({ invoices, title, defaultStatusFilter = 'all' }: InvoiceTableProps) {
+export function InvoiceTable({
+  invoices,
+  title,
+  defaultStatusFilter = 'all',
+  currentUser,
+  team,
+  config,
+  lastActionId,
+  showActions,
+  onVerify,
+  onApprove,
+  onRejectClick,
+  onPay,
+  onInvoiceClick,
+  onAddBankDetails,
+}: InvoiceTableProps) {
   const { user } = useAuth();
   const { verifyInvoice, approveInvoice, rejectInvoice, payInvoice, updateBankDetails } = useInvoice();
 

@@ -1,3 +1,13 @@
+export type Role = 'Master Admin' | 'Admin' | 'User' | 'Verifier';
+
+export interface TeamMember {
+  id: string;
+  name: string;
+  username: string;
+  password?: string;
+  role: Role;
+}
+
 export type InvoiceStatus =
   | 'pending_verification'
   | 'pending_approval'

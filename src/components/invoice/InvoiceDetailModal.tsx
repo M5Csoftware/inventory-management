@@ -23,24 +23,38 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 
+import { TeamMember, AppConfig } from '@/types/invoice';
+
 interface InvoiceDetailModalProps {
   invoice: Invoice;
+  isOpen?: boolean;
   onClose: () => void;
-  onVerify: (id: string, notes?: string) => void;
-  onApprove: (id: string) => void;
-  onReject: (id: string, reason: string) => void;
-  onPay: (id: string) => void;
-  onOpenBankModal: (invoice: Invoice) => void;
+  onVerify?: (id: string, notes?: string) => void;
+  onApprove?: (id: string) => void;
+  onReject?: (id: string, reason: string) => void;
+  onRejectClick?: (id: string) => void;
+  onPay?: (id: string) => void;
+  onOpenBankModal?: (invoice: Invoice) => void;
+  onAddBankDetails?: (invoice: Invoice) => void;
+  currentUser?: TeamMember | null;
+  team?: TeamMember[];
+  config?: AppConfig;
 }
 
 export function InvoiceDetailModal({
   invoice,
+  isOpen,
   onClose,
   onVerify,
   onApprove,
   onReject,
+  onRejectClick,
   onPay,
   onOpenBankModal,
+  onAddBankDetails,
+  currentUser,
+  team,
+  config,
 }: InvoiceDetailModalProps) {
   const { user } = useAuth();
   const [rejectReason, setRejectReason] = useState('');
@@ -159,7 +173,7 @@ export function InvoiceDetailModal({
                   <span className="text-xs font-bold flex items-center gap-1.5">
                     <Landmark className="h-3.5 w-3.5 text-blue-500" /> Vendor Bank Account
                   </span>
-                  <Button variant="outline" size="sm" onClick={() => onOpenBankModal(invoice)} className="h-7 text-[11px] px-2">
+                  <Button variant="outline" size="sm" onClick={() => (onOpenBankModal || onAddBankDetails)?.(invoice)} className="h-7 text-[11px] px-2">
                     {invoice.bankDetails ? 'Edit Bank Info' : '+ Add Bank Info'}
                   </Button>
                 </div>
@@ -230,7 +244,7 @@ export function InvoiceDetailModal({
               <Button
                 size="sm"
                 className="bg-amber-600 hover:bg-amber-700 text-white gap-1.5 w-full sm:w-auto"
-                onClick={() => onVerify(invoice.id)}
+                onClick={() => onVerify?.(invoice.id)}
               >
                 <CheckCircle2 className="h-4 w-4" /> Complete L1 Verification
               </Button>
@@ -241,7 +255,7 @@ export function InvoiceDetailModal({
               <Button
                 size="sm"
                 className="bg-purple-600 hover:bg-purple-700 text-white gap-1.5 w-full sm:w-auto"
-                onClick={() => onApprove(invoice.id)}
+                onClick={() => onApprove?.(invoice.id)}
               >
                 <ShieldCheck className="h-4 w-4" /> Grant L2 Sign-Off
               </Button>
@@ -252,7 +266,7 @@ export function InvoiceDetailModal({
               <Button
                 size="sm"
                 className="bg-blue-600 hover:bg-blue-700 text-white gap-1.5 w-full sm:w-auto"
-                onClick={() => onPay(invoice.id)}
+                onClick={() => onPay?.(invoice.id)}
               >
                 <DollarSign className="h-4 w-4" /> Mark as Paid
               </Button>
@@ -265,8 +279,12 @@ export function InvoiceDetailModal({
                 size="sm"
                 className="text-rose-600 border-rose-200 hover:bg-rose-50 dark:hover:bg-rose-950 gap-1.5 w-full sm:w-auto"
                 onClick={() => {
-                  const reason = prompt('Please enter rejection reason:');
-                  if (reason) onReject(invoice.id, reason);
+                  if (onRejectClick) {
+                    onRejectClick(invoice.id);
+                  } else if (onReject) {
+                    const reason = prompt('Please enter rejection reason:');
+                    if (reason) onReject(invoice.id, reason);
+                  }
                 }}
               >
                 <XCircle className="h-4 w-4" /> Reject Invoice
