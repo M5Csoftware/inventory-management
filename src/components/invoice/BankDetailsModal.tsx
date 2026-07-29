@@ -38,15 +38,15 @@ export function BankDetailsModal({ invoice, onClose, onSave }: BankDetailsModalP
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-      <div className="w-full max-w-lg rounded-2xl bg-card border border-border/80 shadow-2xl overflow-hidden space-y-0">
+      <div className="w-full max-w-lg rounded-2xl bg-card border border-border/80 shadow-2xl overflow-hidden space-y-0 border-0">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-border/60 p-4 bg-muted/30">
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-500/10 text-blue-600">
+        <div className="flex items-center justify-between border-b border-border/50 p-4 bg-muted/40">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
               <Landmark className="h-5 w-5" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-foreground">Vendor Bank Details</h3>
+              <h3 className="text-base font-bold tracking-tight text-foreground">Vendor Bank Details</h3>
               <p className="text-xs text-muted-foreground">
                 Invoice {invoice.invoiceNumber} &bull; {invoice.vendor}
               </p>
@@ -58,7 +58,7 @@ export function BankDetailsModal({ invoice, onClose, onSave }: BankDetailsModalP
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-5 space-y-4">
+        <form onSubmit={handleSubmit} className="p-6 space-y-4 bg-gradient-to-br from-background via-background to-muted/20">
           <div className="space-y-1.5">
             <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
               Bank Name <span className="text-destructive">*</span>
@@ -67,7 +67,7 @@ export function BankDetailsModal({ invoice, onClose, onSave }: BankDetailsModalP
               placeholder="e.g. HDFC Bank / ICICI Bank"
               value={bankName}
               onChange={(e) => setBankName(e.target.value)}
-              className="h-10 text-xs bg-background"
+              className="h-10 text-xs bg-background rounded-xl border-2 border-gray-300 dark:border-gray-600 font-semibold"
               required
             />
           </div>
@@ -80,7 +80,7 @@ export function BankDetailsModal({ invoice, onClose, onSave }: BankDetailsModalP
               placeholder="e.g. Acme Technologies Pvt Ltd"
               value={accountName}
               onChange={(e) => setAccountName(e.target.value)}
-              className="h-10 text-xs bg-background"
+              className="h-10 text-xs bg-background rounded-xl border-2 border-gray-300 dark:border-gray-600 font-semibold"
               required
             />
           </div>
@@ -94,7 +94,7 @@ export function BankDetailsModal({ invoice, onClose, onSave }: BankDetailsModalP
                 placeholder="e.g. 50100294184920"
                 value={accountNumber}
                 onChange={(e) => setAccountNumber(e.target.value)}
-                className="h-10 text-xs font-mono bg-background"
+                className="h-10 text-xs font-mono bg-background rounded-xl border-2 border-gray-300 dark:border-gray-600 font-bold"
                 required
               />
             </div>
@@ -107,18 +107,18 @@ export function BankDetailsModal({ invoice, onClose, onSave }: BankDetailsModalP
                 placeholder="e.g. HDFC0001234"
                 value={ifscCode}
                 onChange={(e) => setIfscCode(e.target.value.toUpperCase())}
-                className="h-10 text-xs font-mono uppercase bg-background"
+                className="h-10 text-xs font-mono uppercase bg-background rounded-xl border-2 border-gray-300 dark:border-gray-600 font-bold"
                 required
               />
             </div>
           </div>
 
           {/* Footer Buttons */}
-          <div className="flex justify-end gap-2 pt-3 border-t border-border/50">
-            <Button type="button" variant="outline" size="sm" onClick={onClose}>
+          <div className="flex justify-end gap-2 pt-4 border-t border-border/50">
+            <Button type="button" variant="outline" size="sm" onClick={onClose} className="shadow-sm">
               Cancel
             </Button>
-            <Button type="submit" size="sm" className="gap-2 bg-blue-600 hover:bg-blue-700 text-white">
+            <Button type="submit" size="sm" className="gap-2 shadow-md">
               <Save className="h-4 w-4" /> Save Bank Details
             </Button>
           </div>
