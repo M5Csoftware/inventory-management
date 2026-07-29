@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useInventory, Product } from "@/context/inventory-context";
+import { useInventory, Product, BRANCHES } from "@/context/inventory-context";
 import { toast } from "react-toastify";
 
 export interface AssetModelGroup {
@@ -51,6 +51,9 @@ export default function StockInAssetsPage() {
 
   // General Intake Info
   const [productId, setProductId] = useState("");
+  const [targetBranch, setTargetBranch] = useState(() =>
+    activeBranch === "All" ? "Ahmedabad" : activeBranch
+  );
   const [supplier, setSupplier] = useState("");
   const [customSupplier, setCustomSupplier] = useState("");
   const [invoiceNumber, setInvoiceNumber] = useState("");
@@ -58,6 +61,12 @@ export default function StockInAssetsPage() {
   const [notes, setNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const submittingRef = useRef(false);
+
+  useEffect(() => {
+    if (activeBranch !== "All") {
+      setTargetBranch(activeBranch);
+    }
+  }, [activeBranch]);
 
   // Searchable Item Name dropdown states
   const [productSearchOpen, setProductSearchOpen] = useState(false);
@@ -258,6 +267,7 @@ export default function StockInAssetsPage() {
             invoiceNumber,
             model: group.model,
             serialNumber: serialsList.join(", "),
+            branch: targetBranch,
           }
         );
 
@@ -314,7 +324,7 @@ export default function StockInAssetsPage() {
       ) : (
         <form onSubmit={handleSubmit} className="w-full space-y-6">
           {/* 1. General Shipment Setup Card */}
-          <Card className="w-full border-0 shadow-lg shadow-primary/5 bg-gradient-to-br from-card to-card/80 backdrop-blur-sm">
+          <Card className="w-full border-0 shadow-lg shadow-primary/5 bg-gradient-to-br from-card to-card/80 backdrop-blur-sm relative z-20 overflow-visible">
             <CardHeader className="border-b border-border/50 pb-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -336,10 +346,10 @@ export default function StockInAssetsPage() {
               </div>
             </CardHeader>
 
-            <CardContent className="pt-5">
+            <CardContent className="pt-5 overflow-visible">
               <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
                 {/* Item Name Dropdown */}
-                <div className="space-y-1.5 md:col-span-2 xl:col-span-2">
+                <div className="space-y-1.5 md:col-span-2 xl:col-span-2 relative z-30">
                   <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                     <Package className="h-3.5 w-3.5 text-primary" />
                     Asset Item Name / Product <span className="text-destructive">*</span>
@@ -360,7 +370,7 @@ export default function StockInAssetsPage() {
                     </button>
 
                     {productSearchOpen && (
-                      <div className="absolute left-0 right-0 top-12 z-50 rounded-xl border border-border bg-background shadow-2xl overflow-hidden p-2 space-y-2 max-h-64 overflow-y-auto">
+                      <div className="absolute left-0 right-0 top-full mt-1.5 z-50 rounded-xl border border-border bg-background shadow-2xl overflow-hidden p-2 space-y-2 max-h-64 overflow-y-auto">
                         <div className="relative">
                           <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                           <input
@@ -447,6 +457,31 @@ export default function StockInAssetsPage() {
                     onChange={(e) => setInvoiceNumber(e.target.value)}
                     className="h-10 text-xs bg-background rounded-xl border-2 border-gray-300 dark:border-gray-600"
                   />
+                </div>
+
+                {/* Target Branch */}
+                <div className="space-y-1.5">
+                  <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    <Building2 className="h-3.5 w-3.5 text-primary" />
+                    Target Branch <span className="text-destructive">*</span>
+                  </label>
+                  {activeBranch === "All" ? (
+                    <select
+                      value={targetBranch}
+                      onChange={(e) => setTargetBranch(e.target.value)}
+                      className="h-10 w-full rounded-xl border-2 border-gray-300 bg-white/90 px-3 text-xs font-semibold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 dark:border-gray-600 dark:bg-gray-900/90 cursor-pointer"
+                    >
+                      {BRANCHES.map((b: string) => (
+                        <option key={b} value={b}>
+                          🏢 {b} Branch
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <div className="h-10 w-full rounded-xl border-2 border-gray-200 bg-muted/40 px-3 text-xs flex items-center font-semibold text-foreground">
+                      🏢 {activeBranch} Branch
+                    </div>
+                  )}
                 </div>
 
                 {/* Storage Location */}
@@ -580,13 +615,13 @@ export default function StockInAssetsPage() {
                       </div>
                     </div>
 
-                    {/* Warranty (Optional) */}
+                    {/* Warranty Expires At (Optional) */}
                     <div className="space-y-1.5">
                       <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                        Warranty Period <span className="text-[9px] text-muted-foreground font-normal">(Optional)</span>
+                        Warranty Expires At <span className="text-[9px] text-muted-foreground font-normal">(Optional)</span>
                       </label>
                       <Input
-                        placeholder="e.g. 3 Years Onsite Warranty"
+                        type="date"
                         value={group.warranty}
                         onChange={(e) =>
                           updateModelGroup(group.id, { warranty: e.target.value })
@@ -598,7 +633,7 @@ export default function StockInAssetsPage() {
                     {/* Quantity */}
                     <div className="space-y-1.5">
                       <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                        Quantity of Laptops <span className="text-destructive">*</span>
+                        Quantity <span className="text-destructive">*</span>
                       </label>
                       <Input
                         type="number"

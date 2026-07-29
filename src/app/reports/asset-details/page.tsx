@@ -35,13 +35,20 @@ interface AssetAssignment {
   id: string;
   productId: string;
   productName: string;
-  assignedToName: string;
-  assignedToEmail: string;
+  modelNumber?: string;
+  model?: string;
+  assignedTo?: string;
+  assignedToName?: string;
+  assignedToEmail?: string;
+  department?: string;
+  approvedBy?: string;
   branch: string;
   assignedDate: string;
   returnDate?: string;
   status: "Assigned" | "Returned" | "Maintenance" | "Available" | string;
   serialNumber?: string;
+  warranty?: string;
+  notes?: string;
   remarks?: string;
 }
 
@@ -55,6 +62,7 @@ export default function AssetDetailsReportPage() {
 
   // Filters
   const [branchFilter, setBranchFilter] = useState<string>(activeBranch || "All");
+  const [deptFilter, setDeptFilter] = useState<string>("All");
   const [statusFilter, setStatusFilter] = useState<string>("All");
   const [durationFilter, setDurationFilter] = useState<string>("All");
   const [searchTerm, setSearchTerm] = useState<string>("");
@@ -119,6 +127,11 @@ export default function AssetDetailsReportPage() {
         return false;
       }
 
+      // Department filter
+      if (deptFilter !== "All" && asset.department?.toLowerCase() !== deptFilter.toLowerCase()) {
+        return false;
+      }
+
       // Duration filter
       const days = getDaysAssigned(asset.assignedDate);
       if (durationFilter === "recent" && days >= 30) return false;
@@ -129,20 +142,37 @@ export default function AssetDetailsReportPage() {
       if (searchTerm.trim()) {
         const term = searchTerm.toLowerCase().trim();
         const matchId = asset.id?.toLowerCase().includes(term);
+        const matchModel = (asset.modelNumber || asset.model)?.toLowerCase().includes(term);
         const matchProduct = asset.productName?.toLowerCase().includes(term);
-        const matchName = asset.assignedToName?.toLowerCase().includes(term);
+        const matchName = (asset.assignedTo || asset.assignedToName)?.toLowerCase().includes(term);
         const matchEmail = asset.assignedToEmail?.toLowerCase().includes(term);
         const matchSerial = asset.serialNumber?.toLowerCase().includes(term);
         const matchBranch = asset.branch?.toLowerCase().includes(term);
+        const matchDept = asset.department?.toLowerCase().includes(term);
+        const matchApproved = asset.approvedBy?.toLowerCase().includes(term);
+        const matchWarranty = asset.warranty?.toLowerCase().includes(term);
+        const matchNotes = (asset.notes || asset.remarks)?.toLowerCase().includes(term);
 
-        if (!matchId && !matchProduct && !matchName && !matchEmail && !matchSerial && !matchBranch) {
+        if (
+          !matchId &&
+          !matchModel &&
+          !matchProduct &&
+          !matchName &&
+          !matchEmail &&
+          !matchSerial &&
+          !matchBranch &&
+          !matchDept &&
+          !matchApproved &&
+          !matchWarranty &&
+          !matchNotes
+        ) {
           return false;
         }
       }
 
       return true;
     });
-  }, [assets, statusFilter, durationFilter, searchTerm]);
+  }, [assets, statusFilter, deptFilter, durationFilter, searchTerm]);
 
   // Metrics summary
   const metrics = useMemo(() => {
@@ -181,16 +211,18 @@ export default function AssetDetailsReportPage() {
   const custodianSummary = useMemo(() => {
     const map: Record<
       string,
-      { name: string; email: string; branch: string; assetCount: number; assets: AssetAssignment[] }
+      { name: string; email: string; branch: string; department: string; assetCount: number; assets: AssetAssignment[] }
     > = {};
 
     filteredAssets.forEach((a) => {
-      const key = (a.assignedToEmail || a.assignedToName || "Unassigned").toLowerCase();
+      const custodianName = a.assignedTo || a.assignedToName || "Unassigned";
+      const key = (a.assignedToEmail || custodianName).toLowerCase();
       if (!map[key]) {
         map[key] = {
-          name: a.assignedToName || "Unknown",
+          name: custodianName,
           email: a.assignedToEmail || "No Email",
           branch: a.branch || "All",
+          department: a.department || "N/A",
           assetCount: 0,
           assets: [],
         };
@@ -225,32 +257,39 @@ export default function AssetDetailsReportPage() {
   const exportToCSV = () => {
     const headers = [
       "Asset Tag/ID",
-      "Product / Asset Name",
+      "Model Number",
+      "Assets",
       "Serial Number",
       "Branch",
-      "Assigned To (Name)",
-      "Assigned To (Email)",
+      "Department",
+      "Assigned To",
+      "Approved By",
+      "Warranty Details",
+      "Remarks",
       "Assigned Date",
       "Days Active",
       "Return Date",
       "Status",
-      "Remarks",
     ];
 
     const rows = filteredAssets.map((a) => {
       const days = getDaysAssigned(a.assignedDate);
+      const custodianName = a.assignedTo || a.assignedToName || "";
       return [
         `"${a.id || ""}"`,
+        `"${(a.modelNumber || a.model || "").replace(/"/g, '""')}"`,
         `"${(a.productName || "").replace(/"/g, '""')}"`,
-        `"${a.serialNumber || "N/A"}"`,
+        `"${a.serialNumber || ""}"`,
         `"${a.branch || ""}"`,
-        `"${(a.assignedToName || "").replace(/"/g, '""')}"`,
-        `"${a.assignedToEmail || ""}"`,
+        `"${a.department || ""}"`,
+        `"${custodianName.replace(/"/g, '""')}"`,
+        `"${a.approvedBy || ""}"`,
+        `"${(a.warranty || "").replace(/"/g, '""')}"`,
+        `"${(a.remarks || a.notes || "").replace(/"/g, '""')}"`,
         `"${a.assignedDate ? new Date(a.assignedDate).toLocaleDateString() : ""}"`,
         days,
         `"${a.returnDate ? new Date(a.returnDate).toLocaleDateString() : ""}"`,
         `"${a.status || "Assigned"}"`,
-        `"${(a.remarks || "").replace(/"/g, '""')}"`,
       ].join(",");
     });
 
@@ -449,13 +488,13 @@ export default function AssetDetailsReportPage() {
         {/* Filter Controls Bar */}
         <Card className="border-border/60 shadow-sm">
           <CardContent className="p-4 space-y-3">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
               {/* Search */}
               <div className="relative">
                 <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                 <input
                   type="text"
-                  placeholder="Search Tag, Serial, Asset Name, Person..."
+                  placeholder="Search Tag, Serial, Dept, Approver..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full h-9 pl-9 pr-8 text-sm bg-background border border-input rounded-md focus:outline-none focus:ring-1 focus:ring-primary"
@@ -482,6 +521,25 @@ export default function AssetDetailsReportPage() {
                   <option value="Ahmedabad">🏭 Ahmedabad</option>
                   <option value="Ludhiana">🏭 Ludhiana</option>
                   <option value="Mumbai">🏭 Mumbai</option>
+                </select>
+              </div>
+
+              {/* Department Filter */}
+              <div className="flex items-center gap-2">
+                <select
+                  value={deptFilter}
+                  onChange={(e) => setDeptFilter(e.target.value)}
+                  className="w-full h-9 px-3 text-sm bg-background border border-input rounded-md focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
+                >
+                  <option value="All">🏢 All Departments</option>
+                  <option value="Operations">Operations</option>
+                  <option value="Collections">Collections</option>
+                  <option value="Customer support">Customer support</option>
+                  <option value="Sales support">Sales support</option>
+                  <option value="Accounts">Accounts</option>
+                  <option value="Billing">Billing</option>
+                  <option value="HR">HR</option>
+                  <option value="Management">Management</option>
                 </select>
               </div>
 
@@ -525,10 +583,15 @@ export default function AssetDetailsReportPage() {
               <thead className="bg-muted/50 text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b border-border/60">
                 <tr>
                   <th className="py-3.5 px-4">Asset ID</th>
-                  <th className="py-3.5 px-4">Product / Asset Name</th>
+                  <th className="py-3.5 px-4">Model Number</th>
+                  <th className="py-3.5 px-4">Assets</th>
                   <th className="py-3.5 px-4">Serial Number</th>
                   <th className="py-3.5 px-4">Branch</th>
-                  <th className="py-3.5 px-4">Assigned Custodian</th>
+                  <th className="py-3.5 px-4">Department</th>
+                  <th className="py-3.5 px-4">Assigned To</th>
+                  <th className="py-3.5 px-4">Approved By</th>
+                  <th className="py-3.5 px-4">Warranty Details</th>
+                  <th className="py-3.5 px-4">Remarks</th>
                   <th className="py-3.5 px-4 text-center">Assigned Date</th>
                   <th className="py-3.5 px-4 text-center">Duration</th>
                   <th className="py-3.5 px-4 text-center">Status</th>
@@ -538,14 +601,14 @@ export default function AssetDetailsReportPage() {
               <tbody className="divide-y divide-border/40">
                 {loading ? (
                   <tr>
-                    <td colSpan={9} className="py-12 text-center text-muted-foreground">
+                    <td colSpan={14} className="py-12 text-center text-muted-foreground">
                       <RefreshCw className="h-6 w-6 animate-spin mx-auto mb-2 text-purple-600" />
                       Loading Asset Details Report...
                     </td>
                   </tr>
                 ) : filteredAssets.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="py-12 text-center text-muted-foreground">
+                    <td colSpan={14} className="py-12 text-center text-muted-foreground">
                       No asset records found matching your current filter selection.
                     </td>
                   </tr>
@@ -553,6 +616,7 @@ export default function AssetDetailsReportPage() {
                   filteredAssets.map((asset) => {
                     const status = asset.status || "Assigned";
                     const daysActive = getDaysAssigned(asset.assignedDate);
+                    const custodianName = asset.assignedTo || asset.assignedToName || "—";
 
                     return (
                       <tr
@@ -566,11 +630,14 @@ export default function AssetDetailsReportPage() {
                         <td className="py-3 px-4 font-mono font-medium text-xs text-purple-600 dark:text-purple-400">
                           {asset.id}
                         </td>
+                        <td className="py-3 px-4 font-mono text-xs text-foreground font-medium">
+                          {asset.modelNumber || asset.model || "—"}
+                        </td>
                         <td className="py-3 px-4 font-semibold text-foreground">
                           {asset.productName}
                         </td>
                         <td className="py-3 px-4 font-mono text-xs text-muted-foreground">
-                          {asset.serialNumber || "N/A"}
+                          {asset.serialNumber || "—"}
                         </td>
                         <td className="py-3 px-4">
                           <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs bg-accent/50 text-foreground font-medium">
@@ -579,15 +646,36 @@ export default function AssetDetailsReportPage() {
                           </span>
                         </td>
                         <td className="py-3 px-4">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs bg-purple-500/10 text-purple-700 dark:text-purple-300 font-medium">
+                            {asset.department || "—"}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">
                           <div className="font-medium text-xs flex items-center gap-1.5">
                             <User className="h-3.5 w-3.5 text-muted-foreground" />
-                            {asset.assignedToName}
+                            {custodianName}
                           </div>
                           {asset.assignedToEmail && (
                             <div className="text-[11px] text-muted-foreground">
                               {asset.assignedToEmail}
                             </div>
                           )}
+                        </td>
+                        <td className="py-3 px-4">
+                          {asset.approvedBy ? (
+                            <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                              <CheckCircle2 className="h-3 w-3 text-emerald-500" />
+                              {asset.approvedBy}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
+                        </td>
+                        <td className="py-3 px-4 text-xs text-muted-foreground">
+                          {asset.warranty || "—"}
+                        </td>
+                        <td className="py-3 px-4 text-xs text-muted-foreground max-w-[160px] truncate" title={asset.remarks || asset.notes || ""}>
+                          {asset.remarks || asset.notes || "—"}
                         </td>
                         <td className="py-3 px-4 text-center text-xs text-muted-foreground">
                           {asset.assignedDate
@@ -806,6 +894,14 @@ export default function AssetDetailsReportPage() {
                       <span className="font-medium">{selectedAsset.branch}</span>
                     </div>
                     <div className="bg-muted/40 p-3 rounded-lg border border-border/50">
+                      <span className="text-xs text-muted-foreground block">Assigned Department</span>
+                      <span className="font-semibold text-purple-600 dark:text-purple-400">{selectedAsset.department || "N/A"}</span>
+                    </div>
+                    <div className="bg-muted/40 p-3 rounded-lg border border-border/50">
+                      <span className="text-xs text-muted-foreground block">Approved By</span>
+                      <span className="font-semibold text-emerald-600 dark:text-emerald-400">{selectedAsset.approvedBy || "N/A"}</span>
+                    </div>
+                    <div className="bg-muted/40 p-3 rounded-lg border border-border/50">
                       <span className="text-xs text-muted-foreground block">Days Deployed</span>
                       <span className="font-bold text-purple-600 dark:text-purple-400">
                         {getDaysAssigned(selectedAsset.assignedDate)} Days
@@ -833,12 +929,20 @@ export default function AssetDetailsReportPage() {
                 <div className="p-4 rounded-xl bg-purple-500/10 border border-purple-500/20 space-y-3">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-purple-600 text-white flex items-center justify-center font-bold text-base">
-                      {selectedAsset.assignedToName.charAt(0).toUpperCase()}
+                      {(selectedAsset.assignedTo || selectedAsset.assignedToName || "U").charAt(0).toUpperCase()}
                     </div>
                     <div>
-                      <h4 className="font-bold text-base">{selectedAsset.assignedToName}</h4>
-                      <p className="text-xs text-muted-foreground">{selectedAsset.assignedToEmail}</p>
+                      <h4 className="font-bold text-base">{selectedAsset.assignedTo || selectedAsset.assignedToName || "Unknown"}</h4>
+                      <p className="text-xs text-muted-foreground">{selectedAsset.assignedToEmail || "No Email"}</p>
                     </div>
+                  </div>
+                  <div className="text-xs text-muted-foreground border-t border-purple-500/20 pt-2 flex justify-between">
+                    <span>Department:</span>
+                    <span className="font-semibold text-purple-600 dark:text-purple-400">{selectedAsset.department || "N/A"}</span>
+                  </div>
+                  <div className="text-xs text-muted-foreground border-t border-purple-500/20 pt-2 flex justify-between">
+                    <span>Approved By:</span>
+                    <span className="font-semibold text-emerald-600 dark:text-emerald-400">{selectedAsset.approvedBy || "N/A"}</span>
                   </div>
                   <div className="text-xs text-muted-foreground border-t border-purple-500/20 pt-2 flex justify-between">
                     <span>Branch Location:</span>
