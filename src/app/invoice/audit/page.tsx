@@ -1,12 +1,11 @@
 'use client';
 
 import React, { useState } from 'react';
-import Link from 'next/link';
 import { useInvoice, InvoiceProvider } from '@/context/invoice-context';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { History, ArrowLeft, RefreshCw, Search, Download, FileText, User, Calendar } from 'lucide-react';
+import { History, RefreshCw, Search, Download, FileText } from 'lucide-react';
 
 function InvoiceAuditContent() {
   const { invoices, loading, refreshInvoices } = useInvoice();
@@ -61,47 +60,36 @@ function InvoiceAuditContent() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 p-4 sm:p-6 space-y-6 animate-in fade-in duration-500">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <Link href="/invoice">
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-9 w-9 rounded-full border-2 transition-all hover:scale-105"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-          </Link>
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent flex items-center gap-2.5">
-              <History className="h-7 w-7 text-purple-600" />
-              Invoice Audit Trail & Action Log
-            </h1>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Immutable chronological history of all invoice inward check-ins, verifications, sign-offs, payments, and bank detail updates
-            </p>
-          </div>
+    <div className="p-6 sm:p-8 space-y-8 animate-in fade-in duration-300 min-h-screen bg-background w-full max-w-full">
+      {/* Top Header matching Inventory Management pages (NO back button) */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border/40 pb-6 w-full">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground flex items-center gap-3">
+            <History className="h-8 w-8 text-primary" />
+            Invoice Audit
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Immutable chronological log of all invoice check-ins, verifications, sign-offs, payments, and bank updates.
+          </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={refreshInvoices} className="gap-2 h-9 text-xs">
-            <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} /> Refresh
+        <div className="flex items-center gap-3">
+          <Button variant="outline" onClick={refreshInvoices} className="shadow-sm">
+            <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} /> Refresh
           </Button>
-          <Button variant="outline" size="sm" onClick={exportAuditCSV} className="gap-2 h-9 text-xs">
-            <Download className="h-3.5 w-3.5" /> Export Audit Trail (CSV)
+          <Button variant="outline" onClick={exportAuditCSV} className="shadow-sm">
+            <Download className="mr-2 h-4 w-4" /> Export CSV
           </Button>
         </div>
       </div>
 
       {/* Main Audit Table Card */}
-      <Card className="border-border/60 shadow-sm overflow-hidden">
-        <div className="p-4 bg-muted/30 border-b border-border/60 flex items-center justify-between gap-4">
+      <Card className="border-0 shadow-xl shadow-primary/5 bg-gradient-to-br from-card to-card/80 backdrop-blur-sm overflow-hidden w-full max-w-full">
+        <div className="p-4 bg-muted/40 border-b border-border/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <FileText className="h-5 w-5 text-purple-600" />
+            <FileText className="h-5 w-5 text-primary" />
             <h3 className="font-bold text-base text-foreground">Action Logs</h3>
-            <span className="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-bold">
+            <span className="text-xs px-2.5 py-0.5 rounded-full bg-primary/10 text-primary font-bold">
               {filteredEntries.length} Records
             </span>
           </div>
@@ -111,7 +99,7 @@ function InvoiceAuditContent() {
             <Input
               type="search"
               placeholder="Search by action, vendor, actor..."
-              className="pl-9 h-9 text-xs bg-background"
+              className="pl-9 h-9 text-xs bg-white/90 dark:bg-gray-900/90 border-2 border-gray-300 dark:border-gray-600 rounded-lg font-medium focus:border-primary"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -120,17 +108,17 @@ function InvoiceAuditContent() {
 
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left">
-            <thead className="bg-muted/50 text-xs font-semibold uppercase tracking-wider text-muted-foreground border-b border-border/60">
+            <thead className="bg-muted/40 text-xs font-semibold text-muted-foreground border-b border-border/40">
               <tr>
-                <th className="py-3 px-4">Date & Time</th>
+                <th className="py-3 px-4">Date &amp; Time</th>
                 <th className="py-3 px-4">Invoice Ref</th>
-                <th className="py-3 px-4">Vendor & Invoice No.</th>
+                <th className="py-3 px-4">Vendor &amp; Invoice No.</th>
                 <th className="py-3 px-4">Action Performed</th>
                 <th className="py-3 px-4">Actor (User)</th>
                 <th className="py-3 px-4">Action Details / Notes</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-border/40 text-xs">
+            <tbody className="divide-y divide-border/20 text-xs">
               {filteredEntries.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="py-12 text-center text-muted-foreground">
@@ -139,11 +127,11 @@ function InvoiceAuditContent() {
                 </tr>
               ) : (
                 filteredEntries.map((e, idx) => (
-                  <tr key={idx} className="hover:bg-muted/30 transition-colors">
+                  <tr key={idx} className="hover:bg-muted/20 transition-colors">
                     <td className="py-3 px-4 font-mono text-muted-foreground">
                       {new Date(e.at).toLocaleString()}
                     </td>
-                    <td className="py-3 px-4 font-mono font-bold text-purple-600 dark:text-purple-400">
+                    <td className="py-3 px-4 font-mono font-bold text-primary">
                       {e.invoiceId}
                     </td>
                     <td className="py-3 px-4">

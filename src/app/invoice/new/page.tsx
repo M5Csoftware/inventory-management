@@ -9,7 +9,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
-  ArrowLeft,
   FilePlus,
   Building2,
   Receipt,
@@ -21,6 +20,8 @@ import {
   Save,
   Image as ImageIcon,
   X,
+  ArrowUpRight,
+  CheckCircle2,
 } from 'lucide-react';
 
 function NewInvoiceFormContent() {
@@ -85,253 +86,264 @@ function NewInvoiceFormContent() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 p-4 sm:p-6 animate-in fade-in duration-500">
-      <div className="mx-auto max-w-4xl space-y-6">
-        {/* Header */}
-        <div className="flex items-center gap-3">
-          <Link href="/invoice">
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-9 w-9 rounded-full border-2 transition-all hover:scale-105"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-          </Link>
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent flex items-center gap-2">
-              <FilePlus className="h-6 w-6 text-purple-600" />
-              Register Inward Invoice (Check-In)
-            </h1>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Enter vendor details, taxable amount, 18% GST tax calculation, PO reference, and upload invoice document
-            </p>
-          </div>
+    <div className="p-6 sm:p-8 space-y-8 animate-in fade-in duration-300 min-h-screen bg-background w-full max-w-full">
+      {/* Top Header matching Inventory Management pages (NO back button) */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border/40 pb-6 w-full">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground flex items-center gap-3">
+            <FilePlus className="h-8 w-8 text-primary" />
+            New Invoice
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Enter vendor details, taxable amount, 18% GST tax option, PO reference, and attach document scan.
+          </p>
         </div>
+      </div>
 
-        {/* Main Form */}
-        <form onSubmit={handleSubmit}>
-          <Card className="border border-border/60 shadow-xl bg-card/90 backdrop-blur-sm rounded-2xl overflow-hidden">
-            <CardHeader className="bg-muted/30 border-b border-border/40 pb-4">
-              <CardTitle className="text-base font-bold">Inward Invoice Setup</CardTitle>
-              <CardDescription className="text-xs">
-                Fill in vendor details and tax specifications. Automatic 18% GST will be calculated.
-              </CardDescription>
-            </CardHeader>
-
-            <CardContent className="pt-6 space-y-6">
-              {/* Row 1: Vendor & Invoice Number */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                <div className="space-y-1.5">
-                  <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    <Building2 className="h-3.5 w-3.5 text-purple-600" />
-                    Vendor / Party Name <span className="text-destructive">*</span>
-                  </label>
-                  <Input
-                    placeholder="e.g. Acme Logistics & Tech Pvt Ltd"
-                    value={vendor}
-                    onChange={(e) => setVendor(e.target.value)}
-                    className="h-10 text-xs bg-background rounded-xl border-2 border-gray-300 dark:border-gray-600 font-semibold"
-                    required
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    <Receipt className="h-3.5 w-3.5 text-purple-600" />
-                    Vendor Invoice Number <span className="text-destructive">*</span>
-                  </label>
-                  <Input
-                    placeholder="e.g. INV-2026-8801"
-                    value={invoiceNumber}
-                    onChange={(e) => setInvoiceNumber(e.target.value)}
-                    className="h-10 text-xs bg-background rounded-xl border-2 border-gray-300 dark:border-gray-600 font-mono font-bold"
-                    required
-                  />
-                </div>
+      {/* Main Form Card taking 100% Full Width */}
+      <form onSubmit={handleSubmit} className="w-full max-w-full">
+        <Card className="border-0 shadow-xl shadow-primary/5 bg-gradient-to-br from-card to-card/80 backdrop-blur-sm rounded-2xl w-full max-w-full overflow-hidden">
+          <CardHeader className="border-b border-border/50 pb-4">
+            <div className="flex items-start justify-between">
+              <div>
+                <CardTitle className="text-lg font-bold flex items-center gap-2">
+                  <ArrowUpRight className="h-5 w-5 text-emerald-500" />
+                  New Invoice Details
+                </CardTitle>
+                <CardDescription className="text-xs mt-1">
+                  Fill in vendor details and tax specifications. Automatic 18% GST will be calculated.
+                </CardDescription>
               </div>
+              <span className="rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-600">
+                Inward Register Entry
+              </span>
+            </div>
+          </CardHeader>
 
-              {/* Row 2: Invoice Date, Taxable Amount, Tax Option */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-                <div className="space-y-1.5">
-                  <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    <Calendar className="h-3.5 w-3.5 text-purple-600" />
-                    Invoice Date <span className="text-destructive">*</span>
-                  </label>
-                  <Input
-                    type="date"
-                    value={invoiceDate}
-                    onChange={(e) => setInvoiceDate(e.target.value)}
-                    className="h-10 text-xs bg-background rounded-xl border-2 border-gray-300 dark:border-gray-600"
-                    required
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    <IndianRupee className="h-3.5 w-3.5 text-purple-600" />
-                    Taxable Amount (₹) <span className="text-destructive">*</span>
-                  </label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    placeholder="e.g. 45000"
-                    value={taxableAmount}
-                    onChange={(e) => setTaxableAmount(e.target.value)}
-                    className="h-10 text-xs bg-background rounded-xl border-2 border-gray-300 dark:border-gray-600 font-mono font-bold"
-                    required
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    GST Tax Structure
-                  </label>
-                  <select
-                    value={taxOption}
-                    onChange={(e) => setTaxOption(e.target.value as TaxOption)}
-                    className="h-10 w-full rounded-xl border-2 border-gray-300 bg-background px-3 text-xs font-semibold shadow-sm focus:border-primary focus:outline-none dark:border-gray-600 cursor-pointer"
-                  >
-                    <option value="IGST">IGST (18% Integrated Tax)</option>
-                    <option value="CGST_SGST">CGST (9%) + SGST (9%)</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Tax & Total Calculation Box */}
-              {parsedTaxable > 0 && (
-                <div className="p-4 rounded-xl bg-purple-500/10 border border-purple-500/20 grid grid-cols-2 sm:grid-cols-3 gap-4">
-                  <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-purple-700 dark:text-purple-300">Taxable Value</p>
-                    <p className="text-sm font-bold text-foreground">₹{parsedTaxable.toLocaleString('en-IN')}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-purple-700 dark:text-purple-300">Calculated GST (18%)</p>
-                    <p className="text-sm font-bold text-purple-700 dark:text-purple-300">₹{calculatedTax.toLocaleString('en-IN')}</p>
-                  </div>
-                  <div className="col-span-2 sm:col-span-1">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-purple-700 dark:text-purple-300">Total Payable Amount</p>
-                    <p className="text-base font-extrabold text-emerald-600 dark:text-emerald-400">₹{calculatedTotal.toLocaleString('en-IN')}</p>
-                  </div>
-                </div>
-              )}
-
-              {/* Row 3: PO Number & Bank Account Last 4 */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                <div className="space-y-1.5">
-                  <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    <FileText className="h-3.5 w-3.5 text-purple-600" />
-                    PO / Purchase Order No. (Optional)
-                  </label>
-                  <Input
-                    placeholder="e.g. PO-2026-904"
-                    value={poNumber}
-                    onChange={(e) => setPoNumber(e.target.value)}
-                    className="h-10 text-xs bg-background rounded-xl border-2 border-gray-300 dark:border-gray-600 font-mono"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    <Landmark className="h-3.5 w-3.5 text-purple-600" />
-                    Bank Account Last 4 Digits (Optional)
-                  </label>
-                  <Input
-                    maxLength={4}
-                    placeholder="e.g. 8492"
-                    value={bankLast4}
-                    onChange={(e) => setBankLast4(e.target.value)}
-                    className="h-10 text-xs bg-background rounded-xl border-2 border-gray-300 dark:border-gray-600 font-mono"
-                  />
-                </div>
-              </div>
-
-              {/* Description */}
+          <CardContent className="pt-6 space-y-6">
+            {/* Row 1: Vendor, Invoice Number, Invoice Date */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
               <div className="space-y-1.5">
                 <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  Invoice Remarks / Description
+                  <Building2 className="h-3.5 w-3.5 text-primary" />
+                  Vendor / Party Name <span className="text-destructive">*</span>
                 </label>
-                <textarea
-                  rows={2}
-                  placeholder="e.g. IT Equipment supply for Q3 deployment."
-                  value={description}
-                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setDescription(e.target.value)}
-                  className="w-full text-xs bg-background rounded-xl border-2 border-gray-300 dark:border-gray-600 p-3 focus:outline-none focus:border-primary"
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Acme Corp"
+                  value={vendor}
+                  onChange={(e) => setVendor(e.target.value)}
+                  className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 dark:border-gray-600 dark:bg-gray-900/90 font-semibold"
                 />
               </div>
 
-              {/* Document Image Upload / Drag and Drop */}
               <div className="space-y-1.5">
                 <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  <Upload className="h-3.5 w-3.5 text-purple-600" />
-                  Attach Invoice Copy (Optional Scan Image)
+                  <Receipt className="h-3.5 w-3.5 text-primary" />
+                  Vendor Invoice Number <span className="text-destructive">*</span>
                 </label>
-
-                {invoiceImage ? (
-                  <div className="relative rounded-xl border-2 border-purple-500/40 p-4 bg-muted/20 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <ImageIcon className="h-6 w-6 text-purple-600" />
-                      <div>
-                        <p className="text-xs font-bold text-foreground">{imageFileName || 'Invoice Scan Image'}</p>
-                        <p className="text-[10px] text-emerald-600 font-semibold">Image attached & ready</p>
-                      </div>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => {
-                        setInvoiceImage(null);
-                        setImageFileName('');
-                      }}
-                      className="h-8 w-8 text-rose-600"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ) : (
-                  <div
-                    onClick={() => fileInputRef.current?.click()}
-                    className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-6 text-center cursor-pointer hover:border-purple-500 transition-colors bg-muted/10 space-y-2"
-                  >
-                    <Upload className="h-8 w-8 text-muted-foreground mx-auto" />
-                    <p className="text-xs font-semibold text-foreground">Click to upload or drag & drop invoice scan</p>
-                    <p className="text-[10px] text-muted-foreground">Supports PNG, JPG, WEBP, or scanned document images</p>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) handleFileRead(file);
-                      }}
-                    />
-                  </div>
-                )}
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. INV-2026-001"
+                  value={invoiceNumber}
+                  onChange={(e) => setInvoiceNumber(e.target.value)}
+                  className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 dark:border-gray-600 dark:bg-gray-900/90 font-mono font-bold"
+                />
               </div>
 
-              {/* Form Footer Buttons */}
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-border/50">
-                <Link href="/invoice">
-                  <Button type="button" variant="outline" size="sm">
-                    Cancel
-                  </Button>
-                </Link>
-                <Button
-                  type="submit"
-                  size="sm"
-                  disabled={isSubmitting}
-                  className="gap-2 bg-purple-600 hover:bg-purple-700 text-white font-bold"
+              <div className="space-y-1.5">
+                <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  <Calendar className="h-3.5 w-3.5 text-primary" />
+                  Invoice Date <span className="text-destructive">*</span>
+                </label>
+                <input
+                  type="date"
+                  required
+                  value={invoiceDate}
+                  onChange={(e) => setInvoiceDate(e.target.value)}
+                  className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 dark:border-gray-600 dark:bg-gray-900/90 cursor-pointer"
+                />
+              </div>
+            </div>
+
+            {/* Row 2: Taxable Amount, Tax Option, Calculated Total */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              <div className="space-y-1.5">
+                <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  <IndianRupee className="h-3.5 w-3.5 text-primary" />
+                  Taxable Amount (₹) <span className="text-destructive">*</span>
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  required
+                  placeholder="e.g. 45000"
+                  value={taxableAmount}
+                  onChange={(e) => setTaxableAmount(e.target.value)}
+                  className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 dark:border-gray-600 dark:bg-gray-900/90 font-mono font-bold"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Tax Option <span className="text-destructive">*</span>
+                </label>
+                <select
+                  value={taxOption}
+                  onChange={(e) => setTaxOption(e.target.value as TaxOption)}
+                  className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 dark:border-gray-600 dark:bg-gray-900/90 cursor-pointer font-semibold"
                 >
-                  <Save className="h-4 w-4" />
-                  {isSubmitting ? 'Registering...' : 'Register Inward Invoice'}
-                </Button>
+                  <option value="IGST">IGST (18%)</option>
+                  <option value="CGST_SGST">CGST + SGST (9% + 9%)</option>
+                </select>
               </div>
-            </CardContent>
-          </Card>
-        </form>
-      </div>
+
+              <div className="space-y-1.5">
+                <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Total Amount (Calculated)
+                </label>
+                <input
+                  type="text"
+                  readOnly
+                  value={`₹${calculatedTotal.toLocaleString('en-IN')}`}
+                  className="h-9 w-full rounded-lg border-2 border-gray-200 bg-muted/40 px-3 text-sm font-black font-mono text-emerald-600 dark:text-emerald-400 shadow-sm"
+                />
+              </div>
+            </div>
+
+            {/* Dynamic Tax Breakup Notice */}
+            {parsedTaxable > 0 && (
+              <div className="bg-primary/10 border border-primary/20 p-3.5 rounded-xl text-xs text-foreground font-medium flex flex-col sm:flex-row justify-between items-center gap-2">
+                <span>
+                  Tax Breakup (18%): <strong className="text-foreground">₹{calculatedTax.toLocaleString('en-IN')}</strong>{' '}
+                  {taxOption === 'IGST' ? '(Integrated Tax)' : '(CGST 9% + SGST 9%)'}
+                </span>
+                <span className="font-bold text-primary text-sm">
+                  Total Payable: ₹{calculatedTotal.toLocaleString('en-IN')}
+                </span>
+              </div>
+            )}
+
+            {/* Row 3: PO Number & Bank Account Last 4 */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="space-y-1.5">
+                <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  <FileText className="h-3.5 w-3.5 text-primary" />
+                  PO / Purchase Order No. (Optional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. PO-2026-904"
+                  value={poNumber}
+                  onChange={(e) => setPoNumber(e.target.value)}
+                  className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 dark:border-gray-600 dark:bg-gray-900/90 font-mono"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  <Landmark className="h-3.5 w-3.5 text-primary" />
+                  Bank Account (Last 4 Digits)
+                </label>
+                <input
+                  type="text"
+                  maxLength={4}
+                  placeholder="e.g. 8492"
+                  value={bankLast4}
+                  onChange={(e) => setBankLast4(e.target.value)}
+                  className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 dark:border-gray-600 dark:bg-gray-900/90 font-mono"
+                />
+              </div>
+            </div>
+
+            {/* Description */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Description / Line Items Summary
+              </label>
+              <textarea
+                rows={3}
+                placeholder="Brief details of goods or services invoiced..."
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                className="w-full rounded-lg border-2 border-gray-300 bg-white/90 p-3 text-sm shadow-sm transition-all hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 dark:border-gray-600 dark:bg-gray-900/90 text-foreground"
+              />
+            </div>
+
+            {/* Document Scan Upload Box */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Attach Invoice Copy / Document Scan
+              </label>
+
+              {invoiceImage ? (
+                <div className="border-2 border-primary/40 bg-primary/5 p-4 rounded-xl flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <ImageIcon className="h-6 w-6 text-primary" />
+                    <div>
+                      <p className="text-xs font-bold text-foreground">{imageFileName || 'Invoice Scan Image'}</p>
+                      <p className="text-[10px] text-emerald-600 font-semibold flex items-center gap-1">
+                        <CheckCircle2 size={12} /> Scan attached and ready for submission
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => {
+                      setInvoiceImage(null);
+                      setImageFileName('');
+                    }}
+                    className="h-8 w-8 text-rose-600"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-6 text-center cursor-pointer hover:border-primary transition-colors bg-muted/10 space-y-2"
+                >
+                  <Upload className="h-8 w-8 text-muted-foreground mx-auto" />
+                  <p className="text-xs font-semibold text-foreground">Click to upload or drag &amp; drop invoice scan</p>
+                  <p className="text-[10px] text-muted-foreground">PNG, JPG, WEBP formats supported</p>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleFileRead(file);
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Form Footer Buttons */}
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-border/50">
+              <Link href="/invoice">
+                <Button type="button" variant="outline" size="sm" className="shadow-sm">
+                  Cancel
+                </Button>
+              </Link>
+              <Button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full sm:w-auto shadow-lg shadow-primary/20 transition-all hover:shadow-primary/40 hover:-translate-y-0.5 h-10 px-6 font-bold text-sm"
+              >
+                <Save className="h-4 w-4 mr-2" />
+                {isSubmitting ? 'Submitting...' : 'Submit New Invoice'}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </form>
     </div>
   );
 }
