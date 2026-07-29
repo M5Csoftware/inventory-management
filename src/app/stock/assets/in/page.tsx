@@ -37,7 +37,9 @@ export interface AssetModelGroup {
   id: string;
   model: string;
   amount: string;
-  warranty: string;
+  warrantyYears: string;
+  warrantyMonths: string;
+  warrantyDays: string;
   quantity: number;
   serialNumbers: string[];
   showBulkPaste?: boolean;
@@ -52,7 +54,7 @@ export default function StockInAssetsPage() {
   // General Intake Info
   const [productId, setProductId] = useState("");
   const [targetBranch, setTargetBranch] = useState(() =>
-    activeBranch === "All" ? "Ahmedabad" : activeBranch
+    activeBranch === "All" ? "Ahmedabad" : activeBranch,
   );
   const [supplier, setSupplier] = useState("");
   const [customSupplier, setCustomSupplier] = useState("");
@@ -79,7 +81,9 @@ export default function StockInAssetsPage() {
       id: "group-1",
       model: "",
       amount: "",
-      warranty: "",
+      warrantyYears: "",
+      warrantyMonths: "",
+      warrantyDays: "",
       quantity: 1,
       serialNumbers: [""],
       showBulkPaste: false,
@@ -90,7 +94,7 @@ export default function StockInAssetsPage() {
   // Filter products that belong to an asset category
   const assetProducts = products.filter((prod) => {
     const category = categories.find(
-      (c) => c.name.toLowerCase() === prod.category.toLowerCase()
+      (c) => c.name.toLowerCase() === prod.category.toLowerCase(),
     );
     return category?.isAsset === true;
   });
@@ -98,7 +102,7 @@ export default function StockInAssetsPage() {
   const filteredAssetProducts = assetProducts.filter(
     (prod) =>
       prod.name.toLowerCase().includes(productSearchTerm.toLowerCase()) ||
-      prod.category.toLowerCase().includes(productSearchTerm.toLowerCase())
+      prod.category.toLowerCase().includes(productSearchTerm.toLowerCase()),
   );
 
   const selectedProduct = assetProducts.find((p) => p.id === productId);
@@ -123,8 +127,8 @@ export default function StockInAssetsPage() {
       if (!modelGroups[0].amount) {
         setModelGroups((prev) =>
           prev.map((g, idx) =>
-            idx === 0 ? { ...g, amount: selectedProduct.price.toString() } : g
-          )
+            idx === 0 ? { ...g, amount: selectedProduct.price.toString() } : g,
+          ),
         );
       }
     }
@@ -153,14 +157,18 @@ export default function StockInAssetsPage() {
   // Model Group Handlers
   const handleAddModelGroup = () => {
     const newId = `group-${Date.now()}`;
-    const defaultAmount = selectedProduct?.price ? selectedProduct.price.toString() : "";
+    const defaultAmount = selectedProduct?.price
+      ? selectedProduct.price.toString()
+      : "";
     setModelGroups((prev) => [
       ...prev,
       {
         id: newId,
         model: "",
         amount: defaultAmount,
-        warranty: "",
+        warrantyYears: "",
+        warrantyMonths: "",
+        warrantyDays: "",
         quantity: 1,
         serialNumbers: [""],
         showBulkPaste: false,
@@ -176,7 +184,7 @@ export default function StockInAssetsPage() {
 
   const updateModelGroup = (id: string, fields: Partial<AssetModelGroup>) => {
     setModelGroups((prev) =>
-      prev.map((g) => (g.id === id ? { ...g, ...fields } : g))
+      prev.map((g) => (g.id === id ? { ...g, ...fields } : g)),
     );
   };
 
@@ -189,7 +197,7 @@ export default function StockInAssetsPage() {
         // Resize serial numbers array preserving existing values
         const currentSerials = g.serialNumbers || [];
         const newSerials = Array.from({ length: qty }).map(
-          (_, idx) => currentSerials[idx] || ""
+          (_, idx) => currentSerials[idx] || "",
         );
 
         return {
@@ -197,14 +205,14 @@ export default function StockInAssetsPage() {
           quantity: qty,
           serialNumbers: newSerials,
         };
-      })
+      }),
     );
   };
 
   const handleSerialNumberChange = (
     groupId: string,
     serialIdx: number,
-    val: string
+    val: string,
   ) => {
     setModelGroups((prev) =>
       prev.map((g) => {
@@ -212,17 +220,15 @@ export default function StockInAssetsPage() {
         const updatedSerials = [...g.serialNumbers];
         updatedSerials[serialIdx] = val;
         return { ...g, serialNumbers: updatedSerials };
-      })
+      }),
     );
   };
-
-
 
   // Totals calculations
   const totalUnits = modelGroups.reduce((acc, g) => acc + (g.quantity || 0), 0);
   const totalValuation = modelGroups.reduce(
     (acc, g) => acc + (g.quantity || 0) * (parseFloat(g.amount) || 0),
-    0
+    0,
   );
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -235,19 +241,45 @@ export default function StockInAssetsPage() {
     const finalSupplier =
       supplier === "CUSTOM_SUPPLIER" ? customSupplier : supplier;
 
+    // Use targetBranch for the transaction
+    const branchToUse = targetBranch || activeBranch || "Delhi";
+
     try {
       let overallSuccess = true;
+      const failedSerials: string[] = [];
 
       for (const group of modelGroups) {
         const serialsList = group.serialNumbers
           .map((s) => s.trim())
           .filter(Boolean);
-        
+
+        // Build warranty string from individual fields
+        const warrantyParts = [];
+        if (group.warrantyYears && parseInt(group.warrantyYears) > 0) {
+          warrantyParts.push(
+            `${group.warrantyYears} Year${parseInt(group.warrantyYears) > 1 ? "s" : ""}`,
+          );
+        }
+        if (group.warrantyMonths && parseInt(group.warrantyMonths) > 0) {
+          warrantyParts.push(
+            `${group.warrantyMonths} Month${parseInt(group.warrantyMonths) > 1 ? "s" : ""}`,
+          );
+        }
+        if (group.warrantyDays && parseInt(group.warrantyDays) > 0) {
+          warrantyParts.push(
+            `${group.warrantyDays} Day${parseInt(group.warrantyDays) > 1 ? "s" : ""}`,
+          );
+        }
+        const warrantyString =
+          warrantyParts.length > 0 ? warrantyParts.join(" ") : "";
+
         const summaryParts = [
           `Model: ${group.model || "Standard"}`,
-          group.warranty ? `Warranty: ${group.warranty}` : "",
+          warrantyString ? `Warranty: ${warrantyString}` : "",
           group.amount ? `Price: ₹${group.amount}` : "",
-          serialsList.length > 0 ? `S/Ns (${serialsList.length}): ${serialsList.join(", ")}` : "",
+          serialsList.length > 0
+            ? `S/Ns (${serialsList.length}): ${serialsList.join(", ")}`
+            : "",
           invoiceNumber ? `Invoice: ${invoiceNumber}` : "",
           finalSupplier ? `Supplier: ${finalSupplier}` : "",
           notes ? `Notes: ${notes}` : "",
@@ -255,6 +287,7 @@ export default function StockInAssetsPage() {
 
         const fullNotes = `[Asset Intake] ${summaryParts.join(" | ")}`;
 
+        // Record the transaction with the branch
         const success = await recordTransaction(
           productId,
           "Stock In",
@@ -267,18 +300,74 @@ export default function StockInAssetsPage() {
             invoiceNumber,
             model: group.model,
             serialNumber: serialsList.join(", "),
-            branch: targetBranch,
-          }
+            branch: branchToUse,
+          },
         );
 
         if (!success) {
           overallSuccess = false;
+          continue;
+        }
+
+        // Save each serial number to AssetSerial collection
+        if (serialsList.length > 0) {
+          const API_BASE =
+            process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+          const token = localStorage.getItem("token");
+          const dbName = localStorage.getItem("dbName");
+
+          for (const serial of serialsList) {
+            try {
+              const response = await fetch(`${API_BASE}/asset-serials`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                  ...(dbName ? { "x-database": dbName } : {}),
+                },
+                body: JSON.stringify({
+                  productId: productId,
+                  productName: selectedProduct?.name || "Unknown",
+                  serialNumber: serial,
+                  model: group.model || "",
+                  warranty: warrantyString,
+                  purchaseDate: new Date().toISOString().slice(0, 10),
+                  invoiceNumber: invoiceNumber || "",
+                  supplier: finalSupplier || "",
+                  branch: branchToUse,
+                  amount: parseFloat(group.amount) || 0,
+                  status: "In Stock",
+                  notes: notes || "",
+                }),
+              });
+
+              const result = await response.json();
+
+              if (!response.ok) {
+                console.error(`Failed to save serial ${serial}:`, result);
+                failedSerials.push(serial);
+              }
+            } catch (err) {
+              console.error(`Failed to save serial ${serial}:`, err);
+              failedSerials.push(serial);
+            }
+          }
         }
       }
 
       if (overallSuccess) {
-        toast.success(`Successfully registered ${totalUnits} asset units into inventory!`);
+        if (failedSerials.length > 0) {
+          toast.warning(
+            `Successfully registered ${totalUnits} asset units, but failed to save serial numbers: ${failedSerials.join(", ")}`,
+          );
+        } else {
+          toast.success(
+            `Successfully registered ${totalUnits} asset units into inventory!`,
+          );
+        }
         router.push("/stock/assets");
+      } else {
+        toast.error("Failed to complete asset intake. Please try again.");
       }
     } catch (err) {
       console.error("Asset intake error:", err);
@@ -301,7 +390,8 @@ export default function StockInAssetsPage() {
             </h1>
             <p className="text-xs sm:text-sm text-muted-foreground flex items-center gap-1.5 mt-0.5">
               <ArrowUpRight className="h-4 w-4 text-primary" />
-              Register incoming asset batches with model pricing, warranties, and individual serial number tracking
+              Register incoming asset batches with model pricing, warranties,
+              and individual serial number tracking
             </p>
           </div>
         </div>
@@ -336,7 +426,8 @@ export default function StockInAssetsPage() {
                       General Shipment & Vendor Setup
                     </CardTitle>
                     <CardDescription className="text-xs mt-0.5">
-                      Select item type, supplier, invoice reference, and warehouse storage location
+                      Select item type, supplier, invoice reference, and
+                      warehouse storage location
                     </CardDescription>
                   </div>
                 </div>
@@ -352,7 +443,8 @@ export default function StockInAssetsPage() {
                 <div className="space-y-1.5 md:col-span-2 xl:col-span-2 relative z-30">
                   <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                     <Package className="h-3.5 w-3.5 text-primary" />
-                    Asset Item Name / Product <span className="text-destructive">*</span>
+                    Asset Item Name / Product{" "}
+                    <span className="text-destructive">*</span>
                   </label>
 
                   <div className="relative" ref={productDropdownRef}>
@@ -377,7 +469,9 @@ export default function StockInAssetsPage() {
                             type="text"
                             autoFocus
                             value={productSearchTerm}
-                            onChange={(e) => setProductSearchTerm(e.target.value)}
+                            onChange={(e) =>
+                              setProductSearchTerm(e.target.value)
+                            }
                             placeholder="Search asset items..."
                             className="h-9 w-full rounded-lg border border-input bg-muted/40 pl-9 pr-3 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
                           />
@@ -401,8 +495,12 @@ export default function StockInAssetsPage() {
                                 className="w-full text-left px-3 py-2.5 text-xs hover:bg-muted/60 transition-colors flex items-center justify-between rounded-lg"
                               >
                                 <div>
-                                  <p className="font-semibold text-foreground">{prod.name}</p>
-                                  <p className="text-[10px] text-muted-foreground">{prod.category}</p>
+                                  <p className="font-semibold text-foreground">
+                                    {prod.name}
+                                  </p>
+                                  <p className="text-[10px] text-muted-foreground">
+                                    {prod.category}
+                                  </p>
                                 </div>
                                 {prod.id === productId && (
                                   <Check className="h-4 w-4 text-primary shrink-0" />
@@ -432,7 +530,9 @@ export default function StockInAssetsPage() {
                         {s.name}
                       </option>
                     ))}
-                    <option value="CUSTOM_SUPPLIER">+ Custom Supplier...</option>
+                    <option value="CUSTOM_SUPPLIER">
+                      + Custom Supplier...
+                    </option>
                   </select>
 
                   {supplier === "CUSTOM_SUPPLIER" && (
@@ -523,7 +623,8 @@ export default function StockInAssetsPage() {
                   2. Model Groups & Individual Serial Numbers
                 </h2>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Configure model names, unit prices, warranties, quantities, and serial numbers per model group
+                  Configure model names, unit prices, warranties, quantities,
+                  and serial numbers per model group
                 </p>
               </div>
               <Button
@@ -551,10 +652,16 @@ export default function StockInAssetsPage() {
                       </span>
                       <div>
                         <h3 className="text-sm font-bold">
-                          {group.model ? `Model: ${group.model}` : `Model Group #${groupIdx + 1}`}
+                          {group.model
+                            ? `Model: ${group.model}`
+                            : `Model Group #${groupIdx + 1}`}
                         </h3>
                         <p className="text-[11px] text-muted-foreground">
-                          {group.quantity} Unit{group.quantity > 1 ? "s" : ""} &bull; {group.amount ? `₹${(parseFloat(group.amount) * group.quantity).toLocaleString("en-IN")}` : "Price not set"}
+                          {group.quantity} Unit{group.quantity > 1 ? "s" : ""}{" "}
+                          &bull;{" "}
+                          {group.amount
+                            ? `₹${(parseFloat(group.amount) * group.quantity).toLocaleString("en-IN")}`
+                            : "Price not set"}
                         </p>
                       </div>
                     </div>
@@ -579,7 +686,8 @@ export default function StockInAssetsPage() {
                     {/* Model Name */}
                     <div className="space-y-1.5">
                       <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                        Model Name / Code <span className="text-destructive">*</span>
+                        Model Name / Code{" "}
+                        <span className="text-destructive">*</span>
                       </label>
                       <Input
                         placeholder="e.g. ThinkPad T14 Gen 3"
@@ -592,10 +700,11 @@ export default function StockInAssetsPage() {
                       />
                     </div>
 
-                    {/* Unit Price (Entered 1 time for model) */}
+                    {/* Unit Price */}
                     <div className="space-y-1.5">
                       <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                        Unit Price (₹) <span className="text-destructive">*</span>
+                        Unit Price (₹){" "}
+                        <span className="text-destructive">*</span>
                       </label>
                       <div className="relative">
                         <span className="absolute left-3 top-3 text-xs text-muted-foreground font-bold">
@@ -607,7 +716,9 @@ export default function StockInAssetsPage() {
                           placeholder="75000"
                           value={group.amount}
                           onChange={(e) =>
-                            updateModelGroup(group.id, { amount: e.target.value })
+                            updateModelGroup(group.id, {
+                              amount: e.target.value,
+                            })
                           }
                           className="h-10 pl-7 text-xs bg-background rounded-xl border-2 border-gray-300 dark:border-gray-600 font-mono font-bold"
                           required
@@ -615,19 +726,63 @@ export default function StockInAssetsPage() {
                       </div>
                     </div>
 
-                    {/* Warranty Expires At (Optional) */}
+                    {/* Warranty Period - Three boxes for Years, Months, Days */}
                     <div className="space-y-1.5">
                       <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                        Warranty Expires At <span className="text-[9px] text-muted-foreground font-normal">(Optional)</span>
+                        Warranty Period{" "}
+                        <span className="text-[9px] text-muted-foreground font-normal">
+                          (Optional)
+                        </span>
                       </label>
-                      <Input
-                        type="date"
-                        value={group.warranty}
-                        onChange={(e) =>
-                          updateModelGroup(group.id, { warranty: e.target.value })
-                        }
-                        className="h-10 text-xs bg-background rounded-xl border-2 border-gray-300 dark:border-gray-600"
-                      />
+                      <div className="flex gap-2">
+                        <div className="flex-1">
+                          <Input
+                            type="number"
+                            min="0"
+                            placeholder="Yrs"
+                            value={group.warrantyYears}
+                            onChange={(e) =>
+                              updateModelGroup(group.id, {
+                                warrantyYears: e.target.value,
+                              })
+                            }
+                            className="h-9 text-xs bg-background rounded-xl border-2 border-gray-300 dark:border-gray-600 text-center"
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <Input
+                            type="number"
+                            min="0"
+                            max="11"
+                            placeholder="Mon"
+                            value={group.warrantyMonths}
+                            onChange={(e) =>
+                              updateModelGroup(group.id, {
+                                warrantyMonths: e.target.value,
+                              })
+                            }
+                            className="h-9 text-xs bg-background rounded-xl border-2 border-gray-300 dark:border-gray-600 text-center"
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <Input
+                            type="number"
+                            min="0"
+                            max="30"
+                            placeholder="Days"
+                            value={group.warrantyDays}
+                            onChange={(e) =>
+                              updateModelGroup(group.id, {
+                                warrantyDays: e.target.value,
+                              })
+                            }
+                            className="h-9 text-xs bg-background rounded-xl border-2 border-gray-300 dark:border-gray-600 text-center"
+                          />
+                        </div>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground">
+                        Enter duration in Years, Months, and/or Days
+                      </p>
                     </div>
 
                     {/* Quantity */}
@@ -641,7 +796,10 @@ export default function StockInAssetsPage() {
                         max="100"
                         value={group.quantity}
                         onChange={(e) =>
-                          handleQuantityChange(group.id, parseInt(e.target.value))
+                          handleQuantityChange(
+                            group.id,
+                            parseInt(e.target.value),
+                          )
                         }
                         className="h-10 text-xs bg-background rounded-xl border-2 border-gray-300 dark:border-gray-600 font-extrabold text-primary"
                         required
@@ -667,13 +825,13 @@ export default function StockInAssetsPage() {
                               #{snIdx + 1}
                             </span>
                             <Input
-                              placeholder={`Serial Number #${snIdx + 1}`}
+                              placeholder={`S/N #${snIdx + 1}`}
                               value={sn}
                               onChange={(e) =>
                                 handleSerialNumberChange(
                                   group.id,
                                   snIdx,
-                                  e.target.value
+                                  e.target.value,
                                 )
                               }
                               className="h-9 pl-11 text-xs font-mono bg-background rounded-xl border border-input focus:border-primary"
@@ -700,7 +858,9 @@ export default function StockInAssetsPage() {
                   Total Acquisition Summary
                 </h4>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  {modelGroups.length} Model Group{modelGroups.length > 1 ? "s" : ""} &bull; {totalUnits} Total Laptop Unit{totalUnits > 1 ? "s" : ""}
+                  {modelGroups.length} Model Group
+                  {modelGroups.length > 1 ? "s" : ""} &bull; {totalUnits} Total
+                  Asset Unit{totalUnits > 1 ? "s" : ""}
                 </p>
               </div>
             </div>
@@ -721,7 +881,9 @@ export default function StockInAssetsPage() {
                 className="gap-2 bg-primary text-primary-foreground shadow-xl shadow-primary/25 hover:bg-primary/90 h-11 px-6 text-sm font-semibold rounded-xl"
               >
                 <Save className="h-4 w-4" />
-                {isSubmitting ? "Processing Asset Stock In..." : "Complete Asset Stock In"}
+                {isSubmitting
+                  ? "Processing Asset Stock In..."
+                  : "Complete Asset Stock In"}
               </Button>
             </div>
           </div>
