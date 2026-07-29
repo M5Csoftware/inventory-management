@@ -24,6 +24,7 @@ import {
   Hammer,
   FileSpreadsheet,
   ExternalLink,
+  CheckCircle2,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -127,6 +128,16 @@ export const navItems: NavItem[] = [
         label: "Asset Details",
         icon: Laptop,
       },
+    ],
+  },
+  {
+    label: "Invoices",
+    icon: FileSpreadsheet,
+    subItems: [
+      { href: "/invoice", label: "Invoice Dashboard", icon: List },
+      { href: "/invoice/new", label: "New Inward Invoice", icon: PlusCircle },
+      { href: "/invoice/approvals", label: "Approvals Workflow", icon: CheckCircle2 },
+      { href: "/invoice/audit", label: "Invoice Audit History", icon: FileText },
     ],
   },
 ];
@@ -333,20 +344,6 @@ export function Sidebar() {
             <Users className="h-5 w-5 shrink-0" />
             <span className="truncate">Manage Roles</span>
           </Link>
-        )}
-        {hasPermission("/invoice-registration") && (
-          <a
-            href={process.env.NEXT_PUBLIC_INVOICE_REGISTRATION_URL || "https://invoice-registration.vercel.app/"}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={cn(
-              "flex items-center gap-3 rounded-lg px-3 py-2 text-sm lg:text-base font-medium transition-all text-muted-foreground hover:bg-accent hover:text-accent-foreground",
-            )}
-          >
-            <FileSpreadsheet className="h-5 w-5 shrink-0 text-blue-500" />
-            <span className="truncate">Invoice</span>
-            <ExternalLink className="h-3.5 w-3.5 ml-auto text-muted-foreground/60" />
-          </a>
         )}
         <button
           onClick={handleLogout}
