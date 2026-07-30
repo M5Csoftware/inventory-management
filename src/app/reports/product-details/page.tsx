@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   Package,
   Search,
@@ -60,6 +61,8 @@ interface Transaction {
 
 export default function ProductDetailsReportPage() {
   const { activeBranch } = useInventory();
+  const searchParams = useSearchParams();
+  const productIdParam = searchParams.get("productId");
   const [products, setProducts] = useState<Product[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
@@ -133,6 +136,24 @@ export default function ProductDetailsReportPage() {
   useEffect(() => {
     fetchData();
   }, []);
+
+  useEffect(() => {
+    if (!productIdParam) {
+      setSelectedProduct(null);
+      return;
+    }
+
+    const matchedProduct = products.find(
+      (product) =>
+        product.id?.toLowerCase() === productIdParam.toLowerCase(),
+    );
+
+    if (matchedProduct) {
+      setSelectedProduct(matchedProduct);
+    } else {
+      setSelectedProduct(null);
+    }
+  }, [productIdParam, products]);
 
   // Compute total quantity for a product under current branch filter
   const getProductStock = (prod: Product, branch: string) => {

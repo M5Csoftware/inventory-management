@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { FolderPlus, Package, Edit2, Trash2, ChevronDown, ChevronUp } from "lucide-react";
 import {
   Card,
@@ -15,6 +16,7 @@ import { useInventory, Category, Product } from "@/context/inventory-context";
 import { ConfirmDeleteModal } from "@/components/confirm-delete-modal";
 
 export default function CategoriesPage() {
+  const router = useRouter();
   const { categories, products, deleteCategory, activeBranch } = useInventory();
   const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
@@ -178,10 +180,13 @@ export default function CategoriesPage() {
                             key={product.id}
                             className="rounded-md border border-border/40 bg-background/70 px-3 py-2 text-sm"
                           >
-                            <Link
-                              href={`/products/edit/${product.id}`}
+                            <button
+                              type="button"
                               className="flex w-full items-center justify-between gap-3 text-left"
-                              onClick={(event) => event.stopPropagation()}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                router.push(`/reports/product-details?productId=${encodeURIComponent(product.id)}`);
+                              }}
                             >
                               <span className="truncate font-medium">
                                 {product.name}
@@ -189,7 +194,7 @@ export default function CategoriesPage() {
                               <span className="text-xs text-muted-foreground">
                                 {getStock(product)} in stock
                               </span>
-                            </Link>
+                            </button>
                           </li>
                         ))}
                       </ul>
