@@ -176,14 +176,20 @@ export default function CategoriesPage() {
                         {categoryProducts.map((product: Product) => (
                           <li
                             key={product.id}
-                            className="flex items-center justify-between rounded-md border border-border/40 bg-background/70 px-3 py-2 text-sm"
+                            className="rounded-md border border-border/40 bg-background/70 px-3 py-2 text-sm"
                           >
-                            <span className="truncate font-medium">
-                              {product.name}
-                            </span>
-                            <span className="text-xs text-muted-foreground">
-                              {getStock(product)} in stock
-                            </span>
+                            <Link
+                              href={`/products/edit/${product.id}`}
+                              className="flex w-full items-center justify-between gap-3 text-left"
+                              onClick={(event) => event.stopPropagation()}
+                            >
+                              <span className="truncate font-medium">
+                                {product.name}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                {getStock(product)} in stock
+                              </span>
+                            </Link>
                           </li>
                         ))}
                       </ul>
