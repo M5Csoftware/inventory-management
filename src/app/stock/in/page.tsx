@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowLeft,
   ArrowUpRight,
@@ -33,9 +33,17 @@ import { Button } from "@/components/ui/button";
 import { useInventory, Product, Supplier, BRANCHES } from "@/context/inventory-context";
 
 export default function StockInPage() {
-  const { products, categories, suppliers, recordTransaction, activeBranch } =
-    useInventory();
+  const {
+    products,
+    categories,
+    suppliers,
+    recordTransaction,
+    updateProduct,
+    activeBranch,
+  } = useInventory();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isEditMode = searchParams.get("mode") === "edit";
 
   // Form states matching Asset Stock In
   const [productId, setProductId] = useState("");
@@ -90,15 +98,31 @@ export default function StockInPage() {
       ? Object.values(prod.stock || {}).reduce((a, b) => a + b, 0)
       : prod.stock?.[activeBranch] || 0;
 
+  const requestedProductId = searchParams.get("productId");
+
   // Default product selection & price auto-fill
   useEffect(() => {
+    if (requestedProductId) {
+      const targetProduct = nonAssetProducts.find((p) => p.id === requestedProductId);
+      if (targetProduct) {
+        setProductId(targetProduct.id);
+        if (targetProduct.price) {
+          setAmount(targetProduct.price.toString());
+        }
+        if (isEditMode && !quantity) {
+          setQuantity(String(getStockLabel(targetProduct)));
+        }
+      }
+      return;
+    }
+
     if (nonAssetProducts.length > 0 && !productId) {
       setProductId(nonAssetProducts[0].id);
       if (nonAssetProducts[0].price) {
         setAmount(nonAssetProducts[0].price.toString());
       }
     }
-  }, [nonAssetProducts, productId]);
+  }, [requestedProductId, nonAssetProducts, productId, isEditMode, quantity]);
 
   // Set default supplier when suppliers load
   useEffect(() => {
@@ -138,6 +162,20 @@ export default function StockInPage() {
 
     const finalSupplier =
       supplier === "CUSTOM_SUPPLIER" ? customSupplier : supplier;
+
+    if (isEditMode && selectedProduct) {
+      const targetBranch = activeBranch === "All" ? "Ahmedabad" : activeBranch;
+      const updatedStockMap =
+        typeof selectedProduct.stock === "object" && selectedProduct.stock !== null
+          ? { ...selectedProduct.stock, [targetBranch]: parseInt(quantity || "0") }
+          : { Ahmedabad: 0, Ludhiana: 0, Delhi: parseInt(quantity || "0"), Mumbai: 0 };
+
+      await updateProduct(selectedProduct.id, {
+        stock: updatedStockMap,
+      });
+      router.push("/stock");
+      return;
+    }
 
     // Create notes with all the details including purchase date
     const summaryParts = [
@@ -526,7 +564,7 @@ export default function StockInPage() {
                     className="group w-full gap-2 bg-gradient-to-r from-emerald-600 to-emerald-500 shadow-lg shadow-emerald-500/30 transition-all hover:scale-[1.02] hover:shadow-emerald-500/40 sm:w-auto h-9 text-sm disabled:opacity-50 disabled:pointer-events-none"
                   >
                     <Save className="h-3.5 w-3.5 transition-transform group-hover:scale-110" />
-                    {isSubmitting ? "Recording..." : "Record Stock In"}
+                    {isSubmitting ? (isEditMode ? "Saving..." : "Recording...") : isEditMode ? "Update Stock" : "Record Stock In"}
                     <Plus className="h-3.5 w-3.5 transition-transform group-hover:rotate-90" />
                   </Button>
                 </div>

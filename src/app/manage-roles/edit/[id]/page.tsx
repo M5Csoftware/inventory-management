@@ -149,12 +149,13 @@ export default function EditUserPage() {
     setSubmitting(true);
     try {
       const token = localStorage.getItem("token");
+      const shouldGrantFullAccess = role === "admin" || branch === "All";
       const updatePayload: Record<string, any> = {
         name,
         email,
-        role: role === "admin" ? "admin" : "stock_manager",
+        role: shouldGrantFullAccess ? "admin" : "stock_manager",
         branch,
-        permissions: role === "admin" ? ["*"] : selectedTabs,
+        permissions: shouldGrantFullAccess ? ["*"] : selectedTabs,
       };
       if (password.trim()) {
         updatePayload.password = password;
