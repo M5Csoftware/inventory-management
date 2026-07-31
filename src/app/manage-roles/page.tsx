@@ -157,7 +157,7 @@ export default function ManageRolesPage() {
                 users.map((u) => {
                   const isAdmin = u.role === 'admin';
                   const permCount = u.permissions?.length || 0;
-                  const isFullAccess = isAdmin || u.permissions?.includes('*');
+                  const isFullAccess = isAdmin || u.permissions?.includes('*') || u.branch === 'All';
 
                   return (
                     <tr key={u.id} className="hover:bg-muted/30 transition-colors group">

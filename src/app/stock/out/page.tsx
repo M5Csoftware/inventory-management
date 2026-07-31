@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowLeft,
   ArrowDownRight,
@@ -27,9 +27,11 @@ import { Button } from "@/components/ui/button";
 import { useInventory, Product } from "@/context/inventory-context";
 
 export default function StockOutPage() {
-  const { products, categories, recordTransaction, activeBranch } =
+  const { products, categories, recordTransaction, updateProduct, activeBranch } =
     useInventory();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isEditMode = searchParams.get("mode") === "edit";
 
   // Form states
   const [productId, setProductId] = useState("");
@@ -65,12 +67,25 @@ export default function StockOutPage() {
       ? Object.values(prod.stock).reduce((a, b) => a + b, 0)
       : prod.stock[activeBranch] || 0;
 
+  const requestedProductId = searchParams.get("productId");
+
   // Default selection when products load
   useEffect(() => {
+    if (requestedProductId) {
+      const targetProduct = nonAssetProducts.find((p) => p.id === requestedProductId);
+      if (targetProduct) {
+        setProductId(targetProduct.id);
+        if (isEditMode && !quantity) {
+          setQuantity(String(getStockLabel(targetProduct)));
+        }
+      }
+      return;
+    }
+
     if (nonAssetProducts.length > 0 && !productId) {
       setProductId(nonAssetProducts[0].id);
     }
-  }, [nonAssetProducts, productId]);
+  }, [requestedProductId, nonAssetProducts, productId, isEditMode, quantity]);
 
   // Close the product search dropdown when clicking outside of it
   useEffect(() => {
@@ -101,6 +116,20 @@ export default function StockOutPage() {
     setIsSubmitting(true);
 
     try {
+      if (isEditMode && selectedProduct) {
+        const targetBranch = activeBranch === "All" ? "Ahmedabad" : activeBranch;
+        const updatedStockMap =
+          typeof selectedProduct.stock === "object" && selectedProduct.stock !== null
+            ? { ...selectedProduct.stock, [targetBranch]: parseInt(quantity || "0") }
+            : { Ahmedabad: 0, Ludhiana: 0, Delhi: parseInt(quantity || "0"), Mumbai: 0 };
+
+        await updateProduct(selectedProduct.id, {
+          stock: updatedStockMap,
+        });
+        router.push("/stock");
+        return;
+      }
+
       const finalNotes = handedTo ? `Handed to: ${handedTo}\n${notes}` : notes;
 
       const success = await recordTransaction(
@@ -338,7 +367,7 @@ export default function StockOutPage() {
                     className="group w-full gap-2 bg-gradient-to-r from-blue-600 to-blue-500 shadow-lg shadow-blue-500/30 transition-all hover:scale-[1.02] hover:shadow-blue-500/40 sm:w-auto h-9 text-sm disabled:opacity-50 disabled:pointer-events-none"
                   >
                     <Save className="h-3.5 w-3.5 transition-transform group-hover:scale-110" />
-                    {isSubmitting ? "Recording..." : "Record Stock Out"}
+                    {isSubmitting ? (isEditMode ? "Saving..." : "Recording...") : isEditMode ? "Update Stock" : "Record Stock Out"}
                     <Plus className="h-3.5 w-3.5 transition-transform group-hover:rotate-90" />
                   </Button>
                 </div>

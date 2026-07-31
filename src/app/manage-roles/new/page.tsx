@@ -215,6 +215,7 @@ export default function CreateUserPage() {
     setLoading(true);
     try {
       const token = localStorage.getItem("token");
+      const shouldGrantFullAccess = role === "admin" || branch === "All";
       const res = await fetch(`${API_BASE}/users`, {
         method: "POST",
         headers: {
@@ -225,9 +226,9 @@ export default function CreateUserPage() {
           name,
           email,
           password,
-          role: role === "admin" ? "admin" : "stock_manager",
+          role: shouldGrantFullAccess ? "admin" : "stock_manager",
           branch,
-          permissions: role === "admin" ? ["*"] : selectedTabs,
+          permissions: shouldGrantFullAccess ? ["*"] : selectedTabs,
         }),
       });
 

@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { FolderPlus, Package, Edit2, Trash2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { FolderPlus, Package, Edit2, Trash2, ChevronDown, ChevronUp } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -15,8 +16,10 @@ import { useInventory, Category, Product } from "@/context/inventory-context";
 import { ConfirmDeleteModal } from "@/components/confirm-delete-modal";
 
 export default function CategoriesPage() {
+  const router = useRouter();
   const { categories, products, deleteCategory, activeBranch } = useInventory();
   const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
+  const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
 
   const getStock = (p: any) => {
     if (!p.stock) return 0;
@@ -59,11 +62,17 @@ export default function CategoriesPage() {
             (acc: number, curr: Product) => acc + curr.price * getStock(curr),
             0,
           );
+          const isExpanded = expandedCategory === category.name;
 
           return (
             <Card
               key={category.name}
-              className="group relative overflow-hidden bg-background/60 backdrop-blur-sm border-border/50 shadow-sm transition-all hover:shadow-md hover:border-primary/30"
+              className="group relative cursor-pointer overflow-hidden bg-background/60 backdrop-blur-sm border-border/50 shadow-sm transition-all hover:shadow-md hover:border-primary/30"
+              onClick={() =>
+                setExpandedCategory((current) =>
+                  current === category.name ? null : category.name,
+                )
+              }
             >
               <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 transition-opacity group-hover:opacity-100"></div>
               <CardHeader className="relative flex flex-row items-start justify-between gap-3 space-y-0 pb-4">
@@ -109,27 +118,93 @@ export default function CategoriesPage() {
                     </span>
                   </div>
                 </div>
-                <div className="flex justify-end gap-1 mt-4 border-t pt-3 border-border/50">
-                  <Link
-                    href={`/categories/edit/${encodeURIComponent(category.name)}`}
+                <div className="mt-4 flex items-center justify-between border-t pt-3 border-border/50">
+                  <button
+                    type="button"
+                    className="flex items-center gap-1 text-sm font-medium text-primary"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setExpandedCategory((current) =>
+                        current === category.name ? null : category.name,
+                      );
+                    }}
                   >
+                    {isExpanded ? (
+                      <ChevronUp className="h-4 w-4" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4" />
+                    )}
+                    {isExpanded ? "Hide items" : "View items"}
+                  </button>
+                  <div className="flex justify-end gap-1">
+                    <Link
+                      href={`/categories/edit/${encodeURIComponent(category.name)}`}
+                      onClick={(event) => event.stopPropagation()}
+                    >
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 text-xs text-muted-foreground hover:text-foreground"
+                      >
+                        <Edit2 className="mr-1.5 h-3.5 w-3.5" /> Edit
+                      </Button>
+                    </Link>
                     <Button
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setCategoryToDelete(category.name);
+                      }}
                       variant="ghost"
                       size="sm"
-                      className="h-8 text-xs text-muted-foreground hover:text-foreground"
+                      className="h-8 text-xs text-destructive hover:bg-destructive/10"
                     >
-                      <Edit2 className="mr-1.5 h-3.5 w-3.5" /> Edit
+                      <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Delete
                     </Button>
-                  </Link>
-                  <Button
-                    onClick={() => setCategoryToDelete(category.name)}
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 text-xs text-destructive hover:bg-destructive/10"
-                  >
-                    <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Delete
-                  </Button>
+                  </div>
                 </div>
+                {isExpanded && (
+                  <div className="mt-4 rounded-lg border border-border/60 bg-muted/20 p-3">
+                    <div className="mb-2 flex items-center justify-between">
+                      <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        Items in this category
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {categoryProducts.length} item
+                        {categoryProducts.length === 1 ? "" : "s"}
+                      </span>
+                    </div>
+                    {categoryProducts.length > 0 ? (
+                      <ul className="space-y-2">
+                        {categoryProducts.map((product: Product) => (
+                          <li
+                            key={product.id}
+                            className="rounded-md border border-border/40 bg-background/70 px-3 py-2 text-sm"
+                          >
+                            <button
+                              type="button"
+                              className="flex w-full items-center justify-between gap-3 text-left"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                router.push(`/reports/product-details?productId=${encodeURIComponent(product.id)}`);
+                              }}
+                            >
+                              <span className="truncate font-medium">
+                                {product.name}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                {getStock(product)} in stock
+                              </span>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        No products in this category yet.
+                      </p>
+                    )}
+                  </div>
+                )}
               </CardContent>
             </Card>
           );
