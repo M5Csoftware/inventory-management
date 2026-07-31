@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ArrowDownLeft,
   ArrowUpRight,
@@ -9,6 +10,8 @@ import {
   Plus,
   Minus,
   Filter,
+  Edit2,
+  Trash2,
 } from "lucide-react";
 import {
   Card,
@@ -19,15 +22,19 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { useInventory } from "@/context/inventory-context";
+import { useInventory, type Product } from "@/context/inventory-context";
+import { ConfirmDeleteModal } from "@/components/confirm-delete-modal";
 
 export default function StockPage() {
-  const { transactions, products, categories, activeBranch } = useInventory();
+  const router = useRouter();
+  const { transactions, products, categories, activeBranch, deleteProduct } =
+    useInventory();
   const [activeTab, setActiveTab] = useState<"current" | "transactions">(
     "current",
   );
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
+  const [productToDelete, setProductToDelete] = useState<Product | null>(null);
 
   // Calculate monthly stats based on live transactions
   const monthlyInflows = transactions
@@ -342,6 +349,9 @@ export default function StockPage() {
                       <th className="h-10 px-4 text-right align-middle font-medium text-muted-foreground">
                         Available Stock
                       </th>
+                      <th className="h-10 px-4 text-right align-middle font-medium text-muted-foreground">
+                        Actions
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -384,6 +394,34 @@ export default function StockPage() {
                             {p.packaging || "units"}
                           </span>
                         </td>
+                        <td className="p-4 align-middle text-right space-x-1">
+                          <Button
+                            type="button"
+                            onClick={() => {
+                              const currentStock =
+                                activeBranch === "All"
+                                  ? Object.values(p.stock).reduce((a, b) => a + b, 0)
+                                  : p.stock[activeBranch] || 0;
+                              const targetRoute =
+                                currentStock > 0 ? "/stock/out" : "/stock/in";
+                              router.push(`${targetRoute}?productId=${p.id}&mode=edit`);
+                            }}
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            onClick={() => setProductToDelete(p)}
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:bg-destructive/10"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -393,6 +431,19 @@ export default function StockPage() {
           </CardContent>
         </Card>
       )}
+
+      <ConfirmDeleteModal
+        isOpen={productToDelete !== null}
+        onClose={() => setProductToDelete(null)}
+        onConfirm={async () => {
+          if (productToDelete) {
+            await deleteProduct(productToDelete.id);
+          }
+        }}
+        title="Delete Product"
+        description="Are you sure you want to delete this inventory item? Related stock records may be affected."
+        itemName={productToDelete ? `${productToDelete.name} (${productToDelete.id})` : ""}
+      />
     </div>
   );
 }
