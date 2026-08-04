@@ -303,7 +303,7 @@ export default function EditUserPage() {
 
                 <div>
                   <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground block mb-1.5">
-                    Confirm Password
+                    Confirm Password (Optional)
                   </label>
                   <input
                     type="password"
@@ -337,6 +337,9 @@ export default function EditUserPage() {
                   <option value="Mumbai">🏭 Mumbai Branch</option>
                   <option value="All">🌐 All Branches (Global)</option>
                 </select>
+                <p className="text-[11px] text-muted-foreground mt-1.5 font-medium">
+                  Selecting &quot;All Branches (Global)&quot; enables branch switching and viewing data across all branches for any assigned role.
+                </p>
               </div>
             </CardContent>
           </Card>
