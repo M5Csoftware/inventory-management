@@ -386,6 +386,9 @@ export default function CreateUserPage() {
                   <option value="Mumbai">🏭 Mumbai Branch</option>
                   <option value="All">🌐 All Branches (Global)</option>
                 </select>
+                <p className="text-[11px] text-muted-foreground mt-1.5 font-medium">
+                  Selecting &quot;All Branches (Global)&quot; enables branch switching and viewing data across all branches for any assigned role.
+                </p>
               </div>
             </CardContent>
           </Card>
