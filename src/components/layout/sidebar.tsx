@@ -24,6 +24,7 @@ import {
   Hammer,
   FileSpreadsheet,
   ExternalLink,
+  ShieldCheck,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -126,6 +127,11 @@ export const navItems: NavItem[] = [
         href: "/reports/asset-details",
         label: "Asset Details",
         icon: Laptop,
+      },
+      {
+        href: "/reports/audit-log",
+        label: "Audit Log",
+        icon: ShieldCheck,
       },
     ],
   },
