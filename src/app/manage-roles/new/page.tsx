@@ -311,7 +311,7 @@ export default function CreateUserPage() {
                 <User className="w-4.5 h-4.5 text-primary" /> Profile Credentials
               </CardTitle>
               <CardDescription className="text-xs">
-                Basic identification, email login, and password confirmation
+                Basic identification, email login, and password credentials
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-4 space-y-4">
@@ -397,6 +397,9 @@ export default function CreateUserPage() {
                   <option value="Mumbai">🏭 Mumbai Branch</option>
                   <option value="All">🌐 All Branches (Global)</option>
                 </select>
+                <p className="text-[11px] text-muted-foreground mt-1.5 font-medium">
+                  Selecting &quot;All Branches (Global)&quot; enables branch switching and viewing data across all branches for any assigned role.
+                </p>
               </div>
             </CardContent>
           </Card>
