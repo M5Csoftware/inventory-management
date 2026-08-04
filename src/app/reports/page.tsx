@@ -2,7 +2,7 @@
 "use client";
 
 import Link from "next/link";
-import { FileText, BarChart3, ArrowRight, TrendingUp, History, Package, Laptop } from "lucide-react";
+import { FileText, BarChart3, ArrowRight, TrendingUp, History, Package, Laptop, ShieldCheck } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -12,7 +12,7 @@ export default function ReportsHubPage() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Reports &amp; Analytics</h1>
         <p className="text-muted-foreground mt-1">
-          Select a report module below to view detailed inventory movements, product master details, asset assignments, and monthly stock calculations.
+          Select a report module below to view detailed inventory movements, product master details, asset assignments, monthly stock calculations, and system audit logs.
         </p>
       </div>
 
@@ -159,6 +159,43 @@ export default function ReportsHubPage() {
             <Link href="/reports/asset-details" className="block">
               <Button className="w-full justify-between bg-purple-600 hover:bg-purple-700 text-white transition-all shadow-md">
                 <span>View Asset Details Report</span>
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+
+        {/* Card 5: Audit Log */}
+        <Card className="group relative overflow-hidden border-border/60 hover:border-amber-500/50 transition-all duration-300 hover:shadow-xl hover:shadow-amber-500/5 bg-gradient-to-b from-card to-card/50">
+          <div className="absolute top-0 right-0 p-8 text-amber-500/10 group-hover:text-amber-500/20 transition-colors pointer-events-none">
+            <ShieldCheck className="w-32 h-32 -mr-8 -mt-8" />
+          </div>
+          <CardHeader className="pb-4">
+            <div className="w-12 h-12 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+              <ShieldCheck className="w-6 h-6" />
+            </div>
+            <CardTitle className="text-xl sm:text-2xl font-bold">
+              Audit Log
+            </CardTitle>
+            <CardDescription className="text-sm leading-relaxed">
+              Universal activity trail tracking every user action, stock addition/removal, role updates, product changes, and system modifications across all branches.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="flex flex-wrap gap-2 text-xs font-medium">
+              <span className="px-2.5 py-1 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                User Activity Trail
+              </span>
+              <span className="px-2.5 py-1 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                Action Categories
+              </span>
+              <span className="px-2.5 py-1 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                CSV Export
+              </span>
+            </div>
+            <Link href="/reports/audit-log" className="block">
+              <Button className="w-full justify-between bg-amber-600 hover:bg-amber-700 text-white transition-all shadow-md">
+                <span>View Audit Log</span>
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </Button>
             </Link>

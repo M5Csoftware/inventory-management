@@ -99,6 +99,7 @@ export const SIDEBAR_TABS_STRUCTURE: SidebarFolderGroup[] = [
       { path: "/reports/monthly-stock", label: "Monthly Stock Summary" },
       { path: "/reports/product-details", label: "Product Details Report" },
       { path: "/reports/asset-details", label: "Asset Details Report" },
+      { path: "/reports/audit-log", label: "Audit Log" },
     ],
   },
   {
