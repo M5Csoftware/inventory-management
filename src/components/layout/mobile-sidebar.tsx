@@ -105,7 +105,7 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
           <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2 block">
             Current Branch
           </label>
-          {user?.role === "admin" ? (
+          {user?.role === "admin" || user?.role === "master" || user?.id === "master" || user?.branch === "All" ? (
             <div className="relative">
               <select
                 value={activeBranch}
