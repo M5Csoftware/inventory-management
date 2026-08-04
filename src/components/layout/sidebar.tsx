@@ -182,7 +182,7 @@ export function Sidebar() {
         <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1 block">
           Current Branch
         </label>
-        {user?.role === "admin" ? (
+        {user?.role === "admin" || user?.role === "master" || user?.id === "master" || user?.branch === "All" ? (
           <div className="relative">
             <select
               value={activeBranch}
