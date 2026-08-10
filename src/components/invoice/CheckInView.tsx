@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { FilePlus, AlertTriangle, Upload, X, Image as ImageIcon, Building2, Receipt, Calendar, IndianRupee, Landmark, ArrowUpRight, CheckCircle2 } from 'lucide-react';
 import { formatAmount } from './InvoiceTable';
+import { useInventory } from '@/context/inventory-context';
 
 interface CheckInViewProps {
   currentUser: TeamMember | null;
@@ -31,6 +32,7 @@ export const CheckInView: React.FC<CheckInViewProps> = ({
   config,
   onSubmit,
 }) => {
+  const { suppliers } = useInventory();
   const [vendor, setVendor] = useState('');
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [invoiceDate, setInvoiceDate] = useState(() => new Date().toISOString().slice(0, 10));
@@ -43,6 +45,11 @@ export const CheckInView: React.FC<CheckInViewProps> = ({
   const [imageFileName, setImageFileName] = useState<string>('');
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Check if entered vendor matches a DB supplier
+  const matchedSupplier = suppliers?.find(
+    (s) => s.name.trim().toLowerCase() === vendor.trim().toLowerCase()
+  );
 
   // Auto tax calculations
   const parsedTaxable = parseFloat(taxableAmount) || 0;
@@ -118,7 +125,7 @@ export const CheckInView: React.FC<CheckInViewProps> = ({
                 New Invoice Details
               </CardTitle>
               <CardDescription className="text-xs mt-1">
-                Enter vendor details, taxable amount, tax option, and attach document scan for automatic 18% GST computation
+                Select registered vendor from database or enter new party details, taxable amount, and tax options.
               </CardDescription>
             </div>
             <span className="rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-600">
@@ -138,18 +145,39 @@ export const CheckInView: React.FC<CheckInViewProps> = ({
           <form onSubmit={handleFormSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
               <div className="space-y-1.5">
-                <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  <Building2 className="h-3.5 w-3.5 text-primary" /> Vendor Name <span className="text-destructive">*</span>
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    <Building2 className="h-3.5 w-3.5 text-primary" /> Vendor Name <span className="text-destructive">*</span>
+                  </label>
+                  {matchedSupplier && (
+                    <span className="text-[10px] text-emerald-600 font-bold flex items-center gap-1">
+                      <CheckCircle2 size={12} /> DB Verified
+                    </span>
+                  )}
+                </div>
                 <input
                   type="text"
                   required
+                  list="db-vendors-list"
                   disabled={disabled}
                   value={vendor}
                   onChange={(e) => setVendor(e.target.value)}
-                  placeholder="e.g. Acme Corp"
+                  placeholder="Type or select vendor from DB..."
                   className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 dark:border-gray-600 dark:bg-gray-900/90 font-semibold"
                 />
+                <datalist id="db-vendors-list">
+                  {(suppliers || []).map((s, idx) => (
+                    <option key={idx} value={s.name}>
+                      {s.name} {s.location ? `(${s.location})` : s.taxId ? `(${s.taxId})` : ''}
+                    </option>
+                  ))}
+                </datalist>
+                {matchedSupplier && (
+                  <p className="text-[10px] text-muted-foreground font-medium truncate">
+                    {matchedSupplier.location ? `Location: ${matchedSupplier.location}` : ''}{' '}
+                    {matchedSupplier.taxId ? `• GSTIN/PAN: ${matchedSupplier.taxId}` : ''}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-1.5">

@@ -20,7 +20,10 @@ import {
 import { useAuth } from '@/context/auth-context';
 import { InvoiceDetailModal } from './InvoiceDetailModal';
 import { BankDetailsModal } from './BankDetailsModal';
+import { ApproveConfirmationModal } from './ApproveConfirmationModal';
+import { VerifyConfirmationModal } from './VerifyConfirmationModal';
 import { useInvoice } from '@/context/invoice-context';
+import { canApproveInvoice } from '@/utils/invoice-permissions';
 
 import { TeamMember, AppConfig } from '@/types/invoice';
 
@@ -75,8 +78,10 @@ export function InvoiceTable({
   const [statusFilter, setStatusFilter] = useState(defaultStatusFilter);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [bankModalInvoice, setBankModalInvoice] = useState<Invoice | null>(null);
+  const [approveConfirmModalTarget, setApproveConfirmModalTarget] = useState<Invoice | null>(null);
+  const [verifyConfirmModalTarget, setVerifyConfirmModalTarget] = useState<Invoice | null>(null);
 
-  const isAdminOrMaster = user?.id === 'master' || user?.role === 'master' || user?.role === 'admin';
+  const canApprove = canApproveInvoice(user, currentUser);
 
   // Filter invoices
   const filteredInvoices = invoices.filter((inv) => {
@@ -207,7 +212,7 @@ export function InvoiceTable({
       </div>
 
       {/* Table Body */}
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto pb-1">
         <table className="w-full text-sm text-left">
           <thead className="bg-muted/40 text-xs font-semibold text-muted-foreground border-b border-border/40">
             <tr>
@@ -265,11 +270,11 @@ export function InvoiceTable({
                     {inv.enteredBy}
                   </td>
                   <td className="py-3 px-4 text-center" onClick={(e) => e.stopPropagation()}>
-                    <div className="flex items-center justify-center gap-1">
+                    <div className="flex items-center justify-center gap-1.5">
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7 text-muted-foreground hover:text-primary"
+                        className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg"
                         onClick={() => setSelectedInvoice(inv)}
                         title="View Details"
                       >
@@ -278,44 +283,60 @@ export function InvoiceTable({
 
                       {inv.status === 'pending_verification' && (
                         <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950"
-                          onClick={() => verifyInvoice(inv.id)}
-                          title="L1 Verify"
+                          size="sm"
+                          variant="outline"
+                          className="h-8 px-2.5 text-xs font-bold text-amber-700 dark:text-amber-300 border-amber-500/40 hover:bg-amber-500/10 gap-1.5 shadow-xs"
+                          onClick={() => {
+                            if (onVerify) {
+                              onVerify(inv.id);
+                            } else {
+                              setVerifyConfirmModalTarget(inv);
+                            }
+                          }}
+                          title="Verify Invoice"
                         >
-                          <CheckCircle2 className="h-4 w-4" />
+                          <CheckCircle2 className="h-3.5 w-3.5" /> Verify
                         </Button>
                       )}
 
-                      {inv.status === 'pending_approval' && isAdminOrMaster && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-950"
-                          onClick={() => approveInvoice(inv.id)}
-                          title="L2 Approve"
-                        >
-                          <ShieldCheck className="h-4 w-4" />
-                        </Button>
+                      {inv.status === 'pending_approval' && (
+                        canApprove ? (
+                          <Button
+                            size="sm"
+                            className="h-8 px-3 text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white gap-1.5 shadow-sm hover:shadow-purple-500/25 transition-all rounded-lg"
+                            onClick={() => {
+                              if (onApprove) {
+                                onApprove(inv.id);
+                              } else {
+                                setApproveConfirmModalTarget(inv);
+                              }
+                            }}
+                            title="Approve Invoice"
+                          >
+                            <ShieldCheck className="h-4 w-4" /> Approve
+                          </Button>
+                        ) : (
+                          <Badge variant="outline" className="text-[10px] text-muted-foreground border-dashed py-1">
+                            Admin/Invoice Role Needed
+                          </Badge>
+                        )
                       )}
 
-                      {inv.status === 'approved' && isAdminOrMaster && (
+                      {inv.status === 'approved' && canApprove && (
                         <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950"
-                          onClick={() => payInvoice(inv.id)}
+                          size="sm"
+                          className="h-8 px-3 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 shadow-sm hover:shadow-emerald-500/25 transition-all rounded-lg"
+                          onClick={() => (onPay ? onPay(inv.id) : payInvoice(inv.id))}
                           title="Mark Paid"
                         >
-                          <DollarSign className="h-4 w-4" />
+                          <DollarSign className="h-3.5 w-3.5" /> Pay
                         </Button>
                       )}
 
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950"
+                        className="h-8 w-8 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950 rounded-lg"
                         onClick={() => setBankModalInvoice(inv)}
                         title="Bank Details"
                       >
@@ -334,12 +355,83 @@ export function InvoiceTable({
       {selectedInvoice && (
         <InvoiceDetailModal
           invoice={selectedInvoice}
+          currentUser={currentUser}
           onClose={() => setSelectedInvoice(null)}
-          onVerify={(id, notes) => verifyInvoice(id, notes)}
-          onApprove={(id) => approveInvoice(id)}
+          onVerify={(id) => {
+            if (onVerify) {
+              onVerify(id);
+            } else {
+              const target = invoices.find((i) => i.id === id);
+              if (target) setVerifyConfirmModalTarget(target);
+            }
+          }}
+          onApprove={(id) => {
+            if (onApprove) {
+              onApprove(id);
+            } else {
+              const target = invoices.find((i) => i.id === id);
+              if (target) setApproveConfirmModalTarget(target);
+            }
+          }}
+          onRejectClick={(id) => {
+            if (onRejectClick) {
+              onRejectClick(id);
+            } else {
+              const reason = prompt('Please enter rejection reason:');
+              if (reason) rejectInvoice(id, reason);
+            }
+          }}
           onReject={(id, reason) => rejectInvoice(id, reason)}
           onPay={(id) => payInvoice(id)}
           onOpenBankModal={(inv) => setBankModalInvoice(inv)}
+        />
+      )}
+
+      {/* Verify Confirmation Modal */}
+      {verifyConfirmModalTarget && (
+        <VerifyConfirmationModal
+          invoice={verifyConfirmModalTarget}
+          isOpen={!!verifyConfirmModalTarget}
+          onClose={() => setVerifyConfirmModalTarget(null)}
+          onConfirm={async (id, notes) => {
+            if (onVerify) {
+              await onVerify(id, notes);
+            } else {
+              await verifyInvoice(id, notes);
+            }
+          }}
+          onReject={(id) => {
+            if (onRejectClick) {
+              onRejectClick(id);
+            } else {
+              const reason = prompt('Please enter rejection reason:');
+              if (reason) rejectInvoice(id, reason);
+            }
+          }}
+        />
+      )}
+
+      {/* Approval Confirmation Modal */}
+      {approveConfirmModalTarget && (
+        <ApproveConfirmationModal
+          invoice={approveConfirmModalTarget}
+          isOpen={!!approveConfirmModalTarget}
+          onClose={() => setApproveConfirmModalTarget(null)}
+          onConfirm={async (id) => {
+            if (onApprove) {
+              await onApprove(id);
+            } else {
+              await approveInvoice(id);
+            }
+          }}
+          onReject={(id) => {
+            if (onRejectClick) {
+              onRejectClick(id);
+            } else {
+              const reason = prompt('Please enter rejection reason:');
+              if (reason) rejectInvoice(id, reason);
+            }
+          }}
         />
       )}
 

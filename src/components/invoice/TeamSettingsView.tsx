@@ -26,6 +26,7 @@ interface TeamSettingsViewProps {
 const roleColors: Record<Role, string> = {
   'Master Admin': 'bg-amber-500/10 text-amber-600 border-amber-500/30 font-bold',
   Admin: 'bg-purple-500/10 text-purple-600 border-purple-500/30',
+  Invoice: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30 font-semibold',
   Verifier: 'bg-blue-500/10 text-blue-600 border-blue-500/30',
   User: 'bg-muted text-muted-foreground border-border/60',
 };
@@ -33,6 +34,7 @@ const roleColors: Record<Role, string> = {
 const roleIcons: Record<Role, React.ReactNode> = {
   'Master Admin': <ShieldCheck size={11} className="text-amber-600" />,
   Admin: <ShieldCheck size={11} />,
+  Invoice: <ShieldCheck size={11} className="text-emerald-600" />,
   Verifier: <Eye size={11} />,
   User: <User size={11} />,
 };

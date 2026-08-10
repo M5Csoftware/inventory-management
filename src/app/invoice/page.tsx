@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useInvoice, InvoiceProvider } from '@/context/invoice-context';
 import { useAuth } from '@/context/auth-context';
-import { Invoice, AppConfig, TeamMember, Flag, BankDetails } from '@/types/invoice';
+import { Invoice, AppConfig, TeamMember, Flag, BankDetails, Role } from '@/types/invoice';
 import { DashboardView } from '@/components/invoice/DashboardView';
 import { CheckInView } from '@/components/invoice/CheckInView';
 import { InvoiceTable } from '@/components/invoice/InvoiceTable';
@@ -13,6 +13,8 @@ import { TeamSettingsView } from '@/components/invoice/TeamSettingsView';
 import { Modal } from '@/components/invoice/Modal';
 import { InvoiceDetailModal } from '@/components/invoice/InvoiceDetailModal';
 import { BankDetailsModal } from '@/components/invoice/BankDetailsModal';
+import { ApproveConfirmationModal } from '@/components/invoice/ApproveConfirmationModal';
+import { VerifyConfirmationModal } from '@/components/invoice/VerifyConfirmationModal';
 import { exportInvoicesToCSV } from '@/utils/export-invoice';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -56,13 +58,15 @@ function MasterInvoiceContent() {
   const [rejectError, setRejectError] = useState<string>('');
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [bankModalInvoice, setBankModalInvoice] = useState<Invoice | null>(null);
+  const [approveModalInvoice, setApproveModalInvoice] = useState<Invoice | null>(null);
+  const [verifyModalInvoice, setVerifyModalInvoice] = useState<Invoice | null>(null);
 
   const currentUser: TeamMember = {
     id: user?.id || 'mem_admin',
     name: user?.name || 'Admin',
     username: user?.email ? user.email.split('@')[0] : 'admin',
     password: '',
-    role: user?.role === 'master' ? 'Master Admin' : user?.role === 'admin' ? 'Admin' : 'User',
+    role: (user?.role === 'master' ? 'Master Admin' : user?.role === 'admin' ? 'Admin' : user?.role?.toLowerCase().includes('invoice') ? 'Invoice' : 'User') as Role,
   };
 
   const handleCheckinSubmit = async (formData: {
@@ -112,7 +116,7 @@ function MasterInvoiceContent() {
   ];
 
   return (
-    <div className="p-6 sm:p-8 space-y-8 animate-in fade-in duration-300 min-h-screen bg-background">
+    <div className="p-6 sm:p-8 pb-20 sm:pb-28 space-y-8 animate-in fade-in duration-300 min-h-screen bg-background">
       {/* Top Header Matching Stock & Products Management Pages */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border/40 pb-6">
         <div>
@@ -213,8 +217,14 @@ function MasterInvoiceContent() {
                 config={config}
                 lastActionId={null}
                 showActions={true}
-                onVerify={(id, notes) => verifyInvoice(id, notes)}
-                onApprove={(id) => approveInvoice(id)}
+                onVerify={(id) => {
+                  const target = invoices.find((i) => i.id === id);
+                  if (target) setVerifyModalInvoice(target);
+                }}
+                onApprove={(id) => {
+                  const target = invoices.find((i) => i.id === id);
+                  if (target) setApproveModalInvoice(target);
+                }}
                 onRejectClick={(id) => setRejectInvoiceId(id)}
                 onPay={(id) => payInvoice(id)}
                 onInvoiceClick={(inv) => setSelectedInvoice(inv)}
@@ -230,8 +240,15 @@ function MasterInvoiceContent() {
               team={team}
               config={config}
               lastActionId={null}
-              onVerify={(id, notes) => verifyInvoice(id, notes)}
-              onApprove={(id) => approveInvoice(id)}
+              showActions={true}
+              onVerify={(id) => {
+                const target = invoices.find((i) => i.id === id);
+                if (target) setVerifyModalInvoice(target);
+              }}
+              onApprove={(id) => {
+                const target = invoices.find((i) => i.id === id);
+                if (target) setApproveModalInvoice(target);
+              }}
               onRejectClick={(id) => setRejectInvoiceId(id)}
               onPay={(id) => payInvoice(id)}
               onInvoiceClick={(inv) => setSelectedInvoice(inv)}
@@ -344,10 +361,45 @@ function MasterInvoiceContent() {
           currentUser={currentUser}
           team={team}
           config={config}
-          onApprove={(id) => approveInvoice(id)}
+          onVerify={(id) => {
+            const target = invoices.find((i) => i.id === id);
+            if (target) setVerifyModalInvoice(target);
+          }}
+          onApprove={(id) => {
+            const target = invoices.find((i) => i.id === id);
+            if (target) setApproveModalInvoice(target);
+          }}
           onRejectClick={(id) => setRejectInvoiceId(id)}
           onPay={(id) => payInvoice(id)}
           onAddBankDetails={(inv) => setBankModalInvoice(inv)}
+        />
+      )}
+
+      {/* Verify Confirmation Modal */}
+      {verifyModalInvoice && (
+        <VerifyConfirmationModal
+          invoice={verifyModalInvoice}
+          isOpen={!!verifyModalInvoice}
+          onClose={() => setVerifyModalInvoice(null)}
+          onConfirm={async (id, notes) => {
+            await verifyInvoice(id, notes);
+            setVerifyModalInvoice(null);
+          }}
+          onReject={(id) => setRejectInvoiceId(id)}
+        />
+      )}
+
+      {/* Approval Confirmation Modal */}
+      {approveModalInvoice && (
+        <ApproveConfirmationModal
+          invoice={approveModalInvoice}
+          isOpen={!!approveModalInvoice}
+          onClose={() => setApproveModalInvoice(null)}
+          onConfirm={async (id) => {
+            await approveInvoice(id);
+            setApproveModalInvoice(null);
+          }}
+          onReject={(id) => setRejectInvoiceId(id)}
         />
       )}
 

@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Invoice, BankDetails } from '@/types/invoice';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,11 +17,16 @@ interface BankDetailsModalProps {
 export function BankDetailsModal({ invoice, onClose, onSave }: BankDetailsModalProps) {
   const { user } = useAuth();
   const existing = invoice.bankDetails;
+  const [mounted, setMounted] = useState(false);
 
   const [bankName, setBankName] = useState(existing?.bankName || '');
   const [accountName, setAccountName] = useState(existing?.accountName || invoice.vendor || '');
   const [accountNumber, setAccountNumber] = useState(existing?.accountNumber || '');
   const [ifscCode, setIfscCode] = useState(existing?.ifscCode || '');
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,8 +42,10 @@ export function BankDetailsModal({ invoice, onClose, onSave }: BankDetailsModalP
     });
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+  if (!mounted) return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
       <div className="w-full max-w-lg rounded-2xl bg-card border border-border/80 shadow-2xl overflow-hidden space-y-0 border-0">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border/50 p-4 bg-muted/40">
@@ -124,6 +132,7 @@ export function BankDetailsModal({ invoice, onClose, onSave }: BankDetailsModalP
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

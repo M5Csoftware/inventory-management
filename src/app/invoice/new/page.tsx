@@ -23,10 +23,12 @@ import {
   ArrowUpRight,
   CheckCircle2,
 } from 'lucide-react';
+import { useInventory } from '@/context/inventory-context';
 
 function NewInvoiceFormContent() {
   const router = useRouter();
   const { createInvoice } = useInvoice();
+  const { suppliers } = useInventory();
 
   const [vendor, setVendor] = useState('');
   const [invoiceNumber, setInvoiceNumber] = useState('');
@@ -124,18 +126,33 @@ function NewInvoiceFormContent() {
             {/* Row 1: Vendor, Invoice Number, Invoice Date */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
               <div className="space-y-1.5">
-                <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  <Building2 className="h-3.5 w-3.5 text-primary" />
-                  Vendor / Party Name <span className="text-destructive">*</span>
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    <Building2 className="h-3.5 w-3.5 text-primary" />
+                    Vendor / Party Name <span className="text-destructive">*</span>
+                  </label>
+                  {suppliers?.some((s) => s.name.trim().toLowerCase() === vendor.trim().toLowerCase()) && (
+                    <span className="text-[10px] text-emerald-600 font-bold flex items-center gap-1">
+                      <CheckCircle2 size={12} /> DB Verified
+                    </span>
+                  )}
+                </div>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Acme Corp"
+                  list="new-page-db-vendors"
+                  placeholder="Type or select vendor from DB..."
                   value={vendor}
                   onChange={(e) => setVendor(e.target.value)}
                   className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 dark:border-gray-600 dark:bg-gray-900/90 font-semibold"
                 />
+                <datalist id="new-page-db-vendors">
+                  {(suppliers || []).map((s, idx) => (
+                    <option key={idx} value={s.name}>
+                      {s.name} {s.location ? `(${s.location})` : s.taxId ? `(${s.taxId})` : ''}
+                    </option>
+                  ))}
+                </datalist>
               </div>
 
               <div className="space-y-1.5">
