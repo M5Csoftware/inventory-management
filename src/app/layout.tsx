@@ -30,7 +30,7 @@ export default function RootLayout({
       lang="en"
       className="h-full antialiased"
     >
-      <body suppressHydrationWarning className={`${inter.className} h-screen flex bg-background text-foreground selection:bg-primary/20`}>
+      <body suppressHydrationWarning className={`${inter.className} h-screen overflow-hidden flex bg-background text-foreground selection:bg-primary/20`}>
         {/* Dynamic Background */}
         <div className="fixed inset-0 -z-10 h-full w-full bg-white dark:bg-zinc-950 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(120,119,198,0.3),rgba(255,255,255,0))] dark:bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(120,119,198,0.15),rgba(255,255,255,0))]"></div>
         
@@ -38,9 +38,9 @@ export default function RootLayout({
           <AuthGuard>
             <InventoryProvider>
               <TabProvider>
-                <div className="flex w-full min-h-screen">
+                <div className="flex w-full h-full min-h-0">
                   <Sidebar />
-                  <div className="flex-1 flex flex-col min-w-0">
+                  <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
                     <Header />
                     <main className="flex-1 overflow-y-auto min-h-0">
                       {children}

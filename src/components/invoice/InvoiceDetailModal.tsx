@@ -1,6 +1,5 @@
-'use client';
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Invoice } from '@/types/invoice';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -23,6 +22,7 @@ import {
   Info,
 } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
+import { canApproveInvoice } from '@/utils/invoice-permissions';
 import { TeamMember, AppConfig } from '@/types/invoice';
 
 interface InvoiceDetailModalProps {
@@ -57,12 +57,17 @@ export function InvoiceDetailModal({
   config,
 }: InvoiceDetailModalProps) {
   const { user } = useAuth();
+  const [mounted, setMounted] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
   const [showRejectForm, setShowRejectForm] = useState(false);
   const [verifyNotes, setVerifyNotes] = useState('');
   const [showVerifyForm, setShowVerifyForm] = useState(false);
 
-  const isAdminOrMaster = user?.id === 'master' || user?.role === 'master' || user?.role === 'admin';
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const canApprove = canApproveInvoice(user, currentUser);
 
   const getStatusBadge = (status: Invoice['status']) => {
     switch (status) {
@@ -79,8 +84,10 @@ export function InvoiceDetailModal({
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200 overflow-y-auto">
+  if (!mounted) return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200 overflow-y-auto">
       <div className="w-full max-w-4xl max-h-[90vh] rounded-2xl bg-card border border-border/80 shadow-2xl overflow-hidden flex flex-col my-auto border-0">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border/50 p-4 bg-muted/40 shrink-0">
@@ -251,10 +258,10 @@ export function InvoiceDetailModal({
             )}
 
             {/* Approval Button */}
-            {invoice.status === 'pending_approval' && isAdminOrMaster && (
+            {invoice.status === 'pending_approval' && canApprove && (
               <Button
                 size="sm"
-                className="bg-purple-600 hover:bg-purple-700 text-white gap-1.5 w-full sm:w-auto shadow-sm"
+                className="bg-purple-600 hover:bg-purple-700 text-white font-bold gap-2 w-full sm:w-auto shadow-md hover:shadow-purple-500/30 transition-all rounded-xl h-9 px-4"
                 onClick={() => onApprove?.(invoice.id)}
               >
                 <ShieldCheck className="h-4 w-4" /> Approve Invoice
@@ -262,10 +269,10 @@ export function InvoiceDetailModal({
             )}
 
             {/* Pay Button */}
-            {invoice.status === 'approved' && isAdminOrMaster && (
+            {invoice.status === 'approved' && canApprove && (
               <Button
                 size="sm"
-                className="bg-blue-600 hover:bg-blue-700 text-white gap-1.5 w-full sm:w-auto shadow-sm"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold gap-2 w-full sm:w-auto shadow-md hover:shadow-emerald-500/30 transition-all rounded-xl h-9 px-4"
                 onClick={() => onPay?.(invoice.id)}
               >
                 <DollarSign className="h-4 w-4" /> Mark as Paid
@@ -293,6 +300,7 @@ export function InvoiceDetailModal({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

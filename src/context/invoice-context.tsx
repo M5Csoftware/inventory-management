@@ -263,7 +263,7 @@ export function InvoiceProvider({ children }: { children: React.ReactNode }) {
       actorName: currentSessionUser.name,
       actorRole: currentSessionUser.role,
       action: 'Approved',
-      note: '',
+      note: 'L2 administrative approval sign-off granted.',
     });
 
     const updated = await invoiceService.updateInvoice(id, {
@@ -318,7 +318,7 @@ export function InvoiceProvider({ children }: { children: React.ReactNode }) {
       actorName: currentSessionUser.name,
       actorRole: currentSessionUser.role,
       action: 'Marked as paid',
-      note: '',
+      note: 'Final payout completed and marked as paid.',
     });
 
     const updated = await invoiceService.updateInvoice(id, {

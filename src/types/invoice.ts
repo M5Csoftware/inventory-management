@@ -1,4 +1,4 @@
-export type Role = 'Master Admin' | 'Admin' | 'User' | 'Verifier';
+export type Role = 'Master Admin' | 'Admin' | 'User' | 'Verifier' | 'Invoice';
 
 export interface TeamMember {
   id: string;
