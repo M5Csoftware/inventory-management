@@ -64,6 +64,7 @@ export default function ProductsPage() {
                     <th className="h-10 px-4 text-left align-middle font-medium text-muted-foreground">Name</th>
                     <th className="h-10 px-4 text-left align-middle font-medium text-muted-foreground">Category</th>
                     <th className="h-10 px-4 text-left align-middle font-medium text-muted-foreground">Price</th>
+                    <th className="h-10 px-4 text-left align-middle font-medium text-muted-foreground">Branch</th>
                     <th className="h-10 px-4 text-left align-middle font-medium text-muted-foreground">Stock</th>
                     <th className="h-10 px-4 text-left align-middle font-medium text-muted-foreground">Supplier</th>
                     <th className="h-10 px-4 align-middle font-medium text-muted-foreground text-right">Actions</th>
@@ -76,6 +77,11 @@ export default function ProductsPage() {
                       <td className="p-4 align-middle font-medium">{product.name}</td>
                       <td className="p-4 align-middle text-muted-foreground">{product.category}</td>
                       <td className="p-4 align-middle font-mono">₹{product.price.toLocaleString('en-IN')}</td>
+                      <td className="p-4 align-middle text-muted-foreground text-sm">
+                        {activeBranch === 'All'
+                          ? Object.keys(product.stock || {}).filter((branch) => (product.stock?.[branch] || 0) > 0).join(', ') || '-'
+                          : activeBranch}
+                      </td>
                       <td className="p-4 align-middle">
                         <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-semibold ${
                           (activeBranch === 'All' 

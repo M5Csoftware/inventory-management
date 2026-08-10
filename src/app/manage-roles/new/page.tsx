@@ -99,6 +99,7 @@ export const SIDEBAR_TABS_STRUCTURE: SidebarFolderGroup[] = [
       { path: "/reports/monthly-stock", label: "Monthly Stock Summary" },
       { path: "/reports/product-details", label: "Product Details Report" },
       { path: "/reports/asset-details", label: "Asset Details Report" },
+      { path: "/reports/audit-log", label: "Audit Log" },
     ],
   },
   {
@@ -227,6 +228,7 @@ export default function CreateUserPage() {
     setLoading(true);
     try {
       const token = localStorage.getItem("token");
+      const shouldGrantFullAccess = role === "admin" || branch === "All";
       const res = await fetch(`${API_BASE}/users`, {
         method: "POST",
         headers: {
@@ -237,9 +239,9 @@ export default function CreateUserPage() {
           name,
           email,
           password,
-          role: role === "admin" ? "admin" : "stock_manager",
+          role: shouldGrantFullAccess ? "admin" : "stock_manager",
           branch,
-          permissions: role === "admin" ? ["*"] : selectedTabs,
+          permissions: shouldGrantFullAccess ? ["*"] : selectedTabs,
         }),
       });
 

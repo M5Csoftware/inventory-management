@@ -62,14 +62,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!user) return false;
 
     const isAdminOrMaster = user.id === 'master' || user.role === 'master' || user.role === 'admin';
+    const isGlobalBranch = user.branch === 'All';
 
     // Manage Roles is STRICTLY restricted to Admin and Master Admin only
     if (path.startsWith('/manage-roles')) {
       return isAdminOrMaster;
     }
 
-    // Master and Admin roles have full access to everything
-    if (isAdminOrMaster) return true;
+    // Master, admin, and global-branch users have full access to everything
+    if (isAdminOrMaster || isGlobalBranch) return true;
     if (!user.permissions || user.permissions.length === 0) return false;
     if (user.permissions.includes('*')) return true;
 
