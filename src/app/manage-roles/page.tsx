@@ -154,13 +154,29 @@ export default function ManageRolesPage() {
                   </td>
                 </tr>
               ) : (
-                users.map((u) => {
+                users.map((u, idx) => {
                   const isAdmin = u.role === 'admin';
                   const permCount = u.permissions?.length || 0;
-                  const isFullAccess = isAdmin || u.permissions?.includes('*') || u.branch === 'All';
+                  const isFullAccess = isAdmin || u.permissions?.includes('*');
+                  const uniqueKey = (u as any)._id ? `${u.id}-${(u as any)._id}` : (u.id ? `${u.id}-${idx}` : idx);
+
+                  const getRoleBadge = (r: string) => {
+                    switch (r) {
+                      case 'admin':
+                        return { label: 'Admin', cls: 'bg-purple-500/15 text-purple-700 dark:text-purple-400 border-purple-500/20' };
+                      case 'invoice_manager':
+                        return { label: 'Invoice Specialist', cls: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/20' };
+                      case 'custom':
+                        return { label: 'Custom Access', cls: 'bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/20' };
+                      case 'stock_manager':
+                      default:
+                        return { label: 'Stock Manager', cls: 'bg-sky-500/15 text-sky-700 dark:text-sky-400 border-sky-500/20' };
+                    }
+                  };
+                  const badge = getRoleBadge(u.role);
 
                   return (
-                    <tr key={u.id} className="hover:bg-muted/30 transition-colors group">
+                    <tr key={uniqueKey} className="hover:bg-muted/30 transition-colors group">
                       <td className="p-4">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm border border-primary/20 shrink-0">
@@ -178,13 +194,9 @@ export default function ManageRolesPage() {
 
                       <td className="p-4">
                         <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                            isAdmin
-                              ? 'bg-purple-500/15 text-purple-700 dark:text-purple-400 border border-purple-500/20'
-                              : 'bg-blue-500/15 text-blue-700 dark:text-blue-400 border border-blue-500/20'
-                          }`}
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${badge.cls}`}
                         >
-                          {isAdmin ? 'Admin' : 'Stock Manager'}
+                          {badge.label}
                         </span>
                       </td>
 
