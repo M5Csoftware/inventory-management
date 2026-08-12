@@ -59,7 +59,7 @@ export default function EditUserPage() {
           const u = data.data;
           setName(u.name || "");
           setEmail(u.email || "");
-          const r = u.role === "admin" ? "admin" : "stock_manager";
+          const r = (u.role as any) || "stock_manager";
           setRole(r);
           setBranch(u.branch || "Ahmedabad");
           setSelectedTabs(u.permissions || []);
@@ -158,13 +158,13 @@ export default function EditUserPage() {
     setSubmitting(true);
     try {
       const token = localStorage.getItem("token");
-      const shouldGrantFullAccess = role === "admin" || branch === "All";
+      const isFullAdmin = role === "admin";
       const updatePayload: Record<string, any> = {
         name,
         email,
-        role: shouldGrantFullAccess ? "admin" : "stock_manager",
+        role,
         branch,
-        permissions: shouldGrantFullAccess ? ["*"] : selectedTabs,
+        permissions: isFullAdmin ? ["*"] : selectedTabs,
       };
       if (password.trim()) {
         updatePayload.password = password;
