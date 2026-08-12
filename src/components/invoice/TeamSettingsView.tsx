@@ -146,13 +146,8 @@ export const TeamSettingsView: React.FC<TeamSettingsViewProps> = ({
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/40 text-xs">
-<<<<<<< Updated upstream
-                {team.map((m) => (
-                  <tr key={m.id} className="hover:bg-muted/30 transition-colors">
-=======
                 {team.map((m, idx) => (
                   <tr key={(m as any)._id ? `${m.id}-${(m as any)._id}` : (m.id ? `${m.id}-${idx}` : idx)} className="hover:bg-muted/30 transition-colors">
->>>>>>> Stashed changes
                     <td className="py-3 px-4 font-bold text-foreground">{m.name}</td>
                     <td className="py-3 px-4 font-mono font-semibold text-muted-foreground">@{m.username}</td>
                     <td className="py-3 px-4">
