@@ -34,7 +34,7 @@ export default function EditUserPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [role, setRole] = useState<"admin" | "stock_manager" | "custom">("stock_manager");
+  const [role, setRole] = useState<"admin" | "stock_manager" | "invoice_manager" | "custom">("stock_manager");
   const [branch, setBranch] = useState("Ahmedabad");
 
   // Selected sidebar tabs (array of route paths)
@@ -96,7 +96,7 @@ export default function EditUserPage() {
   };
 
   // Quick Preset Actions
-  const applyPreset = (preset: "all" | "standard" | "reports" | "clear") => {
+  const applyPreset = (preset: "all" | "standard" | "invoice" | "reports" | "clear") => {
     if (preset === "all") {
       setRole("admin");
       const allPaths = SIDEBAR_TABS_STRUCTURE.flatMap((f) => f.tabs.map((t) => t.path));
@@ -113,6 +113,15 @@ export default function EditUserPage() {
         "/products",
         "/categories",
         "/reports/transactions",
+      ]);
+    } else if (preset === "invoice") {
+      setRole("invoice_manager");
+      setSelectedTabs([
+        "/",
+        "/invoice",
+        "/invoice/new",
+        "/invoice/approvals",
+        "/invoice/audit",
       ]);
     } else if (preset === "reports") {
       setRole("custom");
@@ -387,6 +396,27 @@ export default function EditUserPage() {
                   </div>
                 </div>
                 {role === "stock_manager" && <CheckCircle2 className="w-5 h-5 text-primary shrink-0" />}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => applyPreset("invoice")}
+                className={`w-full p-3.5 rounded-xl border text-left flex items-center justify-between transition-all ${
+                  role === "invoice_manager"
+                    ? "border-emerald-500 bg-emerald-500/10 text-foreground ring-1 ring-emerald-500 shadow-xs"
+                    : "border-border/60 bg-card hover:bg-accent/40 text-muted-foreground"
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-emerald-500/15 text-emerald-600 flex items-center justify-center font-bold text-sm shrink-0">
+                    🧾
+                  </div>
+                  <div>
+                    <div className="font-semibold text-sm text-foreground">Invoice &amp; Inward Specialist</div>
+                    <div className="text-xs text-muted-foreground">Inward Invoice check-in, approvals &amp; audit history</div>
+                  </div>
+                </div>
+                {role === "invoice_manager" && <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />}
               </button>
 
               <button
