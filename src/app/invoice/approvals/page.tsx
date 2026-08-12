@@ -9,7 +9,18 @@ import { ShieldCheck, RefreshCw, Clock, CheckCircle2, Layers } from 'lucide-reac
 import { useAuth } from '@/context/auth-context';
 
 function ApprovalsWorkflowContent() {
-  const { invoices, loading, refreshInvoices } = useInvoice();
+  const {
+    invoices,
+    loading,
+    refreshInvoices,
+    verifyInvoice,
+    approveInvoice,
+    rejectInvoice,
+    payInvoice,
+    updateBankDetails,
+    team,
+    config,
+  } = useInvoice();
   const { user } = useAuth();
   const [activeQueueTab, setActiveQueueTab] = useState<'all' | 'step1' | 'step2' | 'step3'>('all');
 
@@ -155,7 +166,18 @@ function ApprovalsWorkflowContent() {
             </h3>
             <span className="text-xs text-muted-foreground font-medium">L1 Document Review</span>
           </div>
-          <InvoiceTable invoices={pendingL1List} title="Verification Queue" defaultStatusFilter="pending_verification" />
+          <InvoiceTable
+            invoices={pendingL1List}
+            title="Verification Queue"
+            defaultStatusFilter="pending_verification"
+            team={team}
+            config={config}
+            showActions={true}
+            onVerify={verifyInvoice}
+            onApprove={approveInvoice}
+            onRejectClick={(id) => rejectInvoice(id, "Rejected from approvals queue")}
+            onPay={payInvoice}
+          />
         </div>
       )}
 
@@ -168,7 +190,18 @@ function ApprovalsWorkflowContent() {
             </h3>
             <span className="text-xs text-muted-foreground font-medium">L2 Threshold Sign-Off</span>
           </div>
-          <InvoiceTable invoices={pendingL2List} title="Admin Sign-Off Queue" defaultStatusFilter="pending_approval" />
+          <InvoiceTable
+            invoices={pendingL2List}
+            title="Admin Sign-Off Queue"
+            defaultStatusFilter="pending_approval"
+            team={team}
+            config={config}
+            showActions={true}
+            onVerify={verifyInvoice}
+            onApprove={approveInvoice}
+            onRejectClick={(id) => rejectInvoice(id, "Rejected from approvals queue")}
+            onPay={payInvoice}
+          />
         </div>
       )}
 
@@ -181,7 +214,18 @@ function ApprovalsWorkflowContent() {
             </h3>
             <span className="text-xs text-muted-foreground font-medium">L3 Final Payout Queue</span>
           </div>
-          <InvoiceTable invoices={approvedList} title="Approved / Payout Queue" defaultStatusFilter="approved" />
+          <InvoiceTable
+            invoices={approvedList}
+            title="Approved / Payout Queue"
+            defaultStatusFilter="approved"
+            team={team}
+            config={config}
+            showActions={true}
+            onVerify={verifyInvoice}
+            onApprove={approveInvoice}
+            onRejectClick={(id) => rejectInvoice(id, "Rejected from approvals queue")}
+            onPay={payInvoice}
+          />
         </div>
       )}
     </div>
