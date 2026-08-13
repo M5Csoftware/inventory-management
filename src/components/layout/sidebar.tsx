@@ -24,6 +24,8 @@ import {
   Hammer,
   FileSpreadsheet,
   ExternalLink,
+  ShieldCheck,
+  CheckCircle2
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -127,6 +129,21 @@ export const navItems: NavItem[] = [
         label: "Asset Details",
         icon: Laptop,
       },
+      {
+        href: "/reports/audit-log",
+        label: "Audit Log",
+        icon: ShieldCheck,
+      },
+    ],
+  },
+  {
+    label: "Invoice",
+    icon: FileSpreadsheet,
+    subItems: [
+      { href: "/invoice", label: "Dashboard", icon: List },
+      { href: "/invoice/new", label: "New Invoice", icon: PlusCircle },
+      { href: "/invoice/approvals", label: "Approvals", icon: CheckCircle2 },
+      { href: "/invoice/audit", label: "Invoice Audit", icon: FileText },
     ],
   },
 ];
@@ -177,12 +194,12 @@ export function Sidebar() {
         </span>
       </div>
 
-      {/* Branch Selector (Only for Master Admin) */}
+      {/* Branch Selector */}
       <div className="px-3 lg:px-4 py-3 border-b">
         <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1 block">
           Current Branch
         </label>
-        {user?.role === "admin" ? (
+        {user?.role === "admin" || user?.role === "master" || user?.id === "master" || user?.branch === "All" ? (
           <div className="relative">
             <select
               value={activeBranch}
@@ -333,20 +350,6 @@ export function Sidebar() {
             <Users className="h-5 w-5 shrink-0" />
             <span className="truncate">Manage Roles</span>
           </Link>
-        )}
-        {hasPermission("/invoice-registration") && (
-          <a
-            href={process.env.NEXT_PUBLIC_INVOICE_REGISTRATION_URL || "https://invoice-registration.vercel.app/"}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={cn(
-              "flex items-center gap-3 rounded-lg px-3 py-2 text-sm lg:text-base font-medium transition-all text-muted-foreground hover:bg-accent hover:text-accent-foreground",
-            )}
-          >
-            <FileSpreadsheet className="h-5 w-5 shrink-0 text-blue-500" />
-            <span className="truncate">Invoice</span>
-            <ExternalLink className="h-3.5 w-3.5 ml-auto text-muted-foreground/60" />
-          </a>
         )}
         <button
           onClick={handleLogout}

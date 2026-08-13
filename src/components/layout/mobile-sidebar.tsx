@@ -105,7 +105,7 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
           <label className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2 block">
             Current Branch
           </label>
-          {user?.role === "admin" ? (
+          {user?.role === "admin" || user?.role === "master" || user?.id === "master" || user?.branch === "All" ? (
             <div className="relative">
               <select
                 value={activeBranch}
@@ -259,19 +259,6 @@ export function MobileSidebar({ isOpen, onClose }: MobileSidebarProps) {
               <Users className="h-5 w-5 shrink-0" />
               <span className="truncate">Manage Roles</span>
             </Link>
-          )}
-          {hasPermission("/invoice-registration") && (
-            <a
-              href={process.env.NEXT_PUBLIC_INVOICE_REGISTRATION_URL || "https://invoice-registration.vercel.app/"}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={onClose}
-              className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-base font-medium transition-all text-muted-foreground hover:bg-accent hover:text-accent-foreground active:scale-[0.98]"
-            >
-              <FileSpreadsheet className="h-5 w-5 shrink-0 text-blue-500" />
-              <span className="truncate">Invoice</span>
-              <ExternalLink className="h-3.5 w-3.5 ml-auto text-muted-foreground/60" />
-            </a>
           )}
           <button
             onClick={handleLogout}
