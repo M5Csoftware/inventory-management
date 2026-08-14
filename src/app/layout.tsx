@@ -18,6 +18,9 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "M5C Logistics - Inventory Management System",
   description: "Sophisticated and state-of-the-art inventory management for M5C Logistics.",
+  icons: {
+    icon: "/favicon.ico",
+  },
 };
 
 export default function RootLayout({
