@@ -149,20 +149,25 @@ export default function MonthlyStockReportPage() {
 
         for (const prod of filteredProducts) {
           const prodTxs = transactionsList.filter(
-            (t: any) => t.productId === prod.id,
+            (t: any) =>
+              t.productId === prod.id ||
+              t.productId === String(prod._id) ||
+              (prod._id && String(t.productId) === String(prod._id)),
           );
           const relevantBranches =
             monthlyBranch && monthlyBranch !== "All"
               ? [monthlyBranch]
               : branchesList;
 
+          const txTimestamps = prodTxs
+            .map((t: any) => new Date(t.date || t.createdAt).getTime())
+            .filter((t: number) => !isNaN(t));
+
           let prodCreatedAt = prod.createdAt ? new Date(prod.createdAt) : null;
-          if (!prodCreatedAt && prodTxs.length > 0) {
-            const timestamps = prodTxs
-              .map((t: any) => new Date(t.date || t.createdAt).getTime())
-              .filter((t: number) => !isNaN(t));
-            if (timestamps.length > 0) {
-              prodCreatedAt = new Date(Math.min(...timestamps));
+          if (txTimestamps.length > 0) {
+            const earliestTx = new Date(Math.min(...txTimestamps));
+            if (!prodCreatedAt || earliestTx < prodCreatedAt) {
+              prodCreatedAt = earliestTx;
             }
           }
           if (!prodCreatedAt) {

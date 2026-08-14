@@ -15,6 +15,7 @@ import {
   AlertCircle,
   Truck,
   Plus,
+  Building2,
   Trash2,
 } from "lucide-react";
 import {
@@ -25,7 +26,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useInventory, Category, Supplier, Product, ProductSupplierEntry } from '@/context/inventory-context';
+import { useInventory, Category, Supplier, Product, ProductSupplierEntry, BRANCHES } from '@/context/inventory-context';
 
 interface SupplierRow {
   supplierName: string;
@@ -48,6 +49,16 @@ export default function EditProductPage() {
   const [category, setCategory] = useState('');
   const [description, setDescription] = useState('');
   const [stock, setStock] = useState('');
+  const [selectedBranch, setSelectedBranch] = useState(() =>
+    activeBranch === 'All' ? 'Ahmedabad' : activeBranch,
+  );
+
+  useEffect(() => {
+    if (activeBranch !== 'All') {
+      setSelectedBranch(activeBranch);
+    }
+  }, [activeBranch]);
+
   const [threshold, setThreshold] = useState('10');
   const [uomValue, setUomValue] = useState('1');
   const [uom, setUom] = useState('pcs');
@@ -72,11 +83,10 @@ export default function EditProductPage() {
       setCategory(product.category);
       setDescription(product.description || '');
 
+      const targetBranchToUse = activeBranch === 'All' ? selectedBranch : activeBranch;
       const currentStock = typeof product.stock === 'number' 
         ? product.stock 
-        : (activeBranch === 'All' 
-            ? Object.values(product.stock || {}).reduce((a, b) => a + b, 0)
-            : (product.stock?.[activeBranch] || 0));
+        : (product.stock?.[targetBranchToUse] || 0);
       setStock(currentStock.toString());
       setThreshold(product.threshold ? product.threshold.toString() : '10');
       setUomValue(product.uomValue ? product.uomValue.toString() : '1');
@@ -118,7 +128,7 @@ export default function EditProductPage() {
         ]);
       }
     }
-  }, [product, activeBranch, suppliers]);
+  }, [product, activeBranch, selectedBranch, suppliers]);
 
   const handleAddSupplierRow = () => {
     const defaultSup = suppliers.length > 0 ? suppliers[0].name : '';
@@ -163,10 +173,20 @@ export default function EditProductPage() {
       const primarySupplierName = validSuppliers.length > 0 ? validSuppliers[0].supplierName : (product.supplier || 'N/A');
       const derivedPrice = validSuppliers.length > 0 ? validSuppliers[0].rate : product.price;
 
-      const targetBranch = activeBranch === 'All' ? 'Delhi' : activeBranch;
-      const updatedStockMap = typeof product.stock === 'object' && product.stock !== null
-        ? { ...product.stock, [targetBranch]: parseInt(stock || '0') }
-        : { Ahmedabad: 0, Ludhiana: 0, Delhi: parseInt(stock || '0'), Mumbai: 0 };
+      const existingStockMap =
+        typeof product.stock === "object" && product.stock !== null
+          ? product.stock
+          : { Ahmedabad: 0, Ludhiana: 0, Delhi: typeof product.stock === "number" ? product.stock : 0, Mumbai: 0 };
+
+      const targetBranchToUse = activeBranch === "All" ? selectedBranch : activeBranch;
+
+      const updatedStockMap = {
+        Ahmedabad: existingStockMap.Ahmedabad || 0,
+        Ludhiana: existingStockMap.Ludhiana || 0,
+        Delhi: existingStockMap.Delhi || 0,
+        Mumbai: existingStockMap.Mumbai || 0,
+        [targetBranchToUse]: parseInt(stock || "0"),
+      };
 
       await updateProduct(product.id, {
         name,
@@ -490,7 +510,7 @@ export default function EditProductPage() {
                   </div>
                   <div className="space-y-1.5">
                     <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                      Current Quantity ({activeBranch} in {packaging}) <span className="text-destructive">*</span>
+                      Current Quantity (in {packaging}) <span className="text-destructive">*</span>
                     </label>
                     <input
                       type="number"
@@ -500,6 +520,29 @@ export default function EditProductPage() {
                       className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all placeholder:text-muted-foreground/50 hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
                       required
                     />
+                  </div>
+                  <div className="space-y-1.5 md:col-span-2 lg:col-span-1">
+                    <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      <Building2 className="h-3 w-3 text-primary" />
+                      Target Branch <span className="text-destructive">*</span>
+                    </label>
+                    {activeBranch === "All" ? (
+                      <select
+                        value={selectedBranch}
+                        onChange={(e) => setSelectedBranch(e.target.value)}
+                        className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22currentColor%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E')] bg-[length:16px] bg-[right_10px_center] bg-no-repeat hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500 font-medium cursor-pointer"
+                      >
+                        {BRANCHES.map((b: string) => (
+                          <option key={b} value={b}>
+                            🏢 {b} Branch
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <div className="h-9 w-full rounded-lg border-2 border-gray-200 bg-muted/40 px-3 text-sm flex items-center font-semibold text-foreground">
+                        🏢 {activeBranch} Branch
+                      </div>
+                    )}
                   </div>
                 </div>
 

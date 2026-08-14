@@ -118,10 +118,15 @@ export default function StockOutPage() {
     try {
       if (isEditMode && selectedProduct) {
         const targetBranch = activeBranch === "All" ? "Ahmedabad" : activeBranch;
-        const updatedStockMap =
+        const existingStockMap =
           typeof selectedProduct.stock === "object" && selectedProduct.stock !== null
-            ? { ...selectedProduct.stock, [targetBranch]: parseInt(quantity || "0") }
-            : { Ahmedabad: 0, Ludhiana: 0, Delhi: parseInt(quantity || "0"), Mumbai: 0 };
+            ? selectedProduct.stock
+            : { Ahmedabad: 0, Ludhiana: 0, Delhi: typeof selectedProduct.stock === "number" ? selectedProduct.stock : 0, Mumbai: 0 };
+
+        const updatedStockMap = {
+          ...existingStockMap,
+          [targetBranch]: parseInt(quantity || "0"),
+        };
 
         await updateProduct(selectedProduct.id, {
           stock: updatedStockMap,
