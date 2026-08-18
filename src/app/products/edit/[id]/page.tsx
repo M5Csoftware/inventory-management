@@ -151,13 +151,13 @@ export default function EditProductPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (submittingRef.current || !product || !name || !stock || !category) return;
+    if (submittingRef.current || !product || !name || !stock || !category || !length || !width || !height) return;
 
     submittingRef.current = true;
     setIsSubmitting(true);
 
     try {
-      const dimensionStr = (length && width && height) ? `${length} x ${width} x ${height}` : undefined;
+      const dimensionStr = `${length}x${width}x${height}`;
 
       // Process suppliersList
       const validSuppliers = productSuppliers
@@ -546,7 +546,7 @@ export default function EditProductPage() {
                   </div>
                 </div>
 
-                {/* Optional Weight & Dimensions */}
+                {/* Weight & Dimensions */}
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-1.5">
                     <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -563,7 +563,7 @@ export default function EditProductPage() {
                   </div>
                   <div className="space-y-1.5">
                     <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                      Dimensions (L x W x H in cm) <span className="text-[9px] text-muted-foreground font-normal">(Optional)</span>
+                      Dimensions (L x B x H) <span className="text-destructive">*</span>
                     </label>
                     <div className="grid grid-cols-3 gap-2">
                       <input
@@ -572,13 +572,15 @@ export default function EditProductPage() {
                         onChange={(e) => setLength(e.target.value)}
                         placeholder="L"
                         className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-2 text-center text-sm shadow-sm transition-all placeholder:text-muted-foreground/50 hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
+                        required
                       />
                       <input
                         type="number"
                         value={width}
                         onChange={(e) => setWidth(e.target.value)}
-                        placeholder="W"
+                        placeholder="B"
                         className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-2 text-center text-sm shadow-sm transition-all placeholder:text-muted-foreground/50 hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
+                        required
                       />
                       <input
                         type="number"
@@ -586,6 +588,7 @@ export default function EditProductPage() {
                         onChange={(e) => setHeight(e.target.value)}
                         placeholder="H"
                         className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-2 text-center text-sm shadow-sm transition-all placeholder:text-muted-foreground/50 hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
+                        required
                       />
                     </div>
                   </div>

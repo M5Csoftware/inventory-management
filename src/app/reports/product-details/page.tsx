@@ -45,6 +45,7 @@ interface Product {
   stock: Record<string, number>;
   supplier?: string;
   description?: string;
+  dimensions?: string;
 }
 
 interface Transaction {
@@ -321,6 +322,7 @@ export default function ProductDetailsReportPage() {
       "Total Valuation (INR)",
       "Stock Status",
       "Supplier",
+      "Dimension",
     ];
 
     const rows = filteredProducts.map((p) => {
@@ -347,6 +349,7 @@ export default function ProductDetailsReportPage() {
         val,
         `"${status}"`,
         `"${(p.supplier || "N/A").replace(/"/g, '""')}"`,
+        `"${(p.dimensions || "N/A").replace(/"/g, '""')}"`,
       ].join(",");
     });
 
@@ -663,20 +666,21 @@ export default function ProductDetailsReportPage() {
                   <th className="py-3.5 px-4 text-right">Valuation (INR)</th>
                   <th className="py-3.5 px-4 text-center">Stock Status</th>
                   <th className="py-3.5 px-4">Supplier</th>
+                  <th className="py-3.5 px-4">Dimension</th>
                   <th className="py-3.5 px-4 text-center print:hidden">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/40">
                 {loading ? (
                   <tr>
-                    <td colSpan={9} className="py-12 text-center text-muted-foreground">
+                    <td colSpan={10} className="py-12 text-center text-muted-foreground">
                       <RefreshCw className="h-6 w-6 animate-spin mx-auto mb-2 text-primary" />
                       Loading Product Details...
                     </td>
                   </tr>
                 ) : filteredProducts.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="py-12 text-center text-muted-foreground">
+                    <td colSpan={10} className="py-12 text-center text-muted-foreground">
                       No products found matching your current filter criteria.
                     </td>
                   </tr>
@@ -740,6 +744,9 @@ export default function ProductDetailsReportPage() {
                         </td>
                         <td className="py-3 px-4 text-xs text-muted-foreground truncate max-w-36">
                           {prod.supplier || "N/A"}
+                        </td>
+                        <td className="py-3 px-4 text-xs text-muted-foreground">
+                          {prod.dimensions || "N/A"}
                         </td>
                         <td className="py-3 px-4 text-center print:hidden" onClick={(e) => e.stopPropagation()}>
                           <Button
@@ -979,6 +986,10 @@ export default function ProductDetailsReportPage() {
                   <div className="bg-muted/40 p-3 rounded-lg border border-border/50">
                     <span className="text-xs text-muted-foreground block">Min Stock Threshold</span>
                     <span className="font-semibold">{selectedProduct.minStock || 0}</span>
+                  </div>
+                  <div className="bg-muted/40 p-3 rounded-lg border border-border/50 col-span-2">
+                    <span className="text-xs text-muted-foreground block">Dimension (LxBxH)</span>
+                    <span className="font-medium">{selectedProduct.dimensions || "N/A"}</span>
                   </div>
                 </div>
 
