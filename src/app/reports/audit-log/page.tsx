@@ -452,14 +452,14 @@ export default function AuditLogPage() {
                       <td className="p-4">
                         <div className="flex items-center gap-2.5">
                           <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs border border-primary/20 shrink-0">
-                            {log.userName ? log.userName.charAt(0).toUpperCase() : "U"}
+                            {(log.userName || currentUser?.name || "U").charAt(0).toUpperCase()}
                           </div>
                           <div>
                             <div className="font-semibold text-xs text-foreground">
-                              {log.userName || "System User"}
+                              {log.userName || currentUser?.name || "System User"}
                             </div>
                             <div className="text-[10px] text-muted-foreground">
-                              {log.userRole || "User"} {log.userEmail ? `• ${log.userEmail}` : ""}
+                              {log.userRole || currentUser?.role || "User"} {log.userEmail || currentUser?.email ? `• ${log.userEmail || currentUser?.email}` : ""}
                             </div>
                           </div>
                         </div>

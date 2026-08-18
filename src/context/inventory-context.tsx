@@ -254,39 +254,40 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
     try {
       const branchQuery =
         activeBranch !== "All" ? `?branch=${activeBranch}` : "";
-      const [prodRes, txRes, catRes, supRes, ordRes, astsRes] =
-        await Promise.all([
-          fetch(`${API_BASE}/products${branchQuery}`, {
-            headers: NO_BODY_HEADER,
-          }),
-          fetch(`${API_BASE}/transactions${branchQuery}`, {
-            headers: NO_BODY_HEADER,
-          }),
-          fetch(`${API_BASE}/categories`, { headers: NO_BODY_HEADER }),
-          fetch(`${API_BASE}/suppliers`, { headers: NO_BODY_HEADER }),
-          fetch(`${API_BASE}/orders${branchQuery}`, {
-            headers: NO_BODY_HEADER,
-          }),
-          fetch(`${API_BASE}/assets${branchQuery}`, {
-            headers: NO_BODY_HEADER,
-          }),
-        ]);
+
+      const safeFetchJson = async (url: string, options?: RequestInit) => {
+        try {
+          const res = await fetch(url, options);
+          if (!res.ok) return { success: false, data: [] };
+          return await res.json();
+        } catch {
+          return { success: false, data: [] };
+        }
+      };
 
       const [prods, txs, cats, sups, ords, asts] = await Promise.all([
-        prodRes.json(),
-        txRes.json(),
-        catRes.json(),
-        supRes.json(),
-        ordRes.json(),
-        astsRes.json(),
+        safeFetchJson(`${API_BASE}/products${branchQuery}`, {
+          headers: NO_BODY_HEADER,
+        }),
+        safeFetchJson(`${API_BASE}/transactions${branchQuery}`, {
+          headers: NO_BODY_HEADER,
+        }),
+        safeFetchJson(`${API_BASE}/categories`, { headers: NO_BODY_HEADER }),
+        safeFetchJson(`${API_BASE}/suppliers`, { headers: NO_BODY_HEADER }),
+        safeFetchJson(`${API_BASE}/orders${branchQuery}`, {
+          headers: NO_BODY_HEADER,
+        }),
+        safeFetchJson(`${API_BASE}/assets${branchQuery}`, {
+          headers: NO_BODY_HEADER,
+        }),
       ]);
 
-      if (prods.success) setProducts(prods.data);
-      if (txs.success) setTransactions(txs.data);
-      if (cats.success) setCategories(cats.data);
-      if (sups.success) setSuppliers(sups.data);
-      if (ords.success) setOrders(ords.data);
-      if (asts.success) setAssets(asts.data);
+      if (prods?.success) setProducts(prods.data);
+      if (txs?.success) setTransactions(txs.data);
+      if (cats?.success) setCategories(cats.data);
+      if (sups?.success) setSuppliers(sups.data);
+      if (ords?.success) setOrders(ords.data);
+      if (asts?.success) setAssets(asts.data);
     } catch (error) {
       console.error("Failed to load inventory data from backend:", error);
     }
@@ -303,7 +304,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
         headers: DB_HEADER,
         body: JSON.stringify({
           ...newProduct,
-          branch: activeBranch !== "All" ? activeBranch : "Delhi",
+          branch: (newProduct as any).branch || (activeBranch !== "All" ? activeBranch : "Ahmedabad"),
         }),
       });
       const data = await res.json();
