@@ -13,10 +13,22 @@ export default function ProductsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
 
+  const getProductStock = (p: Product) => {
+    if (!p || !p.stock) return 0;
+    if (typeof p.stock === 'number') return p.stock;
+    if (typeof p.stock === 'object') {
+      if (activeBranch === 'All') {
+        return Object.values(p.stock).reduce((a, b) => a + (Number(b) || 0), 0);
+      }
+      return Number(p.stock[activeBranch]) || 0;
+    }
+    return 0;
+  };
+
   const filteredProducts = products.filter((product: Product) =>
-    product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.category.toLowerCase().includes(searchTerm.toLowerCase())
+    (product.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (product.id || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (product.category || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -71,7 +83,9 @@ export default function ProductsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredProducts.map((product: Product, index: number) => (
+                  {filteredProducts.map((product: Product, index: number) => {
+                    const currentStock = getProductStock(product);
+                    return (
                     <tr key={`${product.id}-${index}`} className="border-b transition-colors hover:bg-muted/50">
                       <td className="p-4 align-middle font-medium font-mono text-xs">{product.id}</td>
                       <td className="p-4 align-middle font-medium">{product.name}</td>
@@ -84,15 +98,11 @@ export default function ProductsPage() {
                       </td>
                       <td className="p-4 align-middle">
                         <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-semibold ${
-                          (activeBranch === 'All' 
-                            ? Object.values(product.stock).reduce((a, b) => a + b, 0) 
-                            : product.stock[activeBranch] || 0) <= product.threshold 
+                          currentStock <= (product.threshold ?? 10)
                             ? 'bg-destructive/10 text-destructive animate-pulse' 
                             : 'bg-emerald-500/10 text-emerald-500'
                         }`}>
-                          {activeBranch === 'All' 
-                            ? Object.values(product.stock).reduce((a, b) => a + b, 0) 
-                            : product.stock[activeBranch] || 0} units
+                          {currentStock} units
                         </span>
                       </td>
                       <td className="p-4 align-middle text-muted-foreground">
@@ -118,7 +128,8 @@ export default function ProductsPage() {
                         </Button>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             )}
