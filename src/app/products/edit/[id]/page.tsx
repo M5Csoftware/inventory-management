@@ -306,7 +306,7 @@ export default function EditProductPage() {
                 <div className="space-y-1.5">
                   <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                     <Layers className="h-3 w-3" />
-                    SKU / Barcode <span className="text-destructive">*</span>
+                    SKU / Barcode <span className="text-muted-foreground font-normal">(Optional)</span>
                   </label>
                   <input
                     type="text"
@@ -314,7 +314,6 @@ export default function EditProductPage() {
                     onChange={(e) => setSku(e.target.value)}
                     placeholder="e.g. FURN-DSK-02"
                     className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 font-mono text-sm shadow-sm transition-all placeholder:text-muted-foreground/50 hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
-                    required
                   />
                 </div>
               </div>
