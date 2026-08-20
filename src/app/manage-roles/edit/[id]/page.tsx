@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import {
@@ -28,6 +28,7 @@ export default function EditUserPage() {
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const submittingRef = useRef(false);
 
   // User credentials
   const [name, setName] = useState("");
@@ -145,6 +146,8 @@ export default function EditUserPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submittingRef.current || submitting) return;
+
     if (!name.trim() || !email.trim()) {
       toast.error("Please fill in required fields");
       return;
@@ -155,6 +158,7 @@ export default function EditUserPage() {
       return;
     }
 
+    submittingRef.current = true;
     setSubmitting(true);
     try {
       const token = localStorage.getItem("token");
@@ -189,6 +193,7 @@ export default function EditUserPage() {
     } catch (err) {
       toast.error("Network error. Please try again.");
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   };

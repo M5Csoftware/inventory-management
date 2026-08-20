@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useRef } from "react";
 import { toast } from "react-toastify";
 import { useAuth } from "./auth-context";
 
@@ -333,186 +333,259 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
     fetchData();
   }, [activeBranch, user]);
 
-  const addProduct = async (newProduct: Omit<Product, "id">) => {
-    try {
-      const res = await fetch(`${API_BASE}/products`, {
-        method: "POST",
-        headers: DB_HEADER,
-        body: JSON.stringify({
-          ...newProduct,
-          branch: (newProduct as any).branch || (activeBranch !== "All" ? activeBranch : "Ahmedabad"),
-        }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        await fetchData();
-        toast.success("Product added successfully!");
-      } else {
-        toast.error(data.message || "Failed to add product.");
-      }
-    } catch (error) {
-      console.error("Failed to add product:", error);
-      toast.error("Network error while adding product.");
+  const inFlightLocks = useRef(new Set<string>());
+
+  const withLock = async <T,>(
+    key: string,
+    fn: () => Promise<T>,
+    fallback: T,
+  ): Promise<T> => {
+    if (inFlightLocks.current.has(key)) {
+      console.warn(
+        `[Double-Click Prevention] Blocked duplicate action: ${key}`,
+      );
+      return fallback;
     }
+    inFlightLocks.current.add(key);
+    try {
+      return await fn();
+    } finally {
+      setTimeout(() => {
+        inFlightLocks.current.delete(key);
+      }, 1000);
+    }
+  };
+
+  const addProduct = async (newProduct: Omit<Product, "id">) => {
+    return withLock(
+      `add-prod-${newProduct.name}`,
+      async () => {
+        try {
+          const res = await fetch(`${API_BASE}/products`, {
+            method: "POST",
+            headers: DB_HEADER,
+            body: JSON.stringify({
+              ...newProduct,
+              branch:
+                (newProduct as any).branch ||
+                (activeBranch !== "All" ? activeBranch : "Ahmedabad"),
+            }),
+          });
+          const data = await res.json();
+          if (data.success) {
+            await fetchData();
+            toast.success("Product added successfully!");
+          } else {
+            toast.error(data.message || "Failed to add product.");
+          }
+        } catch (error) {
+          console.error("Failed to add product:", error);
+          toast.error("Network error while adding product.");
+        }
+      },
+      undefined,
+    );
   };
 
   const addCategory = async (category: Category) => {
-    try {
-      const res = await fetch(`${API_BASE}/categories`, {
-        method: "POST",
-        headers: DB_HEADER,
-        body: JSON.stringify(category),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setCategories((prev) => [...prev, data.data]);
-        toast.success("Category added successfully!");
-      } else {
-        toast.error(data.message || "Failed to add category.");
-      }
-    } catch (error) {
-      console.error("Failed to add category:", error);
-      toast.error("Network error while adding category.");
-    }
+    return withLock(
+      `add-cat-${category.name}`,
+      async () => {
+        try {
+          const res = await fetch(`${API_BASE}/categories`, {
+            method: "POST",
+            headers: DB_HEADER,
+            body: JSON.stringify(category),
+          });
+          const data = await res.json();
+          if (data.success) {
+            setCategories((prev) => [...prev, data.data]);
+            toast.success("Category added successfully!");
+          } else {
+            toast.error(data.message || "Failed to add category.");
+          }
+        } catch (error) {
+          console.error("Failed to add category:", error);
+          toast.error("Network error while adding category.");
+        }
+      },
+      undefined,
+    );
   };
 
   const addSupplier = async (supplier: Supplier) => {
-    try {
-      const res = await fetch(`${API_BASE}/suppliers`, {
-        method: "POST",
-        headers: DB_HEADER,
-        body: JSON.stringify(supplier),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setSuppliers((prev) => [...prev, data.data]);
-        toast.success("Supplier added successfully!");
-      } else {
-        toast.error(data.message || "Failed to add supplier.");
-      }
-    } catch (error) {
-      console.error("Failed to add supplier:", error);
-      toast.error("Network error while adding supplier.");
-    }
+    return withLock(
+      `add-sup-${supplier.name}`,
+      async () => {
+        try {
+          const res = await fetch(`${API_BASE}/suppliers`, {
+            method: "POST",
+            headers: DB_HEADER,
+            body: JSON.stringify(supplier),
+          });
+          const data = await res.json();
+          if (data.success) {
+            setSuppliers((prev) => [...prev, data.data]);
+            toast.success("Supplier added successfully!");
+          } else {
+            toast.error(data.message || "Failed to add supplier.");
+          }
+        } catch (error) {
+          console.error("Failed to add supplier:", error);
+          toast.error("Network error while adding supplier.");
+        }
+      },
+      undefined,
+    );
   };
 
   const deleteProduct = async (id: string) => {
-    try {
-      const res = await fetch(`${API_BASE}/products/${id}`, {
-        method: "DELETE",
-        headers: NO_BODY_HEADER,
-      });
-      const data = await res.json();
-      if (data.success) {
-        setProducts((prev) => prev.filter((p) => p.id !== id));
-        toast.success("Product deleted successfully!");
-      } else {
-        toast.error(data.message || "Failed to delete product.");
-      }
-    } catch (error) {
-      console.error("Failed to delete product:", error);
-      toast.error("Network error while deleting product.");
-    }
+    return withLock(
+      `del-prod-${id}`,
+      async () => {
+        try {
+          const res = await fetch(`${API_BASE}/products/${id}`, {
+            method: "DELETE",
+            headers: NO_BODY_HEADER,
+          });
+          const data = await res.json();
+          if (data.success) {
+            setProducts((prev) => prev.filter((p) => p.id !== id));
+            toast.success("Product deleted successfully!");
+          } else {
+            toast.error(data.message || "Failed to delete product.");
+          }
+        } catch (error) {
+          console.error("Failed to delete product:", error);
+          toast.error("Network error while deleting product.");
+        }
+      },
+      undefined,
+    );
   };
 
   const updateCategory = async (
     name: string,
     updatedCategory: Partial<Category>,
   ) => {
-    try {
-      const res = await fetch(
-        `${API_BASE}/categories/${encodeURIComponent(name)}`,
-        {
-          method: "PUT",
-          headers: DB_HEADER,
-          body: JSON.stringify(updatedCategory),
-        },
-      );
-      const data = await res.json();
-      if (data.success) {
-        setCategories((prev) =>
-          prev.map((c) => (c.name === name ? data.data : c)),
-        );
-        toast.success("Category updated successfully!");
-      } else {
-        toast.error(data.message || "Failed to update category.");
-      }
-    } catch (error) {
-      console.error("Failed to update category:", error);
-      toast.error("Network error while updating category.");
-    }
+    return withLock(
+      `upd-cat-${name}`,
+      async () => {
+        try {
+          const res = await fetch(
+            `${API_BASE}/categories/${encodeURIComponent(name)}`,
+            {
+              method: "PUT",
+              headers: DB_HEADER,
+              body: JSON.stringify(updatedCategory),
+            },
+          );
+          const data = await res.json();
+          if (data.success) {
+            setCategories((prev) =>
+              prev.map((c) => (c.name === name ? data.data : c)),
+            );
+            toast.success("Category updated successfully!");
+          } else {
+            toast.error(data.message || "Failed to update category.");
+          }
+        } catch (error) {
+          console.error("Failed to update category:", error);
+          toast.error("Network error while updating category.");
+        }
+      },
+      undefined,
+    );
   };
 
   const deleteCategory = async (name: string) => {
-    try {
-      const res = await fetch(
-        `${API_BASE}/categories/${encodeURIComponent(name)}`,
-        {
-          method: "DELETE",
-          headers: NO_BODY_HEADER,
-        },
-      );
-      const data = await res.json();
-      if (data.success) {
-        setCategories((prev) => prev.filter((c) => c.name !== name));
-        toast.success("Category deleted successfully!");
-      } else {
-        toast.error(data.message || "Failed to delete category.");
-      }
-    } catch (error) {
-      console.error("Failed to delete category:", error);
-      toast.error("Network error while deleting category.");
-    }
+    return withLock(
+      `del-cat-${name}`,
+      async () => {
+        try {
+          const res = await fetch(
+            `${API_BASE}/categories/${encodeURIComponent(name)}`,
+            {
+              method: "DELETE",
+              headers: NO_BODY_HEADER,
+            },
+          );
+          const data = await res.json();
+          if (data.success) {
+            setCategories((prev) => prev.filter((c) => c.name !== name));
+            toast.success("Category deleted successfully!");
+          } else {
+            toast.error(data.message || "Failed to delete category.");
+          }
+        } catch (error) {
+          console.error("Failed to delete category:", error);
+          toast.error("Network error while deleting category.");
+        }
+      },
+      undefined,
+    );
   };
 
   const updateSupplier = async (
     name: string,
     updatedSupplier: Partial<Supplier>,
   ) => {
-    try {
-      const res = await fetch(
-        `${API_BASE}/suppliers/${encodeURIComponent(name)}`,
-        {
-          method: "PUT",
-          headers: DB_HEADER,
-          body: JSON.stringify(updatedSupplier),
-        },
-      );
-      const data = await res.json();
-      if (data.success) {
-        setSuppliers((prev) =>
-          prev.map((s) => (s.name === name ? data.data : s)),
-        );
-        toast.success("Supplier updated successfully!");
-      } else {
-        toast.error(data.message || "Failed to update supplier.");
-      }
-    } catch (error) {
-      console.error("Failed to update supplier:", error);
-      toast.error("Network error while updating supplier.");
-    }
+    return withLock(
+      `upd-sup-${name}`,
+      async () => {
+        try {
+          const res = await fetch(
+            `${API_BASE}/suppliers/${encodeURIComponent(name)}`,
+            {
+              method: "PUT",
+              headers: DB_HEADER,
+              body: JSON.stringify(updatedSupplier),
+            },
+          );
+          const data = await res.json();
+          if (data.success) {
+            setSuppliers((prev) =>
+              prev.map((s) => (s.name === name ? data.data : s)),
+            );
+            toast.success("Supplier updated successfully!");
+          } else {
+            toast.error(data.message || "Failed to update supplier.");
+          }
+        } catch (error) {
+          console.error("Failed to update supplier:", error);
+          toast.error("Network error while updating supplier.");
+        }
+      },
+      undefined,
+    );
   };
 
   const deleteSupplier = async (name: string) => {
-    try {
-      const res = await fetch(
-        `${API_BASE}/suppliers/${encodeURIComponent(name)}`,
-        {
-          method: "DELETE",
-          headers: NO_BODY_HEADER,
-        },
-      );
-      const data = await res.json();
-      if (data.success) {
-        setSuppliers((prev) => prev.filter((s) => s.name !== name));
-        toast.success("Supplier deleted successfully!");
-      } else {
-        toast.error(data.message || "Failed to delete supplier.");
-      }
-    } catch (error) {
-      console.error("Failed to delete supplier:", error);
-      toast.error("Network error while deleting supplier.");
-    }
+    return withLock(
+      `del-sup-${name}`,
+      async () => {
+        try {
+          const res = await fetch(
+            `${API_BASE}/suppliers/${encodeURIComponent(name)}`,
+            {
+              method: "DELETE",
+              headers: NO_BODY_HEADER,
+            },
+          );
+          const data = await res.json();
+          if (data.success) {
+            setSuppliers((prev) => prev.filter((s) => s.name !== name));
+            toast.success("Supplier deleted successfully!");
+          } else {
+            toast.error(data.message || "Failed to delete supplier.");
+          }
+        } catch (error) {
+          console.error("Failed to delete supplier:", error);
+          toast.error("Network error while deleting supplier.");
+        }
+      },
+      undefined,
+    );
   };
 
   const recordTransaction = async (
@@ -531,65 +604,85 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
       branch?: string;
     },
   ): Promise<boolean> => {
-    try {
-      const selectedBranch =
-        additionalData?.branch ||
-        (activeBranch === "All" ? "Ahmedabad" : activeBranch);
+    const selectedBranch =
+      additionalData?.branch ||
+      (activeBranch === "All" ? "Ahmedabad" : activeBranch);
 
-      const res = await fetch(`${API_BASE}/transactions`, {
-        method: "POST",
-        headers: DB_HEADER,
-        body: JSON.stringify({
-          productId,
-          type,
-          quantity: Number(quantity) || 1,
-          reasonOrLocation: reasonOrLocation || "",
-          notes: notes || "",
-          branch: selectedBranch,
-          purchaseDate: additionalData?.purchaseDate,
-          amount: additionalData?.amount !== undefined && !isNaN(Number(additionalData.amount)) ? Number(additionalData.amount) : undefined,
-          supplier: additionalData?.supplier,
-          invoiceNumber: additionalData?.invoiceNumber,
-          model: additionalData?.model,
-          serialNumber: additionalData?.serialNumber,
-        }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        await fetchData();
-        toast.success(`${type} recorded successfully!`);
-        return true;
-      } else {
-        toast.error(data.message || `Failed to record ${type}.`);
-      }
-    } catch (error) {
-      console.error("Failed to record stock transaction:", error);
-      toast.error("Network error while recording transaction.");
-    }
-    return false;
+    const lockKey = `tx-${productId}-${type}-${quantity}-${selectedBranch}-${additionalData?.invoiceNumber || ""}-${additionalData?.model || ""}-${additionalData?.serialNumber || ""}`;
+
+    return withLock(
+      lockKey,
+      async () => {
+        try {
+          const res = await fetch(`${API_BASE}/transactions`, {
+            method: "POST",
+            headers: DB_HEADER,
+            body: JSON.stringify({
+              productId,
+              type,
+              quantity: Number(quantity) || 1,
+              reasonOrLocation: reasonOrLocation || "",
+              notes: notes || "",
+              branch: selectedBranch,
+              purchaseDate: additionalData?.purchaseDate,
+              amount:
+                additionalData?.amount !== undefined &&
+                !isNaN(Number(additionalData.amount))
+                  ? Number(additionalData.amount)
+                  : undefined,
+              supplier: additionalData?.supplier,
+              invoiceNumber: additionalData?.invoiceNumber,
+              model: additionalData?.model,
+              serialNumber: additionalData?.serialNumber,
+            }),
+          });
+          const data = await res.json();
+          if (data.success) {
+            await fetchData();
+            toast.success(`${type} recorded successfully!`);
+            return true;
+          } else {
+            toast.error(data.message || `Failed to record ${type}.`);
+          }
+        } catch (error) {
+          console.error("Failed to record stock transaction:", error);
+          toast.error("Network error while recording transaction.");
+        }
+        return false;
+      },
+      false,
+    );
   };
 
   const updateProduct = async (
     id: string,
     updatedProduct: Partial<Product>,
   ) => {
-    try {
-      const res = await fetch(`${API_BASE}/products/${id}`, {
-        method: "PUT",
-        headers: DB_HEADER,
-        body: JSON.stringify(updatedProduct),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setProducts((prev) => prev.map((p) => (p.id === id ? data.data : p)));
-        toast.success("Product updated successfully!");
-      } else {
-        toast.error(data.message || "Failed to update product.");
-      }
-    } catch (error) {
-      console.error("Failed to update product:", error);
-      toast.error("Network error while updating product.");
-    }
+    return withLock(
+      `upd-prod-${id}`,
+      async () => {
+        try {
+          const res = await fetch(`${API_BASE}/products/${id}`, {
+            method: "PUT",
+            headers: DB_HEADER,
+            body: JSON.stringify(updatedProduct),
+          });
+          const data = await res.json();
+          if (data.success) {
+            setProducts((prev) =>
+              prev.map((p) => (p.id === id ? data.data : p)),
+            );
+            toast.success("Product updated successfully!");
+          } else {
+            toast.error(data.message || "Failed to update product.");
+          }
+        } catch (error) {
+          console.error("Failed to update product:", error);
+          toast.error("Network error while updating product.");
+        }
+      },
+      undefined,
+    );
   };
 
   const transferStock = async (
@@ -602,110 +695,141 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
       toast.error("Cannot transfer to the same branch.");
       return false;
     }
-    try {
-      const res = await fetch(`${API_BASE}/transactions/transfer`, {
-        method: "POST",
-        headers: DB_HEADER,
-        body: JSON.stringify({
-          productId,
-          quantity,
-          fromBranch: activeBranch,
-          toBranch,
-          notes,
-        }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        await fetchData();
-        toast.success("Stock transferred successfully!");
-        return true;
-      } else {
-        toast.error(data.message || "Failed to transfer stock.");
-        return false;
-      }
-    } catch (error) {
-      console.error("Failed to transfer stock:", error);
-      toast.error("Network error while transferring stock.");
-      return false;
-    }
+
+    return withLock(
+      `transfer-${productId}-${activeBranch}-${toBranch}-${quantity}`,
+      async () => {
+        try {
+          const res = await fetch(`${API_BASE}/transactions/transfer`, {
+            method: "POST",
+            headers: DB_HEADER,
+            body: JSON.stringify({
+              productId,
+              quantity,
+              fromBranch: activeBranch,
+              toBranch,
+              notes,
+            }),
+          });
+          const data = await res.json();
+          if (data.success) {
+            await fetchData();
+            toast.success("Stock transferred successfully!");
+            return true;
+          } else {
+            toast.error(data.message || "Failed to transfer stock.");
+            return false;
+          }
+        } catch (error) {
+          console.error("Failed to transfer stock:", error);
+          toast.error("Network error while transferring stock.");
+          return false;
+        }
+      },
+      false,
+    );
   };
 
   const addOrder = async (order: Omit<Order, "id" | "createdAt">) => {
-    try {
-      const res = await fetch(`${API_BASE}/orders`, {
-        method: "POST",
-        headers: DB_HEADER,
-        body: JSON.stringify({ ...order, branch: activeBranch }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        await fetchData();
-        toast.success("Order created successfully!");
-      } else {
-        toast.error(data.message || "Failed to create order.");
-      }
-    } catch (error) {
-      console.error("Failed to create order:", error);
-      toast.error("Network error while creating order.");
-    }
+    return withLock(
+      `add-order-${order.supplier}-${order.totalAmount}`,
+      async () => {
+        try {
+          const res = await fetch(`${API_BASE}/orders`, {
+            method: "POST",
+            headers: DB_HEADER,
+            body: JSON.stringify({ ...order, branch: activeBranch }),
+          });
+          const data = await res.json();
+          if (data.success) {
+            await fetchData();
+            toast.success("Order created successfully!");
+          } else {
+            toast.error(data.message || "Failed to create order.");
+          }
+        } catch (error) {
+          console.error("Failed to create order:", error);
+          toast.error("Network error while creating order.");
+        }
+      },
+      undefined,
+    );
   };
 
   const updateOrder = async (id: string, orderData: Partial<Order>) => {
-    try {
-      const res = await fetch(`${API_BASE}/orders/${id}`, {
-        method: "PUT",
-        headers: DB_HEADER,
-        body: JSON.stringify(orderData),
-      });
-      const data = await res.json();
-      if (data.success) {
-        await fetchData();
-        toast.success("Order updated successfully!");
-      } else {
-        toast.error(data.message || "Failed to update order.");
-      }
-    } catch (error) {
-      console.error("Failed to update order:", error);
-      toast.error("Network error while updating order.");
-    }
+    return withLock(
+      `upd-order-${id}`,
+      async () => {
+        try {
+          const res = await fetch(`${API_BASE}/orders/${id}`, {
+            method: "PUT",
+            headers: DB_HEADER,
+            body: JSON.stringify(orderData),
+          });
+          const data = await res.json();
+          if (data.success) {
+            await fetchData();
+            toast.success("Order updated successfully!");
+          } else {
+            toast.error(data.message || "Failed to update order.");
+          }
+        } catch (error) {
+          console.error("Failed to update order:", error);
+          toast.error("Network error while updating order.");
+        }
+      },
+      undefined,
+    );
   };
 
   const updateOrderStatus = async (id: string, status: Order["status"]) => {
-    try {
-      const res = await fetch(`${API_BASE}/orders/${id}`, {
-        method: "PUT",
-        headers: DB_HEADER,
-        body: JSON.stringify({ status }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        await fetchData();
-        toast.success("Order status updated!");
-      } else {
-        toast.error(data.message || "Failed to update order.");
-      }
-    } catch (error) {
-      console.error("Failed to update order:", error);
-      toast.error("Network error while updating order.");
-    }
+    return withLock(
+      `upd-order-status-${id}-${status}`,
+      async () => {
+        try {
+          const res = await fetch(`${API_BASE}/orders/${id}`, {
+            method: "PUT",
+            headers: DB_HEADER,
+            body: JSON.stringify({ status }),
+          });
+          const data = await res.json();
+          if (data.success) {
+            await fetchData();
+            toast.success("Order status updated!");
+          } else {
+            toast.error(data.message || "Failed to update order.");
+          }
+        } catch (error) {
+          console.error("Failed to update order:", error);
+          toast.error("Network error while updating order.");
+        }
+      },
+      undefined,
+    );
   };
 
   const deleteOrder = async (id: string) => {
-    try {
-      const res = await fetch(`${API_BASE}/orders/${id}`, {
-        method: "DELETE",
-        headers: NO_BODY_HEADER,
-      });
-      if (res.ok) {
-        await fetchData();
-        toast.success("Order deleted successfully!");
-      } else {
-        toast.error("Failed to delete order.");
-      }
-    } catch (error) {
-      console.error("Failed to delete order:", error);
-      toast.error("Network error while deleting order.");
-    }
+    return withLock(
+      `del-order-${id}`,
+      async () => {
+        try {
+          const res = await fetch(`${API_BASE}/orders/${id}`, {
+            method: "DELETE",
+            headers: NO_BODY_HEADER,
+          });
+          if (res.ok) {
+            await fetchData();
+            toast.success("Order deleted successfully!");
+          } else {
+            toast.error("Failed to delete order.");
+          }
+        } catch (error) {
+          console.error("Failed to delete order:", error);
+          toast.error("Network error while deleting order.");
+        }
+      },
+      undefined,
+    );
   };
 
   const assignAsset = async (
@@ -714,46 +838,62 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
       "id" | "assignedDate" | "status" | "returnedDate"
     >,
   ) => {
-    try {
-      const res = await fetch(`${API_BASE}/assets`, {
-        method: "POST",
-        headers: DB_HEADER,
-        body: JSON.stringify({ ...asset, branch: activeBranch }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        await fetchData();
-        toast.success("Asset assigned successfully!");
-        return true;
-      } else {
-        toast.error(data.message || "Failed to assign asset");
-        return false;
-      }
-    } catch (error) {
-      toast.error("An error occurred");
-      return false;
-    }
+    const branchToUse =
+      (asset as any).branch ||
+      (activeBranch === "All" ? "Ahmedabad" : activeBranch);
+
+    return withLock(
+      `assign-asset-${asset.productId}-${asset.assignedTo}-${asset.serialNumber || ""}`,
+      async () => {
+        try {
+          const res = await fetch(`${API_BASE}/assets`, {
+            method: "POST",
+            headers: DB_HEADER,
+            body: JSON.stringify({ ...asset, branch: branchToUse }),
+          });
+          const data = await res.json();
+          if (data.success) {
+            await fetchData();
+            toast.success("Asset assigned successfully!");
+            return true;
+          } else {
+            toast.error(data.message || "Failed to assign asset");
+            return false;
+          }
+        } catch (error) {
+          toast.error("An error occurred");
+          return false;
+        }
+      },
+      false,
+    );
   };
 
   const returnAsset = async (id: string) => {
-    try {
-      const res = await fetch(`${API_BASE}/assets/${id}/return`, {
-        method: "PUT",
-        headers: NO_BODY_HEADER,
-      });
-      const data = await res.json();
-      if (data.success) {
-        await fetchData();
-        toast.success("Asset returned successfully!");
-        return true;
-      } else {
-        toast.error(data.message || "Failed to return asset");
-        return false;
-      }
-    } catch (error) {
-      toast.error("An error occurred");
-      return false;
-    }
+    return withLock(
+      `return-asset-${id}`,
+      async () => {
+        try {
+          const res = await fetch(`${API_BASE}/assets/${id}/return`, {
+            method: "PUT",
+            headers: NO_BODY_HEADER,
+          });
+          const data = await res.json();
+          if (data.success) {
+            await fetchData();
+            toast.success("Asset returned successfully!");
+            return true;
+          } else {
+            toast.error(data.message || "Failed to return asset");
+            return false;
+          }
+        } catch (error) {
+          toast.error("An error occurred");
+          return false;
+        }
+      },
+      false,
+    );
   };
 
   return (
