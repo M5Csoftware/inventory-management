@@ -462,10 +462,11 @@ export default function EditProductPage() {
                       <input
                         type="number"
                         step="0.01"
-                        value={uomValue}
+                        value={packaging === 'units' || packaging === 'unit' ? '1' : uomValue}
                         onChange={(e) => setUomValue(e.target.value)}
+                        disabled={packaging === 'units' || packaging === 'unit'}
                         placeholder="1"
-                        className="h-9 w-24 rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-center text-sm shadow-sm transition-all hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
+                        className="h-9 w-24 rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-center text-sm shadow-sm transition-all hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:cursor-not-allowed disabled:bg-muted/70 disabled:text-muted-foreground dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
                       />
                       <select 
                         value={uom}
@@ -498,9 +499,17 @@ export default function EditProductPage() {
                     </label>
                     <select 
                       value={packaging}
-                      onChange={(e) => setPackaging(e.target.value)}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setPackaging(val);
+                        if (val === 'units' || val === 'unit') {
+                          setUomValue('1');
+                          setUom('units');
+                        }
+                      }}
                       className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22currentColor%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E')] bg-[length:16px] bg-[right_10px_center] bg-no-repeat hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
                     >
+                      <option value="units">Units</option>
                       <option value="boxes">Boxes</option>
                       <option value="cartons">Cartons</option>
                       <option value="pallets">Pallets</option>
