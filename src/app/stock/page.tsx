@@ -376,21 +376,21 @@ export default function StockPage() {
                           <span
                             className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${
                               (activeBranch === "All"
-                                ? Object.values(p.stock).reduce(
-                                    (a, b) => a + b,
+                                ? Object.values(p.stock || {}).reduce(
+                                    (a, b) => a + (Number(b) || 0),
                                     0,
                                   )
-                                : p.stock[activeBranch] || 0) <= p.threshold
+                                : p.stock?.[activeBranch] || 0) <= (p.threshold ?? 10)
                                 ? "bg-destructive/10 text-destructive"
                                 : "bg-primary/10 text-primary"
                             }`}
                           >
                             {activeBranch === "All"
-                              ? Object.values(p.stock).reduce(
-                                  (a, b) => a + b,
+                              ? Object.values(p.stock || {}).reduce(
+                                  (a, b) => a + (Number(b) || 0),
                                   0,
                                 )
-                              : p.stock[activeBranch] || 0}{" "}
+                              : p.stock?.[activeBranch] || 0}{" "}
                             {p.packaging || "units"}
                           </span>
                         </td>
@@ -400,8 +400,8 @@ export default function StockPage() {
                             onClick={() => {
                               const currentStock =
                                 activeBranch === "All"
-                                  ? Object.values(p.stock).reduce((a, b) => a + b, 0)
-                                  : p.stock[activeBranch] || 0;
+                                  ? Object.values(p.stock || {}).reduce((a, b) => a + (Number(b) || 0), 0)
+                                  : p.stock?.[activeBranch] || 0;
                               const targetRoute =
                                 currentStock > 0 ? "/stock/out" : "/stock/in";
                               router.push(`${targetRoute}?productId=${p.id}&mode=edit`);

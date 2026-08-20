@@ -25,7 +25,7 @@ export interface Product {
   uom?: string;
   packaging?: string;
   weight?: number;
-  dimensions: string;
+  dimensions?: string;
 }
 
 export interface Transaction {

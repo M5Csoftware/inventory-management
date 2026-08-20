@@ -62,10 +62,14 @@ export default function StockOutPage() {
 
   const selectedProduct = nonAssetProducts.find((p) => p.id === productId);
 
-  const getStockLabel = (prod: Product) =>
-    activeBranch === "All"
-      ? Object.values(prod.stock).reduce((a, b) => a + b, 0)
-      : prod.stock[activeBranch] || 0;
+  const getStockLabel = (prod: Product) => {
+    if (!prod || !prod.stock) return 0;
+    if (typeof prod.stock === "number") return prod.stock;
+    if (activeBranch === "All") {
+      return Object.values(prod.stock || {}).reduce((a, b) => a + (Number(b) || 0), 0);
+    }
+    return prod.stock?.[activeBranch] || 0;
+  };
 
   const requestedProductId = searchParams.get("productId");
 
