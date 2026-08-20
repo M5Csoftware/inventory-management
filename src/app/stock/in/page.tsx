@@ -158,48 +158,48 @@ export default function StockInPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (submittingRef.current || !productId || !quantity || !location) return;
-
-    const finalSupplier =
-      supplier === "CUSTOM_SUPPLIER" ? customSupplier : supplier;
-
-    if (isEditMode && selectedProduct) {
-      const targetBranch = activeBranch === "All" ? "Ahmedabad" : activeBranch;
-      const existingStockMap =
-        typeof selectedProduct.stock === "object" && selectedProduct.stock !== null
-          ? selectedProduct.stock
-          : { Ahmedabad: 0, Ludhiana: 0, Delhi: typeof selectedProduct.stock === "number" ? selectedProduct.stock : 0, Mumbai: 0 };
-
-      const updatedStockMap = {
-        ...existingStockMap,
-        [targetBranch]: parseInt(quantity || "0"),
-      };
-
-      await updateProduct(selectedProduct.id, {
-        stock: updatedStockMap,
-      });
-      router.push("/stock");
-      return;
-    }
-
-    // Create notes with all the details including purchase date
-    const summaryParts = [
-      purchaseDate ? `Purchase Date: ${purchaseDate}` : "",
-      invoiceNumber ? `Invoice: ${invoiceNumber}` : "",
-      finalSupplier ? `Supplier: ${finalSupplier}` : "",
-      model ? `Model: ${model}` : "",
-      serialNumber ? `S/N: ${serialNumber}` : "",
-      amount ? `Price: ₹${amount}` : "",
-      notes ? `Notes: ${notes}` : "",
-    ].filter(Boolean);
-
-    const fullNotes =
-      summaryParts.length > 0 ? summaryParts.join(" | ") : undefined;
+    if (submittingRef.current || isSubmitting || !productId || !quantity || !location) return;
 
     submittingRef.current = true;
     setIsSubmitting(true);
 
     try {
+      const finalSupplier =
+        supplier === "CUSTOM_SUPPLIER" ? customSupplier : supplier;
+
+      if (isEditMode && selectedProduct) {
+        const targetBranch = activeBranch === "All" ? "Ahmedabad" : activeBranch;
+        const existingStockMap =
+          typeof selectedProduct.stock === "object" && selectedProduct.stock !== null
+            ? selectedProduct.stock
+            : { Ahmedabad: 0, Ludhiana: 0, Delhi: typeof selectedProduct.stock === "number" ? selectedProduct.stock : 0, Mumbai: 0 };
+
+        const updatedStockMap = {
+          ...existingStockMap,
+          [targetBranch]: parseInt(quantity || "0"),
+        };
+
+        await updateProduct(selectedProduct.id, {
+          stock: updatedStockMap,
+        });
+        router.push("/stock");
+        return;
+      }
+
+      // Create notes with all the details including purchase date
+      const summaryParts = [
+        purchaseDate ? `Purchase Date: ${purchaseDate}` : "",
+        invoiceNumber ? `Invoice: ${invoiceNumber}` : "",
+        finalSupplier ? `Supplier: ${finalSupplier}` : "",
+        model ? `Model: ${model}` : "",
+        serialNumber ? `S/N: ${serialNumber}` : "",
+        amount ? `Price: ₹${amount}` : "",
+        notes ? `Notes: ${notes}` : "",
+      ].filter(Boolean);
+
+      const fullNotes =
+        summaryParts.length > 0 ? summaryParts.join(" | ") : undefined;
+
       const success = await recordTransaction(
         productId,
         "Stock In",

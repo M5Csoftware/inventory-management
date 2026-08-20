@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -124,6 +124,7 @@ export const SIDEBAR_TABS_STRUCTURE: SidebarFolderGroup[] = [
 export default function CreateUserPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const submittingRef = useRef(false);
 
   // User credentials
   const [name, setName] = useState("");
@@ -215,6 +216,8 @@ export default function CreateUserPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submittingRef.current || loading) return;
+
     if (!name.trim() || !email.trim() || !password) {
       toast.error("Please fill in all required fields");
       return;
@@ -225,6 +228,7 @@ export default function CreateUserPage() {
       return;
     }
 
+    submittingRef.current = true;
     setLoading(true);
     try {
       const token = localStorage.getItem("token");
@@ -255,6 +259,7 @@ export default function CreateUserPage() {
     } catch (err) {
       toast.error("Network error. Please try again.");
     } finally {
+      submittingRef.current = false;
       setLoading(false);
     }
   };

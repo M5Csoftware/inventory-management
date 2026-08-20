@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { Invoice, AppConfig, BankDetails, TaxOption, TeamMember, Flag, Role } from '@/types/invoice';
 import { invoiceService } from '@/services/invoice-service';
 import { useAuth } from '@/context/auth-context';
@@ -156,6 +156,27 @@ export function InvoiceProvider({ children }: { children: React.ReactNode }) {
     return flags;
   };
 
+  const inFlightLocks = useRef(new Set<string>());
+
+  const withLock = async <T,>(
+    key: string,
+    fn: () => Promise<T>,
+    fallback: T,
+  ): Promise<T> => {
+    if (inFlightLocks.current.has(key)) {
+      console.warn(`[Invoice Lock] Blocked duplicate concurrent action: ${key}`);
+      return fallback;
+    }
+    inFlightLocks.current.add(key);
+    try {
+      return await fn();
+    } finally {
+      setTimeout(() => {
+        inFlightLocks.current.delete(key);
+      }, 1000);
+    }
+  };
+
   const createInvoice = async (formData: {
     vendor: string;
     invoiceNumber: string;
@@ -169,169 +190,200 @@ export function InvoiceProvider({ children }: { children: React.ReactNode }) {
     description: string;
     invoiceImage: string | null;
   }): Promise<boolean> => {
-    const partialInv = {
-      id: uid('inv'),
-      vendor: formData.vendor.trim(),
-      invoiceNumber: formData.invoiceNumber.trim(),
-      invoiceDate: formData.invoiceDate,
-      taxableAmount: formData.taxableAmount,
-      taxOption: formData.taxOption,
-      taxAmount: formData.taxAmount,
-      amount: formData.amount,
-      poNumber: formData.poNumber.trim(),
-      bankLast4: formData.bankLast4.trim(),
-      description: formData.description.trim(),
-      invoiceImage: formData.invoiceImage,
-      enteredBy: currentSessionUser.id,
-      enteredAt: Date.now(),
-      status: 'pending_verification' as const,
-      approvals: [],
-      history: [],
-      branch: user?.branch || 'Ahmedabad',
-    };
+    const lockKey = `create-inv-${formData.vendor}-${formData.invoiceNumber}`;
+    return withLock(
+      lockKey,
+      async () => {
+        const partialInv = {
+          id: uid('inv'),
+          vendor: formData.vendor.trim(),
+          invoiceNumber: formData.invoiceNumber.trim(),
+          invoiceDate: formData.invoiceDate,
+          taxableAmount: formData.taxableAmount,
+          taxOption: formData.taxOption,
+          taxAmount: formData.taxAmount,
+          amount: formData.amount,
+          poNumber: formData.poNumber.trim(),
+          bankLast4: formData.bankLast4.trim(),
+          description: formData.description.trim(),
+          invoiceImage: formData.invoiceImage,
+          enteredBy: currentSessionUser.id,
+          enteredAt: Date.now(),
+          status: 'pending_verification' as const,
+          approvals: [],
+          history: [],
+          branch: user?.branch || 'Ahmedabad',
+        };
 
-    const calculatedFlags = computeFlags(partialInv as Omit<Invoice, 'flags'>, invoices);
-    const flagsNote = calculatedFlags.length
-      ? `Flags at entry: ${calculatedFlags.map((f) => f.text).join('; ')}`
-      : '';
+        const calculatedFlags = computeFlags(partialInv as Omit<Invoice, 'flags'>, invoices);
+        const flagsNote = calculatedFlags.length
+          ? `Flags at entry: ${calculatedFlags.map((f) => f.text).join('; ')}`
+          : '';
 
-    const newInvoice: Invoice = {
-      ...partialInv,
-      flags: calculatedFlags,
-      history: [
-        {
+        const newInvoice: Invoice = {
+          ...partialInv,
+          flags: calculatedFlags,
+          history: [
+            {
+              at: Date.now(),
+              actorId: currentSessionUser.id,
+              actorName: currentSessionUser.name,
+              actorRole: currentSessionUser.role,
+              action: 'Checked in',
+              note: flagsNote,
+            },
+          ],
+        };
+
+        const saved = await invoiceService.addInvoice(newInvoice);
+        if (saved) {
+          toast.success(`Invoice ${formData.invoiceNumber} checked in successfully!`);
+          await refreshInvoices();
+          return true;
+        }
+        toast.error('Failed to check in invoice.');
+        return false;
+      },
+      false,
+    );
+  };
+
+  const verifyInvoice = async (id: string, notes?: string): Promise<boolean> => {
+    return withLock(
+      `verify-inv-${id}`,
+      async () => {
+        const inv = invoices.find((i) => i.id === id);
+        if (!inv || inv.status !== 'pending_verification') return false;
+
+        const updatedHistory = [...(inv.history || [])];
+        updatedHistory.push({
           at: Date.now(),
           actorId: currentSessionUser.id,
           actorName: currentSessionUser.name,
           actorRole: currentSessionUser.role,
-          action: 'Checked in',
-          note: flagsNote,
-        },
-      ],
-    };
+          action: 'Verified',
+          note: notes || 'Verified with vendor — no issues found.',
+        });
 
-    const saved = await invoiceService.addInvoice(newInvoice);
-    if (saved) {
-      toast.success(`Invoice ${formData.invoiceNumber} checked in successfully!`);
-      await refreshInvoices();
-      return true;
-    }
-    toast.error('Failed to check in invoice.');
-    return false;
-  };
+        const updated = await invoiceService.updateInvoice(id, {
+          status: 'pending_approval',
+          verificationNotes: notes,
+          history: updatedHistory,
+        });
 
-  const verifyInvoice = async (id: string, notes?: string): Promise<boolean> => {
-    const inv = invoices.find((i) => i.id === id);
-    if (!inv || inv.status !== 'pending_verification') return false;
-
-    const updatedHistory = [...(inv.history || [])];
-    updatedHistory.push({
-      at: Date.now(),
-      actorId: currentSessionUser.id,
-      actorName: currentSessionUser.name,
-      actorRole: currentSessionUser.role,
-      action: 'Verified',
-      note: notes || 'Verified with vendor — no issues found.',
-    });
-
-    const updated = await invoiceService.updateInvoice(id, {
-      status: 'pending_approval',
-      verificationNotes: notes,
-      history: updatedHistory,
-    });
-
-    if (updated) {
-      toast.success(`Invoice verified successfully!`);
-      await refreshInvoices();
-      return true;
-    }
-    return false;
+        if (updated) {
+          toast.success(`Invoice verified successfully!`);
+          await refreshInvoices();
+          return true;
+        }
+        return false;
+      },
+      false,
+    );
   };
 
   const approveInvoice = async (id: string): Promise<boolean> => {
-    const inv = invoices.find((i) => i.id === id);
-    if (!inv) return false;
+    return withLock(
+      `approve-inv-${id}`,
+      async () => {
+        const inv = invoices.find((i) => i.id === id);
+        if (!inv) return false;
 
-    const updatedApprovals = [...(inv.approvals || [])];
-    const updatedHistory = [...(inv.history || [])];
+        const updatedApprovals = [...(inv.approvals || [])];
+        const updatedHistory = [...(inv.history || [])];
 
-    updatedApprovals.push({ by: currentSessionUser.id, at: Date.now() });
+        updatedApprovals.push({ by: currentSessionUser.id, at: Date.now() });
 
-    updatedHistory.push({
-      at: Date.now(),
-      actorId: currentSessionUser.id,
-      actorName: currentSessionUser.name,
-      actorRole: currentSessionUser.role,
-      action: 'Approved',
-      note: 'L2 administrative approval sign-off granted.',
-    });
+        updatedHistory.push({
+          at: Date.now(),
+          actorId: currentSessionUser.id,
+          actorName: currentSessionUser.name,
+          actorRole: currentSessionUser.role,
+          action: 'Approved',
+          note: 'L2 administrative approval sign-off granted.',
+        });
 
-    const updated = await invoiceService.updateInvoice(id, {
-      status: 'approved',
-      approvals: updatedApprovals,
-      history: updatedHistory,
-    });
+        const updated = await invoiceService.updateInvoice(id, {
+          status: 'approved',
+          approvals: updatedApprovals,
+          history: updatedHistory,
+        });
 
-    if (updated) {
-      toast.success(`Invoice approved!`);
-      await refreshInvoices();
-      return true;
-    }
-    return false;
+        if (updated) {
+          toast.success(`Invoice approved!`);
+          await refreshInvoices();
+          return true;
+        }
+        return false;
+      },
+      false,
+    );
   };
 
   const rejectInvoice = async (id: string, reason: string): Promise<boolean> => {
-    const inv = invoices.find((i) => i.id === id);
-    if (!inv) return false;
+    return withLock(
+      `reject-inv-${id}`,
+      async () => {
+        const inv = invoices.find((i) => i.id === id);
+        if (!inv) return false;
 
-    const updatedHistory = [...(inv.history || [])];
-    updatedHistory.push({
-      at: Date.now(),
-      actorId: currentSessionUser.id,
-      actorName: currentSessionUser.name,
-      actorRole: currentSessionUser.role,
-      action: 'Rejected',
-      note: reason,
-    });
+        const updatedHistory = [...(inv.history || [])];
+        updatedHistory.push({
+          at: Date.now(),
+          actorId: currentSessionUser.id,
+          actorName: currentSessionUser.name,
+          actorRole: currentSessionUser.role,
+          action: 'Rejected',
+          note: reason,
+        });
 
-    const updated = await invoiceService.updateInvoice(id, {
-      status: 'rejected',
-      history: updatedHistory,
-    });
+        const updated = await invoiceService.updateInvoice(id, {
+          status: 'rejected',
+          history: updatedHistory,
+        });
 
-    if (updated) {
-      toast.error(`Invoice rejected.`);
-      await refreshInvoices();
-      return true;
-    }
-    return false;
+        if (updated) {
+          toast.error(`Invoice rejected.`);
+          await refreshInvoices();
+          return true;
+        }
+        return false;
+      },
+      false,
+    );
   };
 
   const payInvoice = async (id: string): Promise<boolean> => {
-    const inv = invoices.find((i) => i.id === id);
-    if (!inv) return false;
+    return withLock(
+      `pay-inv-${id}`,
+      async () => {
+        const inv = invoices.find((i) => i.id === id);
+        if (!inv) return false;
 
-    const updatedHistory = [...(inv.history || [])];
-    updatedHistory.push({
-      at: Date.now(),
-      actorId: currentSessionUser.id,
-      actorName: currentSessionUser.name,
-      actorRole: currentSessionUser.role,
-      action: 'Marked as paid',
-      note: 'Final payout completed and marked as paid.',
-    });
+        const updatedHistory = [...(inv.history || [])];
+        updatedHistory.push({
+          at: Date.now(),
+          actorId: currentSessionUser.id,
+          actorName: currentSessionUser.name,
+          actorRole: currentSessionUser.role,
+          action: 'Marked as paid',
+          note: 'Final payout completed and marked as paid.',
+        });
 
-    const updated = await invoiceService.updateInvoice(id, {
-      status: 'paid',
-      history: updatedHistory,
-    });
+        const updated = await invoiceService.updateInvoice(id, {
+          status: 'paid',
+          history: updatedHistory,
+        });
 
-    if (updated) {
-      toast.success(`Invoice marked as paid!`);
-      await refreshInvoices();
-      return true;
-    }
-    return false;
+        if (updated) {
+          toast.success(`Invoice marked as paid!`);
+          await refreshInvoices();
+          return true;
+        }
+        return false;
+      },
+      false,
+    );
   };
 
   const updateBankDetails = async (
@@ -343,38 +395,47 @@ export function InvoiceProvider({ children }: { children: React.ReactNode }) {
       ifscCode: string;
     }
   ): Promise<boolean> => {
-    const inv = invoices.find((i) => i.id === id);
-    if (!inv) return false;
+    return withLock(
+      `bank-inv-${id}`,
+      async () => {
+        const inv = invoices.find((i) => i.id === id);
+        if (!inv) return false;
 
-    const bankLast4 = bankData.accountNumber.slice(-4);
-    const bankDetails: BankDetails = {
-      ...bankData,
-      addedAt: Date.now(),
-      addedBy: currentSessionUser.id,
-    };
+        const bankLast4 = bankData.accountNumber.slice(-4);
+        const bankDetails: BankDetails = {
+          bankName: bankData.bankName.trim(),
+          accountName: bankData.accountName.trim(),
+          accountNumber: bankData.accountNumber.trim(),
+          ifscCode: bankData.ifscCode.trim(),
+          addedAt: Date.now(),
+          addedBy: currentSessionUser.id,
+        };
 
-    const updatedHistory = [...(inv.history || [])];
-    updatedHistory.push({
-      at: Date.now(),
-      actorId: currentSessionUser.id,
-      actorName: currentSessionUser.name,
-      actorRole: currentSessionUser.role,
-      action: 'Bank details attached',
-      note: `${bankData.bankName} (${bankData.ifscCode}) · Account: **** ${bankLast4}`,
-    });
+        const updatedHistory = [...(inv.history || [])];
+        updatedHistory.push({
+          at: Date.now(),
+          actorId: currentSessionUser.id,
+          actorName: currentSessionUser.name,
+          actorRole: currentSessionUser.role,
+          action: 'Bank details updated',
+          note: `Bank updated to ${bankData.bankName.trim()} (ending in ${bankLast4})`,
+        });
 
-    const updated = await invoiceService.updateInvoice(id, {
-      bankLast4,
-      bankDetails,
-      history: updatedHistory,
-    });
+        const updated = await invoiceService.updateInvoice(id, {
+          bankLast4,
+          bankDetails,
+          history: updatedHistory,
+        });
 
-    if (updated) {
-      toast.success(`Bank details saved for ${inv.vendor}`);
-      await refreshInvoices();
-      return true;
-    }
-    return false;
+        if (updated) {
+          toast.success(`Bank details updated!`);
+          await refreshInvoices();
+          return true;
+        }
+        return false;
+      },
+      false,
+    );
   };
 
   const addTeamMember = async (name: string, username: string, password: string, role: Role) => {
