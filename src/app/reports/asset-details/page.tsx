@@ -53,7 +53,7 @@ interface AssetAssignment {
 }
 
 export default function AssetDetailsReportPage() {
-  const { activeBranch } = useInventory();
+  const { activeBranch, products, categories } = useInventory();
   const [assets, setAssets] = useState<AssetAssignment[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
@@ -174,6 +174,28 @@ export default function AssetDetailsReportPage() {
     });
   }, [assets, statusFilter, deptFilter, durationFilter, searchTerm]);
 
+  // Real-time available units in stock across asset products
+  const availableInStock = useMemo(() => {
+    const assetProducts = products.filter((prod) => {
+      const category = categories.find(
+        (c) => c.name.toLowerCase() === (prod.category || "").toLowerCase()
+      );
+      return category?.isAsset === true;
+    });
+
+    return assetProducts.reduce((sum, prod) => {
+      if (!prod || !prod.stock) return sum;
+      if (typeof prod.stock === "number") return sum + (isNaN(prod.stock) ? 0 : prod.stock);
+      if (typeof prod.stock === "object") {
+        if (branchFilter === "All") {
+          return sum + Object.values(prod.stock).reduce((a, b) => a + (Number(b) || 0), 0);
+        }
+        return sum + (Number(prod.stock[branchFilter]) || 0);
+      }
+      return sum;
+    }, 0);
+  }, [products, categories, branchFilter]);
+
   // Metrics summary
   const metrics = useMemo(() => {
     let assignedCount = 0;
@@ -192,20 +214,22 @@ export default function AssetDetailsReportPage() {
       }
     });
 
+    const totalSystemAssets = assignedCount + maintenanceCount + availableInStock;
     const utilizationRate =
-      filteredAssets.length > 0
-        ? Math.round((assignedCount / filteredAssets.length) * 100)
+      totalSystemAssets > 0
+        ? Math.round((assignedCount / totalSystemAssets) * 100)
         : 0;
 
     return {
-      total: filteredAssets.length,
+      total: totalSystemAssets,
       assignedCount,
       returnedCount,
+      availableInStock,
       maintenanceCount,
       longTermCount,
       utilizationRate,
     };
-  }, [filteredAssets]);
+  }, [filteredAssets, availableInStock]);
 
   // Custodian Grouping Summary
   const custodianSummary = useMemo(() => {
@@ -397,15 +421,17 @@ export default function AssetDetailsReportPage() {
         <Card className="bg-card/50 backdrop-blur-sm border-border/60">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Returned / Stock
+              Available in Stock
             </CardTitle>
             <CheckCircle2 className="h-4 w-4 text-emerald-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-              {metrics.returnedCount}
+              {metrics.availableInStock}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">Available for re-issue</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Ready for assignment {metrics.returnedCount > 0 ? `(${metrics.returnedCount} returned)` : ""}
+            </p>
           </CardContent>
         </Card>
 

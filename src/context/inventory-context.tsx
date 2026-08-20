@@ -231,14 +231,50 @@ const NO_BODY_HEADER = { "x-database": "m5c-inventory" };
 
 export function InventoryProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
-  const [activeBranch, setActiveBranch] = useState<string>("Ahmedabad");
-
-  // Synchronize activeBranch with user's assigned branch on mount/change
-  useEffect(() => {
-    if (user?.branch) {
-      setActiveBranch(user.branch);
+  const [activeBranch, setActiveBranchState] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("activeBranch");
+      if (saved) return saved;
     }
-  }, [user?.branch]);
+    return "Ahmedabad";
+  });
+
+  const setActiveBranch = (branch: string) => {
+    setActiveBranchState(branch);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("activeBranch", branch);
+    }
+  };
+
+  // Synchronize activeBranch with user's assigned branch or saved preference on mount/change
+  useEffect(() => {
+    if (!user) return;
+
+    const isRestrictedUser =
+      user.branch &&
+      user.branch !== "All" &&
+      user.role !== "admin" &&
+      user.role !== "master" &&
+      user.id !== "master";
+
+    if (isRestrictedUser) {
+      setActiveBranchState(user.branch);
+      if (typeof window !== "undefined") {
+        localStorage.setItem("activeBranch", user.branch);
+      }
+    } else {
+      const savedBranch =
+        typeof window !== "undefined" ? localStorage.getItem("activeBranch") : null;
+      if (savedBranch) {
+        setActiveBranchState(savedBranch);
+      } else if (user.branch) {
+        setActiveBranchState(user.branch);
+        if (typeof window !== "undefined") {
+          localStorage.setItem("activeBranch", user.branch);
+        }
+      }
+    }
+  }, [user]);
 
   const [products, setProducts] = useState<Product[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -506,12 +542,12 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify({
           productId,
           type,
-          quantity,
-          reasonOrLocation,
-          notes,
+          quantity: Number(quantity) || 1,
+          reasonOrLocation: reasonOrLocation || "",
+          notes: notes || "",
           branch: selectedBranch,
           purchaseDate: additionalData?.purchaseDate,
-          amount: additionalData?.amount,
+          amount: additionalData?.amount !== undefined && !isNaN(Number(additionalData.amount)) ? Number(additionalData.amount) : undefined,
           supplier: additionalData?.supplier,
           invoiceNumber: additionalData?.invoiceNumber,
           model: additionalData?.model,

@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useInventory, Product, ASSET_DEPARTMENTS, ASSET_APPROVED_BY } from '@/context/inventory-context';
+import { useInventory, Product, ASSET_DEPARTMENTS, ASSET_APPROVED_BY, BRANCHES } from '@/context/inventory-context';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Laptop, User, FileText, Package, ShieldCheck, Building2, CheckCircle2 } from 'lucide-react';
@@ -11,6 +11,16 @@ import { ArrowLeft, Laptop, User, FileText, Package, ShieldCheck, Building2, Che
 export default function NewAssetAssignmentPage() {
   const { products, categories, assignAsset, activeBranch } = useInventory();
   const router = useRouter();
+
+  const [selectedBranch, setSelectedBranch] = useState<string>(() =>
+    activeBranch === 'All' ? 'Ahmedabad' : activeBranch
+  );
+
+  useEffect(() => {
+    if (activeBranch !== 'All') {
+      setSelectedBranch(activeBranch);
+    }
+  }, [activeBranch]);
 
   const [productId, setProductId] = useState('');
   const [assignedTo, setAssignedTo] = useState('');
@@ -26,9 +36,24 @@ export default function NewAssetAssignmentPage() {
 
   // Filter products that belong to an asset category
   const assetProducts = products.filter((prod) => {
-    const category = categories.find((c) => c.name.toLowerCase() === prod.category.toLowerCase());
+    const category = categories.find((c) => c.name.toLowerCase() === (prod.category || '').toLowerCase());
     return category?.isAsset === true;
   });
+
+  const getAvailableStock = (prod: Product, branch: string) => {
+    if (!prod || !prod.stock) return 0;
+    if (typeof prod.stock === 'number') return isNaN(prod.stock) ? 0 : prod.stock;
+    if (typeof prod.stock === 'object') {
+      if (branch === 'All') {
+        return Object.values(prod.stock).reduce(
+          (a, b) => a + (Number(b) || 0),
+          0
+        );
+      }
+      return Number(prod.stock[branch]) || 0;
+    }
+    return 0;
+  };
 
   useEffect(() => {
     if (assetProducts.length > 0 && !productId) {
@@ -54,9 +79,10 @@ export default function NewAssetAssignmentPage() {
         approvedBy,
         modelNumber: modelNumber || undefined,
         serialNumber: serialNumber || undefined,
-        quantity: parseInt(quantity),
+        quantity: parseInt(quantity, 10) || 1,
         notes: notes || undefined,
         warranty: warranty || undefined,
+        branch: selectedBranch as any,
       });
 
       if (success) {
@@ -115,22 +141,45 @@ export default function NewAssetAssignmentPage() {
             </CardHeader>
             <CardContent className="pt-6">
               <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="space-y-1.5">
-                  <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    <Package className="h-3 w-3" />
-                    Select Item <span className="text-destructive">*</span>
-                  </label>
-                  <select 
-                    value={productId}
-                    onChange={(e) => setProductId(e.target.value)}
-                    className="h-10 w-full rounded-lg border-2 border-muted bg-background px-3 text-sm shadow-sm transition-all appearance-none focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
-                  >
-                    {assetProducts.map((prod: Product) => (
-                      <option key={prod.id} value={prod.id}>
-                        {prod.name} (Available: {activeBranch === 'All' ? Object.values(prod.stock || {}).reduce((a, b) => a + b, 0) : prod.stock?.[activeBranch] || 0} units)
-                      </option>
-                    ))}
-                  </select>
+                <div className="grid gap-6 md:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      <Building2 className="h-3 w-3 text-primary" />
+                      Branch Warehouse <span className="text-destructive">*</span>
+                    </label>
+                    <select
+                      value={selectedBranch}
+                      onChange={(e) => setSelectedBranch(e.target.value)}
+                      className="h-10 w-full rounded-lg border-2 border-muted bg-background px-3 text-sm shadow-sm transition-all appearance-none focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 cursor-pointer font-medium"
+                    >
+                      {BRANCHES.map((b: string) => (
+                        <option key={b} value={b}>
+                          🏢 {b} Branch
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      <Package className="h-3 w-3" />
+                      Select Item <span className="text-destructive">*</span>
+                    </label>
+                    <select 
+                      value={productId}
+                      onChange={(e) => setProductId(e.target.value)}
+                      className="h-10 w-full rounded-lg border-2 border-muted bg-background px-3 text-sm shadow-sm transition-all appearance-none focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    >
+                      {assetProducts.map((prod: Product) => {
+                        const avail = getAvailableStock(prod, selectedBranch);
+                        return (
+                          <option key={prod.id} value={prod.id}>
+                            {prod.name} (Available: {avail} units in {selectedBranch})
+                          </option>
+                        );
+                      })}
+                    </select>
+                  </div>
                 </div>
 
                 <div className="grid gap-6 md:grid-cols-2">
