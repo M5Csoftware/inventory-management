@@ -22,6 +22,7 @@ import {
   Pencil,
   Trash,
   CheckCircle,
+  FilePlus,
 } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -409,6 +410,15 @@ export default function OrdersPage() {
                             <MoreVertical className="h-4 w-4" />
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={() =>
+                                router.push(`/invoice/new?po=${encodeURIComponent(order.id)}`)
+                              }
+                              className="text-primary font-semibold focus:text-primary cursor-pointer"
+                            >
+                              <FilePlus className="mr-2 h-4 w-4 text-primary" />
+                              <span>Create Invoice</span>
+                            </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() =>
                                 router.push(`/orders/${order.id}/edit`)

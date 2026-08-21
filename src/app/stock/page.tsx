@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { useInventory, type Product } from "@/context/inventory-context";
+import { useInventory, type Product, type Category } from "@/context/inventory-context";
 import { ConfirmDeleteModal } from "@/components/confirm-delete-modal";
 
 export default function StockPage() {
@@ -58,8 +58,24 @@ export default function StockPage() {
     const matchesSearch =
       p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (p.sku && p.sku.toLowerCase().includes(searchTerm.toLowerCase()));
-    const matchesCategory =
-      categoryFilter === "All" || p.category === categoryFilter;
+
+    let matchesCategory =
+      categoryFilter === "All" ||
+      p.category.toLowerCase() === categoryFilter.toLowerCase();
+
+    // If not direct match, check if categoryFilter is a parent of p.category
+    if (!matchesCategory && categoryFilter !== "All") {
+      const childCategories = categories
+        .filter(
+          (c) =>
+            c.parentCategory?.toLowerCase() === categoryFilter.toLowerCase(),
+        )
+        .map((c) => c.name.toLowerCase());
+      if (childCategories.includes(p.category.toLowerCase())) {
+        matchesCategory = true;
+      }
+    }
+
     return matchesSearch && matchesCategory;
   });
 
@@ -301,14 +317,61 @@ export default function StockPage() {
                   <select
                     value={categoryFilter}
                     onChange={(e) => setCategoryFilter(e.target.value)}
-                    className="h-9 w-full sm:w-[200px] rounded-md border border-input bg-background/50 pl-9 pr-3 text-sm shadow-sm transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22currentColor%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E')] bg-[length:16px] bg-[right_8px_center] bg-no-repeat"
+                    className="h-9 w-full sm:w-[220px] rounded-md border border-input bg-background/50 pl-9 pr-3 text-sm shadow-sm transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22currentColor%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E')] bg-[length:16px] bg-[right_8px_center] bg-no-repeat font-medium cursor-pointer"
                   >
                     <option value="All">All Categories</option>
-                    {categories.map((c) => (
-                      <option key={c.name} value={c.name}>
-                        {c.name}
-                      </option>
-                    ))}
+                    {(() => {
+                      const topLevels = (categories || []).filter((c) => !c.parentCategory);
+                      const subMap: Record<string, Category[]> = {};
+                      const renderedSubs = new Set<string>();
+
+                      (categories || []).forEach((c) => {
+                        if (c.parentCategory) {
+                          const key = c.parentCategory.trim().toLowerCase();
+                          if (!subMap[key]) subMap[key] = [];
+                          subMap[key].push(c);
+                        }
+                      });
+
+                      const elements = topLevels.map((top) => {
+                        const subs = subMap[top.name.trim().toLowerCase()] || [];
+                        subs.forEach((s) => renderedSubs.add(s.name));
+                        if (subs.length > 0) {
+                          return (
+                            <optgroup key={top.name} label={`📁 ${top.name}`}>
+                              <option value={top.name}>{top.name} (All in {top.name})</option>
+                              {subs.map((s) => (
+                                <option key={s.name} value={s.name}>
+                                  &nbsp;&nbsp;↳ {s.name}
+                                </option>
+                              ))}
+                            </optgroup>
+                          );
+                        }
+                        return (
+                          <option key={top.name} value={top.name}>
+                            {top.name}
+                          </option>
+                        );
+                      });
+
+                      const unlinkedSubs = (categories || []).filter(
+                        (c) => c.parentCategory && !renderedSubs.has(c.name),
+                      );
+                      if (unlinkedSubs.length > 0) {
+                        elements.push(
+                          <optgroup key="other-subs" label="Other Subcategories">
+                            {unlinkedSubs.map((s) => (
+                              <option key={s.name} value={s.name}>
+                                {s.name} ({s.parentCategory})
+                              </option>
+                            ))}
+                          </optgroup>,
+                        );
+                      }
+
+                      return elements;
+                    })()}
                   </select>
                 </div>
                 <div className="relative">

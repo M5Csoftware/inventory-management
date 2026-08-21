@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useInventory } from "@/context/inventory-context";
+import { useInventory, ASSET_DEPARTMENTS } from "@/context/inventory-context";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/inventory";
@@ -558,14 +558,11 @@ export default function AssetDetailsReportPage() {
                   className="w-full h-9 px-3 text-sm bg-background border border-input rounded-md focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
                 >
                   <option value="All">🏢 All Departments</option>
-                  <option value="Operations">Operations</option>
-                  <option value="Collections">Collections</option>
-                  <option value="Customer support">Customer support</option>
-                  <option value="Sales support">Sales support</option>
-                  <option value="Accounts">Accounts</option>
-                  <option value="Billing">Billing</option>
-                  <option value="HR">HR</option>
-                  <option value="Management">Management</option>
+                  {ASSET_DEPARTMENTS.map((dept) => (
+                    <option key={dept} value={dept}>
+                      {dept}
+                    </option>
+                  ))}
                 </select>
               </div>
 

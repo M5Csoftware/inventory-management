@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect, useCallback, Suspense } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useInvoice, InvoiceProvider } from '@/context/invoice-context';
 import { TaxOption } from '@/types/invoice';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -22,13 +22,17 @@ import {
   X,
   ArrowUpRight,
   CheckCircle2,
+  ShoppingCart,
+  Sparkles,
 } from 'lucide-react';
-import { useInventory } from '@/context/inventory-context';
+import { useInventory, Order } from '@/context/inventory-context';
+import { toast } from 'react-toastify';
 
 function NewInvoiceFormContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { createInvoice } = useInvoice();
-  const { suppliers } = useInventory();
+  const { suppliers, orders } = useInventory();
 
   const [vendor, setVendor] = useState('');
   const [invoiceNumber, setInvoiceNumber] = useState('');
@@ -41,13 +45,92 @@ function NewInvoiceFormContent() {
   const [invoiceImage, setInvoiceImage] = useState<string | null>(null);
   const [imageFileName, setImageFileName] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [linkedOrder, setLinkedOrder] = useState<Order | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const initialPoAppliedRef = useRef(false);
 
   // Auto Calculations
   const parsedTaxable = parseFloat(taxableAmount) || 0;
   const calculatedTax = parsedTaxable > 0 ? parsedTaxable * 0.18 : 0;
   const calculatedTotal = parsedTaxable + calculatedTax;
+
+  // Auto-fetch and populate form fields from a selected Purchase Order
+  const applyOrderDetails = useCallback((order: Order) => {
+    setLinkedOrder(order);
+    setPoNumber(order.id);
+
+    if (order.supplier) {
+      setVendor(order.supplier);
+    }
+
+    // Calculate pre-tax subtotal
+    const subtotal =
+      order.items && order.items.length > 0
+        ? order.items.reduce((acc, it) => acc + (it.quantity * it.price), 0)
+        : order.totalAmount
+        ? Number((order.totalAmount / 1.18).toFixed(2))
+        : 0;
+
+    if (subtotal > 0) {
+      setTaxableAmount(subtotal.toFixed(2));
+    }
+
+    // Summarize order items for description
+    if (order.items && order.items.length > 0) {
+      const itemsSummary = order.items
+        .map((it) => `${it.quantity}x ${it.name} (₹${it.price}/unit)`)
+        .join(', ');
+      setDescription(`PO #${order.id}: ${itemsSummary}`);
+    }
+
+    // Use order creation date if available
+    if (order.createdAt) {
+      const parsedDate = new Date(order.createdAt);
+      if (!isNaN(parsedDate.getTime())) {
+        setInvoiceDate(parsedDate.toISOString().slice(0, 10));
+      }
+    }
+
+    toast.info(`Auto-fetched details from Purchase Order ${order.id}`);
+  }, []);
+
+  // Handle PO selection from dropdown / input
+  const handlePoChange = (selectedPoId: string) => {
+    setPoNumber(selectedPoId);
+    const matched = (orders || []).find(
+      (o) => o.id.trim().toLowerCase() === selectedPoId.trim().toLowerCase(),
+    );
+    if (matched) {
+      applyOrderDetails(matched);
+    } else {
+      setLinkedOrder(null);
+    }
+  };
+
+  const clearPoLink = () => {
+    setLinkedOrder(null);
+    setPoNumber('');
+  };
+
+  // Check URL query parameter (?po=... or ?orderId=...)
+  useEffect(() => {
+    if (initialPoAppliedRef.current || !orders || orders.length === 0) return;
+
+    const poParam = searchParams?.get('po') || searchParams?.get('orderId');
+    if (poParam) {
+      const matched = orders.find(
+        (o) => o.id.trim().toLowerCase() === poParam.trim().toLowerCase(),
+      );
+      if (matched) {
+        applyOrderDetails(matched);
+        initialPoAppliedRef.current = true;
+      } else {
+        setPoNumber(poParam);
+        initialPoAppliedRef.current = true;
+      }
+    }
+  }, [orders, searchParams, applyOrderDetails]);
 
   const handleFileRead = (file: File) => {
     if (!file) return;
@@ -61,7 +144,7 @@ function NewInvoiceFormContent() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!vendor || !invoiceNumber || !invoiceDate || parsedTaxable <= 0) return;
+    if (!vendor || !invoiceNumber || !invoiceDate || parsedTaxable <= 0 || isSubmitting) return;
 
     setIsSubmitting(true);
     try {
@@ -89,7 +172,7 @@ function NewInvoiceFormContent() {
 
   return (
     <div className="p-6 sm:p-8 space-y-8 animate-in fade-in duration-300 min-h-screen bg-background w-full max-w-full">
-      {/* Top Header matching Inventory Management pages (NO back button) */}
+      {/* Top Header matching Inventory Management pages */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border/40 pb-6 w-full">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-foreground flex items-center gap-3">
@@ -97,12 +180,12 @@ function NewInvoiceFormContent() {
             New Invoice
           </h1>
           <p className="text-muted-foreground mt-1">
-            Enter vendor details, taxable amount, 18% GST tax option, PO reference, and attach document scan.
+            Enter vendor details, taxable amount, 18% GST tax option, link with Purchase Order (PO), and attach document scan.
           </p>
         </div>
       </div>
 
-      {/* Main Form Card taking 100% Full Width */}
+      {/* Main Form Card */}
       <form onSubmit={handleSubmit} className="w-full max-w-full">
         <Card className="border-0 shadow-xl shadow-primary/5 bg-gradient-to-br from-card to-card/80 backdrop-blur-sm rounded-2xl w-full max-w-full overflow-hidden">
           <CardHeader className="border-b border-border/50 pb-4">
@@ -113,7 +196,7 @@ function NewInvoiceFormContent() {
                   New Invoice Details
                 </CardTitle>
                 <CardDescription className="text-xs mt-1">
-                  Fill in vendor details and tax specifications. Automatic 18% GST will be calculated.
+                  Fill in vendor details or select a Purchase Order to auto-fill. Automatic 18% GST will be calculated.
                 </CardDescription>
               </div>
               <span className="rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-600">
@@ -123,6 +206,72 @@ function NewInvoiceFormContent() {
           </CardHeader>
 
           <CardContent className="pt-6 space-y-6">
+            {/* Quick PO Link Bar */}
+            <div className="p-4 rounded-xl bg-muted/40 border border-border/60 space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <label className="flex items-center gap-2 text-xs font-bold text-foreground">
+                  <ShoppingCart className="h-4 w-4 text-primary" />
+                  Link with Purchase Order (Auto-Fetch Details)
+                </label>
+                <span className="text-[11px] text-muted-foreground flex items-center gap-1">
+                  <Sparkles className="h-3 w-3 text-amber-500" /> Auto-fills Vendor, Subtotal, Date &amp; Description
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="sm:col-span-2">
+                  <select
+                    value={poNumber}
+                    onChange={(e) => handlePoChange(e.target.value)}
+                    className="h-10 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 dark:border-gray-600 dark:bg-gray-900/90 font-medium cursor-pointer"
+                  >
+                    <option value="">-- Select a Purchase Order (PO) to Auto-Fetch --</option>
+                    {(orders || []).map((o) => (
+                      <option key={o.id} value={o.id}>
+                        {o.id} · {o.supplier} · ₹{o.totalAmount?.toLocaleString('en-IN')} ({o.status})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <input
+                    type="text"
+                    list="po-datalist-quick"
+                    placeholder="Or type PO Number (e.g. PO-101)"
+                    value={poNumber}
+                    onChange={(e) => handlePoChange(e.target.value)}
+                    className="h-10 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 dark:border-gray-600 dark:bg-gray-900/90 font-mono font-bold"
+                  />
+                  <datalist id="po-datalist-quick">
+                    {(orders || []).map((o) => (
+                      <option key={o.id} value={o.id}>
+                        {o.id} - {o.supplier} (₹{o.totalAmount})
+                      </option>
+                    ))}
+                  </datalist>
+                </div>
+              </div>
+
+              {/* Linked PO Notification Banner */}
+              {linkedOrder && (
+                <div className="bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 p-3 rounded-lg flex items-center justify-between text-xs text-emerald-800 dark:text-emerald-300 animate-in fade-in">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                    <div>
+                      <span className="font-bold">Linked with {linkedOrder.id}:</span> {linkedOrder.supplier} · Total ₹{linkedOrder.totalAmount?.toLocaleString('en-IN')} ({linkedOrder.items?.length || 0} item lines)
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={clearPoLink}
+                    className="text-emerald-700 hover:text-emerald-900 dark:text-emerald-400 dark:hover:text-emerald-200 underline font-semibold ml-2 cursor-pointer"
+                  >
+                    Clear Link
+                  </button>
+                </div>
+              )}
+            </div>
+
             {/* Row 1: Vendor, Invoice Number, Invoice Date */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
               <div className="space-y-1.5">
@@ -249,13 +398,13 @@ function NewInvoiceFormContent() {
               <div className="space-y-1.5">
                 <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                   <FileText className="h-3.5 w-3.5 text-primary" />
-                  PO / Purchase Order No. (Optional)
+                  PO / Purchase Order No.
                 </label>
                 <input
                   type="text"
                   placeholder="e.g. PO-2026-904"
                   value={poNumber}
-                  onChange={(e) => setPoNumber(e.target.value)}
+                  onChange={(e) => handlePoChange(e.target.value)}
                   className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 dark:border-gray-600 dark:bg-gray-900/90 font-mono"
                 />
               </div>
@@ -299,23 +448,25 @@ function NewInvoiceFormContent() {
               {invoiceImage ? (
                 <div className="border-2 border-primary/40 bg-primary/5 p-4 rounded-xl flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <ImageIcon className="h-6 w-6 text-primary" />
+                    <div className="p-2 bg-primary/10 rounded-lg text-primary">
+                      <ImageIcon className="h-5 w-5" />
+                    </div>
                     <div>
-                      <p className="text-xs font-bold text-foreground">{imageFileName || 'Invoice Scan Image'}</p>
-                      <p className="text-[10px] text-emerald-600 font-semibold flex items-center gap-1">
-                        <CheckCircle2 size={12} /> Scan attached and ready for submission
+                      <p className="text-xs font-semibold text-foreground">
+                        {imageFileName || 'invoice_scan_attached.png'}
                       </p>
+                      <p className="text-[10px] text-muted-foreground">Image file loaded &amp; ready</p>
                     </div>
                   </div>
                   <Button
                     type="button"
                     variant="ghost"
-                    size="icon"
+                    size="sm"
                     onClick={() => {
                       setInvoiceImage(null);
                       setImageFileName('');
                     }}
-                    className="h-8 w-8 text-rose-600"
+                    className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
                   >
                     <X className="h-4 w-4" />
                   </Button>
@@ -323,20 +474,24 @@ function NewInvoiceFormContent() {
               ) : (
                 <div
                   onClick={() => fileInputRef.current?.click()}
-                  className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-6 text-center cursor-pointer hover:border-primary transition-colors bg-muted/10 space-y-2"
+                  className="border-2 border-dashed border-gray-300 dark:border-gray-700 hover:border-primary/60 bg-muted/20 hover:bg-muted/40 p-6 rounded-xl text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2"
                 >
-                  <Upload className="h-8 w-8 text-muted-foreground mx-auto" />
-                  <p className="text-xs font-semibold text-foreground">Click to upload or drag &amp; drop invoice scan</p>
-                  <p className="text-[10px] text-muted-foreground">PNG, JPG, WEBP formats supported</p>
+                  <div className="p-3 bg-background rounded-full shadow-sm text-primary">
+                    <Upload className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-foreground">Click to upload invoice document</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">PNG, JPG, PDF up to 10MB</p>
+                  </div>
                   <input
-                    ref={fileInputRef}
                     type="file"
-                    accept="image/*"
-                    className="hidden"
+                    ref={fileInputRef}
                     onChange={(e) => {
                       const file = e.target.files?.[0];
                       if (file) handleFileRead(file);
                     }}
+                    accept="image/*"
+                    className="hidden"
                   />
                 </div>
               )}
@@ -368,7 +523,9 @@ function NewInvoiceFormContent() {
 export default function NewInvoiceFormPage() {
   return (
     <InvoiceProvider>
-      <NewInvoiceFormContent />
+      <Suspense fallback={<div className="p-8 text-center text-muted-foreground">Loading Invoice Form...</div>}>
+        <NewInvoiceFormContent />
+      </Suspense>
     </InvoiceProvider>
   );
 }
