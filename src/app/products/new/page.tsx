@@ -275,11 +275,60 @@ export default function NewProductPage() {
                     <select 
                       value={category}
                       onChange={(e) => setCategory(e.target.value)}
-                      className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22currentColor%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E')] bg-[length:16px] bg-[right_10px_center] bg-no-repeat hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
+                      className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22currentColor%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E')] bg-[length:16px] bg-[right_10px_center] bg-no-repeat hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500 font-medium cursor-pointer"
                     >
-                      {categories.map((cat: Category) => (
-                        <option key={cat.name} value={cat.name}>{cat.name}</option>
-                      ))}
+                      {(() => {
+                        const topLevels = (categories || []).filter((c: Category) => !c.parentCategory);
+                        const subMap: Record<string, Category[]> = {};
+                        const renderedSubs = new Set<string>();
+
+                        (categories || []).forEach((c: Category) => {
+                          if (c.parentCategory) {
+                            const key = c.parentCategory.trim().toLowerCase();
+                            if (!subMap[key]) subMap[key] = [];
+                            subMap[key].push(c);
+                          }
+                        });
+
+                        const elements = topLevels.map((top: Category) => {
+                          const subs = subMap[top.name.trim().toLowerCase()] || [];
+                          subs.forEach((s) => renderedSubs.add(s.name));
+                          if (subs.length > 0) {
+                            return (
+                              <optgroup key={top.name} label={`📁 ${top.name}`}>
+                                <option value={top.name}>{top.name} (General / Major)</option>
+                                {subs.map((s) => (
+                                  <option key={s.name} value={s.name}>
+                                    &nbsp;&nbsp;↳ {s.name}
+                                  </option>
+                                ))}
+                              </optgroup>
+                            );
+                          }
+                          return (
+                            <option key={top.name} value={top.name}>
+                              {top.name}
+                            </option>
+                          );
+                        });
+
+                        const unlinkedSubs = (categories || []).filter(
+                          (c: Category) => c.parentCategory && !renderedSubs.has(c.name),
+                        );
+                        if (unlinkedSubs.length > 0) {
+                          elements.push(
+                            <optgroup key="other-subs" label="Other Subcategories">
+                              {unlinkedSubs.map((s) => (
+                                <option key={s.name} value={s.name}>
+                                  {s.name} ({s.parentCategory})
+                                </option>
+                              ))}
+                            </optgroup>,
+                          );
+                        }
+
+                        return elements;
+                      })()}
                     </select>
                   </div>
                   <div className="space-y-1.5">
