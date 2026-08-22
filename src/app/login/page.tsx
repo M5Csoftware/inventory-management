@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Package, ArrowRight, Loader2, Eye, EyeOff } from "lucide-react";
@@ -25,9 +25,12 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const submittingRef = useRef(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submittingRef.current || loading) return;
+    submittingRef.current = true;
     setError("");
     setLoading(true);
 
@@ -52,6 +55,7 @@ export default function LoginPage() {
     } catch (err) {
       setError("Something went wrong. Please try again.");
     } finally {
+      submittingRef.current = false;
       setLoading(false);
     }
   };

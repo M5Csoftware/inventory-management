@@ -23,6 +23,8 @@ export function BankDetailsModal({ invoice, onClose, onSave }: BankDetailsModalP
   const [accountName, setAccountName] = useState(existing?.accountName || invoice.vendor || '');
   const [accountNumber, setAccountNumber] = useState(existing?.accountNumber || '');
   const [ifscCode, setIfscCode] = useState(existing?.ifscCode || '');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const isSubmittingRef = React.useRef(false);
 
   useEffect(() => {
     setMounted(true);
@@ -30,7 +32,9 @@ export function BankDetailsModal({ invoice, onClose, onSave }: BankDetailsModalP
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!bankName || !accountName || !accountNumber || !ifscCode) return;
+    if (isSubmittingRef.current || isSubmitting || !bankName || !accountName || !accountNumber || !ifscCode) return;
+    isSubmittingRef.current = true;
+    setIsSubmitting(true);
 
     onSave({
       bankName,
@@ -126,8 +130,8 @@ export function BankDetailsModal({ invoice, onClose, onSave }: BankDetailsModalP
             <Button type="button" variant="outline" size="sm" onClick={onClose} className="shadow-sm">
               Cancel
             </Button>
-            <Button type="submit" size="sm" className="gap-2 shadow-md">
-              <Save className="h-4 w-4" /> Save Bank Details
+            <Button type="submit" size="sm" disabled={isSubmitting} className="gap-2 shadow-md">
+              <Save className="h-4 w-4" /> {isSubmitting ? 'Saving...' : 'Save Bank Details'}
             </Button>
           </div>
         </form>

@@ -60,7 +60,7 @@ export const navItems: NavItem[] = [
     icon: Truck,
     subItems: [
       { href: "/stock", label: "Current Stock", icon: List },
-      { href: "/stock/in", label: "Stock In (Add)", icon: PlusCircle },
+      // { href: "/stock/in", label: "Stock In (Add)", icon: PlusCircle },
       { href: "/stock/out", label: "Stock Out (Remove)", icon: PlusCircle },
       { href: "/stock/transfer", label: "Transfer Stock", icon: Truck },
       { href: "/stock/alerts", label: "Low Stock Alerts", icon: AlertTriangle },

@@ -467,6 +467,8 @@ export default function MaintenancePage() {
   const [serialOptions, setSerialOptions] = useState<SerialEntry[]>([]);
   const [isLoadingSerials, setIsLoadingSerials] = useState(false);
   const [serialRefreshTick, setSerialRefreshTick] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const submittingRef = useRef(false);
 
   const [formData, setFormData] = useState({
     assetId: "",
@@ -868,6 +870,9 @@ export default function MaintenancePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submittingRef.current || isSubmitting) return;
+    submittingRef.current = true;
+    setIsSubmitting(true);
     try {
       const productArray = Array.isArray(products) ? products : [];
       const selectedProduct = productArray.find(
@@ -1011,6 +1016,9 @@ export default function MaintenancePage() {
     } catch (error) {
       console.error("Failed to create maintenance record:", error);
       toast.error("Failed to create maintenance record");
+    } finally {
+      submittingRef.current = false;
+      setIsSubmitting(false);
     }
   };
 
@@ -2425,12 +2433,13 @@ export default function MaintenancePage() {
                 type="button"
                 variant="outline"
                 onClick={() => setIsModalOpen(false)}
+                disabled={isSubmitting}
               >
                 Cancel
               </Button>
-              <Button type="submit" className="bg-amber-600 hover:bg-amber-700">
+              <Button type="submit" disabled={isSubmitting} className="bg-amber-600 hover:bg-amber-700">
                 <Save className="h-4 w-4 mr-2" />
-                Create Record
+                {isSubmitting ? "Creating..." : "Create Record"}
               </Button>
             </DialogFooter>
           </form>

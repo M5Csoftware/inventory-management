@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   User,
   Shield,
@@ -32,6 +32,7 @@ export default function SettingsPage() {
   });
 
   const [isSaved, setIsSaved] = useState(false);
+  const submittingRef = useRef(false);
 
   useEffect(() => {
     const saved = localStorage.getItem('m5c_user_settings');
@@ -47,13 +48,18 @@ export default function SettingsPage() {
 
   const handleSubmitProfile = (e: React.FormEvent) => {
     e.preventDefault();
+    if (submittingRef.current || isSaved) return;
+    submittingRef.current = true;
     localStorage.setItem('m5c_user_settings', JSON.stringify(profile));
     if (profile.branch && profile.branch !== activeBranch) {
       setActiveBranch(profile.branch);
     }
     setIsSaved(true);
     toast.success('System settings saved successfully!');
-    setTimeout(() => setIsSaved(false), 3000);
+    setTimeout(() => {
+      submittingRef.current = false;
+      setIsSaved(false);
+    }, 1500);
   };
 
   return (

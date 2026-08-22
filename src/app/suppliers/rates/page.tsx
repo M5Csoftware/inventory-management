@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -65,6 +65,7 @@ export default function SupplierRatesPage() {
   const [editingRateItem, setEditingRateItem] = useState<RateItem | null>(null);
   const [newRateValue, setNewRateValue] = useState<string>("");
   const [isSaving, setIsSaving] = useState(false);
+  const savingRef = useRef(false);
 
   // Extract all categories
   const categories = useMemo(() => {
@@ -229,13 +230,14 @@ export default function SupplierRatesPage() {
   };
 
   const handleSaveRate = async () => {
-    if (!editingRateItem) return;
+    if (savingRef.current || isSaving || !editingRateItem) return;
     const parsedRate = parseFloat(newRateValue);
     if (isNaN(parsedRate) || parsedRate < 0) {
       toast.error("Please enter a valid rate amount.");
       return;
     }
 
+    savingRef.current = true;
     setIsSaving(true);
     try {
       const targetProduct = products.find((p) => p.id === editingRateItem.productId);
@@ -285,6 +287,7 @@ export default function SupplierRatesPage() {
     } catch (err) {
       toast.error("Failed to update supplier rate.");
     } finally {
+      savingRef.current = false;
       setIsSaving(false);
     }
   };
