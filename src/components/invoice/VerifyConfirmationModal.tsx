@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Invoice } from '@/types/invoice';
 import { Button } from '@/components/ui/button';
 import { Modal } from './Modal';
@@ -30,10 +30,13 @@ export const VerifyConfirmationModal: React.FC<VerifyConfirmationModalProps> = (
 }) => {
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const submittingRef = useRef(false);
 
   if (!invoice) return null;
 
   const handleConfirm = async () => {
+    if (submittingRef.current || isSubmitting) return;
+    submittingRef.current = true;
     try {
       setIsSubmitting(true);
       await onConfirm(invoice.id, notes.trim());
@@ -41,6 +44,7 @@ export const VerifyConfirmationModal: React.FC<VerifyConfirmationModalProps> = (
     } catch (err) {
       console.error('Failed to verify invoice:', err);
     } finally {
+      submittingRef.current = false;
       setIsSubmitting(false);
     }
   };
