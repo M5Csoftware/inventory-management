@@ -52,6 +52,7 @@ export const CheckInView: React.FC<CheckInViewProps> = ({
   const [dragOver, setDragOver] = useState(false);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const submittingRef = useRef(false);
   const [linkedOrder, setLinkedOrder] = useState<Order | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -185,6 +186,8 @@ export const CheckInView: React.FC<CheckInViewProps> = ({
   };
 
   const handleCreateInvoiceOnly = async () => {
+    if (submittingRef.current || isSubmitting) return;
+    submittingRef.current = true;
     setIsSubmitting(true);
     try {
       const imageUrls = invoiceImages.map((img) => img.dataUrl);
@@ -207,11 +210,14 @@ export const CheckInView: React.FC<CheckInViewProps> = ({
       resetForm();
       setIsConfirmModalOpen(false);
     } finally {
+      submittingRef.current = false;
       setIsSubmitting(false);
     }
   };
 
   const handleCreateInvoiceWithStockIn = async (items: StockInItemEntry[]) => {
+    if (submittingRef.current || isSubmitting) return;
+    submittingRef.current = true;
     setIsSubmitting(true);
     try {
       const imageUrls = invoiceImages.map((img) => img.dataUrl);
@@ -265,6 +271,7 @@ export const CheckInView: React.FC<CheckInViewProps> = ({
       console.error(err);
       toast.error('Failed to complete stock in transactions.');
     } finally {
+      submittingRef.current = false;
       setIsSubmitting(false);
     }
   };
