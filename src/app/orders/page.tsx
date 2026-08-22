@@ -325,9 +325,6 @@ export default function OrdersPage() {
                     Total Amount
                   </th>
                   <th className="px-4 sm:px-6 py-4 font-medium">Status</th>
-                  <th className="px-4 sm:px-6 py-4 font-medium text-center">
-                    Fulfillment
-                  </th>
                   <th className="px-4 sm:px-6 py-4 font-medium text-right">
                     Actions
                   </th>
@@ -340,7 +337,7 @@ export default function OrdersPage() {
                 {filteredOrders.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={7}
+                      colSpan={6}
                       className="px-6 py-12 text-center text-muted-foreground"
                     >
                       <div className="flex flex-col items-center justify-center">
@@ -381,35 +378,21 @@ export default function OrdersPage() {
                           {order.status}
                         </span>
                       </td>
-                      <td className="px-4 sm:px-6 py-4 text-center">
-                        {order.status === "Completed" ? (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 whitespace-nowrap">
-                            <CheckCircle className="h-3 w-3" />
-                            Added to Stock
-                          </span>
-                        ) : order.status === "Cancelled" ? (
-                          <span className="text-xs text-muted-foreground">
-                            -
-                          </span>
-                        ) : (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            disabled={completingOrderId === order.id}
-                            onClick={() => handleCompleteOrder(order)}
-                            className="h-8 text-xs gap-2 text-emerald-600 border-emerald-500/30 hover:bg-emerald-500/10 hover:text-emerald-700 whitespace-nowrap disabled:opacity-50 disabled:pointer-events-none"
-                          >
-                            <CheckCircle className="h-3.5 w-3.5" />
-                            {completingOrderId === order.id ? "Completing..." : "Complete & Stock"}
-                          </Button>
-                        )}
-                      </td>
                       <td className="px-4 sm:px-6 py-4 text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger className="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-muted/50 transition-colors outline-none text-muted-foreground hover:text-foreground cursor-pointer">
                             <MoreVertical className="h-4 w-4" />
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
+                            {order.status !== "Completed" && order.status !== "Cancelled" && (
+                              <DropdownMenuItem
+                                onClick={() => handleCompleteOrder(order)}
+                                className="text-emerald-600 focus:text-emerald-600 cursor-pointer font-medium"
+                              >
+                                <CheckCircle className="mr-2 h-4 w-4 text-emerald-600" />
+                                <span>{completingOrderId === order.id ? "Completing..." : "Complete & Stock"}</span>
+                              </DropdownMenuItem>
+                            )}
                             <DropdownMenuItem
                               onClick={() =>
                                 router.push(`/invoice/new?po=${encodeURIComponent(order.id)}`)

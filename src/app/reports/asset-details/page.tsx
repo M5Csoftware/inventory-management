@@ -171,6 +171,10 @@ export default function AssetDetailsReportPage() {
       }
 
       return true;
+    }).sort((a, b) => {
+      const timeA = new Date(a.assignedDate || a.returnDate || 0).getTime();
+      const timeB = new Date(b.assignedDate || b.returnDate || 0).getTime();
+      return timeB - timeA;
     });
   }, [assets, statusFilter, deptFilter, durationFilter, searchTerm]);
 

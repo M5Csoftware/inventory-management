@@ -7,7 +7,6 @@ import { useInvoice, InvoiceProvider } from '@/context/invoice-context';
 import { TaxOption } from '@/types/invoice';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
   FilePlus,
   Building2,
@@ -24,15 +23,24 @@ import {
   CheckCircle2,
   ShoppingCart,
   Sparkles,
+  Plus,
 } from 'lucide-react';
 import { useInventory, Order } from '@/context/inventory-context';
 import { toast } from 'react-toastify';
+import { InvoiceStockInModal, StockInItemEntry } from '@/components/invoice/InvoiceStockInModal';
+
+interface UploadedInvoiceImage {
+  id: string;
+  dataUrl: string;
+  fileName: string;
+  fileSize: string;
+}
 
 function NewInvoiceFormContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { createInvoice } = useInvoice();
-  const { suppliers, orders } = useInventory();
+  const { suppliers, orders, recordTransaction, updateOrderStatus } = useInventory();
 
   const [vendor, setVendor] = useState('');
   const [invoiceNumber, setInvoiceNumber] = useState('');
@@ -42,10 +50,11 @@ function NewInvoiceFormContent() {
   const [poNumber, setPoNumber] = useState('');
   const [bankLast4, setBankLast4] = useState('');
   const [description, setDescription] = useState('');
-  const [invoiceImage, setInvoiceImage] = useState<string | null>(null);
-  const [imageFileName, setImageFileName] = useState('');
+  const [invoiceImages, setInvoiceImages] = useState<UploadedInvoiceImage[]>([]);
+  const [dragOver, setDragOver] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [linkedOrder, setLinkedOrder] = useState<Order | null>(null);
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const initialPoAppliedRef = useRef(false);
@@ -76,12 +85,31 @@ function NewInvoiceFormContent() {
       setTaxableAmount(subtotal.toFixed(2));
     }
 
-    // Summarize order items for description
-    if (order.items && order.items.length > 0) {
-      const itemsSummary = order.items
-        .map((it) => `${it.quantity}x ${it.name} (₹${it.price}/unit)`)
-        .join(', ');
-      setDescription(`PO #${order.id}: ${itemsSummary}`);
+    // Format full Order Details for the description box
+    const orderDate = order.createdAt
+      ? new Date(order.createdAt).toLocaleDateString('en-IN')
+      : new Date().toLocaleDateString('en-IN');
+    const orderedBy = (order as any).orderedBy || (order as any).createdBy || 'Admin';
+
+    if (order.items && order.items.length === 1) {
+      const item = order.items[0];
+      setDescription(
+        `Order Details\nOrder ID: ${order.id}\nSupplier: ${order.supplier || 'N/A'}\nProduct Name\n${item.name}\nDate: ${orderDate}\nOrdered By: ${orderedBy}\nQty\n${item.quantity}\nUnit Price (Rs)\n${Number(item.price || 0).toFixed(2)}`
+      );
+    } else if (order.items && order.items.length > 1) {
+      const itemsList = order.items
+        .map(
+          (item) =>
+            `Product Name\n${item.name}\nQty\n${item.quantity}\nUnit Price (Rs)\n${Number(item.price || 0).toFixed(2)}`
+        )
+        .join('\n\n');
+      setDescription(
+        `Order Details\nOrder ID: ${order.id}\nSupplier: ${order.supplier || 'N/A'}\nDate: ${orderDate}\nOrdered By: ${orderedBy}\n\n${itemsList}`
+      );
+    } else {
+      setDescription(
+        `Order Details\nOrder ID: ${order.id}\nSupplier: ${order.supplier || 'N/A'}\nDate: ${orderDate}\nOrdered By: ${orderedBy}`
+      );
     }
 
     // Use order creation date if available
@@ -132,22 +160,65 @@ function NewInvoiceFormContent() {
     }
   }, [orders, searchParams, applyOrderDetails]);
 
-  const handleFileRead = (file: File) => {
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      setInvoiceImage(ev.target?.result as string);
-      setImageFileName(file.name);
-    };
-    reader.readAsDataURL(file);
+  const handleFilesRead = (files: FileList | File[]) => {
+    if (!files || files.length === 0) return;
+    const targetFiles = Array.from(files).filter(
+      (f) => f.type.startsWith('image/') || f.name.match(/\.(png|jpe?g|webp|gif|svg|pdf)$/i)
+    );
+
+    if (targetFiles.length === 0) {
+      toast.warn('Please select valid image files');
+      return;
+    }
+
+    const newImages: UploadedInvoiceImage[] = [];
+    let processed = 0;
+
+    targetFiles.forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const dataUrl = ev.target?.result as string;
+        const sizeKb = (file.size / 1024).toFixed(1);
+        const sizeStr =
+          file.size > 1024 * 1024
+            ? `${(file.size / (1024 * 1024)).toFixed(2)} MB`
+            : `${sizeKb} KB`;
+
+        newImages.push({
+          id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+          dataUrl,
+          fileName: file.name,
+          fileSize: sizeStr,
+        });
+
+        processed++;
+        if (processed === targetFiles.length) {
+          setInvoiceImages((prev) => [...prev, ...newImages]);
+          toast.success(`Attached ${targetFiles.length} document image(s)`);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!vendor || !invoiceNumber || !invoiceDate || parsedTaxable <= 0 || isSubmitting) return;
+  const handleRemoveImage = (id: string) => {
+    setInvoiceImages((prev) => prev.filter((img) => img.id !== id));
+  };
 
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!vendor || !invoiceNumber || !invoiceDate || parsedTaxable <= 0) {
+      toast.error('Please complete all required fields.');
+      return;
+    }
+    // Open the confirmation modal with Stock In options
+    setIsConfirmModalOpen(true);
+  };
+
+  const handleCreateInvoiceOnly = async () => {
     setIsSubmitting(true);
     try {
+      const imageUrls = invoiceImages.map((img) => img.dataUrl);
       const success = await createInvoice({
         vendor,
         invoiceNumber,
@@ -159,10 +230,12 @@ function NewInvoiceFormContent() {
         poNumber,
         bankLast4,
         description,
-        invoiceImage,
+        invoiceImage: imageUrls[0] || null,
+        invoiceImages: imageUrls,
       });
 
       if (success) {
+        setIsConfirmModalOpen(false);
         router.push('/invoice');
       }
     } finally {
@@ -170,9 +243,68 @@ function NewInvoiceFormContent() {
     }
   };
 
+  const handleCreateInvoiceWithStockIn = async (items: StockInItemEntry[]) => {
+    setIsSubmitting(true);
+    try {
+      const imageUrls = invoiceImages.map((img) => img.dataUrl);
+      const success = await createInvoice({
+        vendor,
+        invoiceNumber,
+        invoiceDate,
+        taxableAmount: parsedTaxable,
+        taxOption,
+        taxAmount: calculatedTax,
+        amount: calculatedTotal,
+        poNumber,
+        bankLast4,
+        description,
+        invoiceImage: imageUrls[0] || null,
+        invoiceImages: imageUrls,
+      });
+
+      if (success) {
+        // Record Stock In transactions for each selected item
+        let totalQty = 0;
+        for (const item of items) {
+          if (item.productId && item.quantity > 0) {
+            totalQty += item.quantity;
+            await recordTransaction(
+              item.productId,
+              'Stock In',
+              item.quantity,
+              'Invoice Inward Entry',
+              `Invoice: ${invoiceNumber}${poNumber ? ` | PO: ${poNumber}` : ''}`,
+              {
+                purchaseDate: invoiceDate,
+                amount: item.price,
+                supplier: vendor,
+                invoiceNumber,
+                branch: item.branch,
+              }
+            );
+          }
+        }
+
+        // If linked with an order, mark the order as Completed
+        if (linkedOrder && linkedOrder.status !== 'Completed') {
+          await updateOrderStatus(linkedOrder.id, 'Completed');
+        }
+
+        toast.success(`Invoice created & ${totalQty} units stocked in successfully!`);
+        setIsConfirmModalOpen(false);
+        router.push('/invoice');
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to complete stock in transactions.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div className="p-6 sm:p-8 space-y-8 animate-in fade-in duration-300 min-h-screen bg-background w-full max-w-full">
-      {/* Top Header matching Inventory Management pages */}
+      {/* Top Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border/40 pb-6 w-full">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-foreground flex items-center gap-3">
@@ -180,13 +312,13 @@ function NewInvoiceFormContent() {
             New Invoice
           </h1>
           <p className="text-muted-foreground mt-1">
-            Enter vendor details, taxable amount, 18% GST tax option, link with Purchase Order (PO), and attach document scan.
+            Enter vendor details, taxable amount, 18% GST tax option, link with Purchase Order (PO), and attach multiple document scans.
           </p>
         </div>
       </div>
 
       {/* Main Form Card */}
-      <form onSubmit={handleSubmit} className="w-full max-w-full">
+      <form onSubmit={handleFormSubmit} className="w-full max-w-full">
         <Card className="border-0 shadow-xl shadow-primary/5 bg-gradient-to-br from-card to-card/80 backdrop-blur-sm rounded-2xl w-full max-w-full overflow-hidden">
           <CardHeader className="border-b border-border/50 pb-4">
             <div className="flex items-start justify-between">
@@ -431,70 +563,127 @@ function NewInvoiceFormContent() {
                 Description / Line Items Summary
               </label>
               <textarea
-                rows={3}
+                rows={7}
                 placeholder="Brief details of goods or services invoiced..."
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="w-full rounded-lg border-2 border-gray-300 bg-white/90 p-3 text-sm shadow-sm transition-all hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 dark:border-gray-600 dark:bg-gray-900/90 text-foreground"
+                className="w-full rounded-lg border-2 border-gray-300 bg-white/90 p-3 text-sm shadow-sm transition-all hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 dark:border-gray-600 dark:bg-gray-900/90 text-foreground leading-relaxed font-mono"
               />
             </div>
 
-            {/* Document Scan Upload Box */}
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Attach Invoice Copy / Document Scan
-              </label>
-
-              {invoiceImage ? (
-                <div className="border-2 border-primary/40 bg-primary/5 p-4 rounded-xl flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-primary/10 rounded-lg text-primary">
-                      <ImageIcon className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-semibold text-foreground">
-                        {imageFileName || 'invoice_scan_attached.png'}
-                      </p>
-                      <p className="text-[10px] text-muted-foreground">Image file loaded &amp; ready</p>
-                    </div>
-                  </div>
-                  <Button
+            {/* Document Scan Upload Box - Multi-Image */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                  <ImageIcon className="h-3.5 w-3.5 text-primary" />
+                  Attach Invoice Copy / Document Scans {invoiceImages.length > 0 && `(${invoiceImages.length} attached)`}
+                </label>
+                {invoiceImages.length > 0 && (
+                  <button
                     type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setInvoiceImage(null);
-                      setImageFileName('');
-                    }}
-                    className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                    onClick={() => setInvoiceImages([])}
+                    className="text-[11px] text-destructive hover:underline cursor-pointer font-medium"
                   >
-                    <X className="h-4 w-4" />
-                  </Button>
+                    Clear All ({invoiceImages.length})
+                  </button>
+                )}
+              </div>
+
+              {invoiceImages.length > 0 ? (
+                <div className="space-y-3">
+                  {/* Grid of uploaded image preview cards */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {invoiceImages.map((img, idx) => (
+                      <div
+                        key={img.id}
+                        className="relative border-2 border-primary/30 bg-primary/5 rounded-xl p-2.5 flex items-center justify-between gap-2.5 shadow-xs hover:border-primary/50 transition-all group"
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                          <div className="h-12 w-12 rounded-lg overflow-hidden shrink-0 border border-border bg-muted/40 flex items-center justify-center relative">
+                            <img
+                              src={img.dataUrl}
+                              alt={img.fileName}
+                              className="h-full w-full object-cover"
+                            />
+                            <span className="absolute bottom-0 right-0 bg-black/75 text-white text-[8px] px-1 rounded-tl-sm font-bold">
+                              #{idx + 1}
+                            </span>
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs font-semibold text-foreground truncate" title={img.fileName}>
+                              {img.fileName}
+                            </p>
+                            <p className="text-[10px] text-muted-foreground">{img.fileSize}</p>
+                          </div>
+                        </div>
+
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRemoveImage(img.id)}
+                          className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg shrink-0 cursor-pointer"
+                          title="Remove image"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Add more images button */}
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    className="border-2 border-dashed border-primary/40 hover:border-primary bg-muted/20 hover:bg-muted/40 p-3 rounded-xl text-center cursor-pointer transition-all flex items-center justify-center gap-2 text-xs font-semibold text-primary"
+                  >
+                    <Plus className="h-4 w-4" />
+                    <span>Click to add more images / documents</span>
+                  </div>
                 </div>
               ) : (
                 <div
                   onClick={() => fileInputRef.current?.click()}
-                  className="border-2 border-dashed border-gray-300 dark:border-gray-700 hover:border-primary/60 bg-muted/20 hover:bg-muted/40 p-6 rounded-xl text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2"
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setDragOver(true);
+                  }}
+                  onDragLeave={() => setDragOver(false)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setDragOver(false);
+                    if (e.dataTransfer.files) handleFilesRead(e.dataTransfer.files);
+                  }}
+                  className={`border-2 border-dashed ${
+                    dragOver
+                      ? 'border-primary bg-primary/10 scale-[0.99]'
+                      : 'border-gray-300 dark:border-gray-700 hover:border-primary/60 bg-muted/20 hover:bg-muted/40'
+                  } p-6 rounded-xl text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2`}
                 >
                   <div className="p-3 bg-background rounded-full shadow-sm text-primary">
                     <Upload className="h-5 w-5" />
                   </div>
                   <div>
-                    <p className="text-xs font-semibold text-foreground">Click to upload invoice document</p>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">PNG, JPG, PDF up to 10MB</p>
+                    <p className="text-xs font-semibold text-foreground">
+                      Click or Drag &amp; Drop multiple invoice documents/images
+                    </p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">
+                      Select multiple PNG, JPG, or PDF files at once (up to 10MB each)
+                    </p>
                   </div>
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) handleFileRead(file);
-                    }}
-                    accept="image/*"
-                    className="hidden"
-                  />
                 </div>
               )}
+
+              <input
+                type="file"
+                ref={fileInputRef}
+                multiple
+                onChange={(e) => {
+                  if (e.target.files) handleFilesRead(e.target.files);
+                  if (fileInputRef.current) fileInputRef.current.value = '';
+                }}
+                accept="image/*,application/pdf"
+                className="hidden"
+              />
             </div>
 
             {/* Form Footer Buttons */}
@@ -510,12 +699,29 @@ function NewInvoiceFormContent() {
                 className="w-full sm:w-auto shadow-lg shadow-primary/20 transition-all hover:shadow-primary/40 hover:-translate-y-0.5 h-10 px-6 font-bold text-sm"
               >
                 <Save className="h-4 w-4 mr-2" />
-                {isSubmitting ? 'Submitting...' : 'Submit New Invoice'}
+                Submit New Invoice
               </Button>
             </div>
           </CardContent>
         </Card>
       </form>
+
+      {/* Confirmation & Stock In Modal on Submit */}
+      <InvoiceStockInModal
+        isOpen={isConfirmModalOpen}
+        onClose={() => setIsConfirmModalOpen(false)}
+        invoiceSummary={{
+          vendor,
+          invoiceNumber,
+          invoiceDate,
+          totalAmount: calculatedTotal,
+          poNumber,
+          linkedOrder,
+        }}
+        onSubmitInvoiceOnly={handleCreateInvoiceOnly}
+        onSubmitWithStockIn={handleCreateInvoiceWithStockIn}
+        isSubmitting={isSubmitting}
+      />
     </div>
   );
 }

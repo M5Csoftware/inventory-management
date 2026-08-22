@@ -94,6 +94,16 @@ export default function MonthlyStockReportPage() {
               (item) => item.category?.toLowerCase() === catLower,
             );
           }
+          list.sort((a, b) => {
+            const timeA = a.lastPurchaseDate && a.lastPurchaseDate !== "-" ? new Date(a.lastPurchaseDate).getTime() : 0;
+            const timeB = b.lastPurchaseDate && b.lastPurchaseDate !== "-" ? new Date(b.lastPurchaseDate).getTime() : 0;
+            const validA = !isNaN(timeA) && timeA > 0;
+            const validB = !isNaN(timeB) && timeB > 0;
+            if (validA && validB) return timeB - timeA;
+            if (validA && !validB) return -1;
+            if (!validA && validB) return 1;
+            return a.productName.localeCompare(b.productName);
+          });
           setMonthlyData(list);
           setLoadingMonthly(false);
           return;
@@ -373,6 +383,17 @@ export default function MonthlyStockReportPage() {
             });
           }
         }
+
+        calculatedReport.sort((a, b) => {
+          const timeA = a.lastPurchaseDate && a.lastPurchaseDate !== "-" ? new Date(a.lastPurchaseDate).getTime() : 0;
+          const timeB = b.lastPurchaseDate && b.lastPurchaseDate !== "-" ? new Date(b.lastPurchaseDate).getTime() : 0;
+          const validA = !isNaN(timeA) && timeA > 0;
+          const validB = !isNaN(timeB) && timeB > 0;
+          if (validA && validB) return timeB - timeA;
+          if (validA && !validB) return -1;
+          if (!validA && validB) return 1;
+          return a.productName.localeCompare(b.productName);
+        });
 
         setMonthlyData(calculatedReport);
       } else {

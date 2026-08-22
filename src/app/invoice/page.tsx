@@ -81,6 +81,7 @@ function MasterInvoiceContent() {
     bankLast4: string;
     description: string;
     invoiceImage: string | null;
+    invoiceImages?: string[];
   }) => {
     const success = await createInvoice(formData);
     if (success) {

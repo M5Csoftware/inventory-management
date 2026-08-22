@@ -321,11 +321,32 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
       ]);
 
       if (prods?.success) setProducts(prods.data);
-      if (txs?.success) setTransactions(txs.data);
+      if (txs?.success) {
+        const sortedTxs = [...txs.data].sort((a, b) => {
+          const timeA = new Date(a.date || (a as any).createdAt || 0).getTime();
+          const timeB = new Date(b.date || (b as any).createdAt || 0).getTime();
+          return timeB - timeA;
+        });
+        setTransactions(sortedTxs);
+      }
       if (cats?.success) setCategories(cats.data);
       if (sups?.success) setSuppliers(sups.data);
-      if (ords?.success) setOrders(ords.data);
-      if (asts?.success) setAssets(asts.data);
+      if (ords?.success) {
+        const sortedOrds = [...ords.data].sort((a, b) => {
+          const timeA = new Date(a.createdAt || 0).getTime();
+          const timeB = new Date(b.createdAt || 0).getTime();
+          return timeB - timeA;
+        });
+        setOrders(sortedOrds);
+      }
+      if (asts?.success) {
+        const sortedAsts = [...asts.data].sort((a, b) => {
+          const timeA = new Date(a.assignedDate || (a as any).createdAt || 0).getTime();
+          const timeB = new Date(b.assignedDate || (b as any).createdAt || 0).getTime();
+          return timeB - timeA;
+        });
+        setAssets(sortedAsts);
+      }
     } catch (error) {
       console.error("Failed to load inventory data from backend:", error);
     }

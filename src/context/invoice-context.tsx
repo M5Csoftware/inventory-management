@@ -29,6 +29,7 @@ interface InvoiceContextType {
     bankLast4: string;
     description: string;
     invoiceImage: string | null;
+    invoiceImages?: string[];
   }) => Promise<boolean>;
   verifyInvoice: (id: string, notes?: string) => Promise<boolean>;
   approveInvoice: (id: string) => Promise<boolean>;
@@ -189,11 +190,16 @@ export function InvoiceProvider({ children }: { children: React.ReactNode }) {
     bankLast4: string;
     description: string;
     invoiceImage: string | null;
+    invoiceImages?: string[];
   }): Promise<boolean> => {
     const lockKey = `create-inv-${formData.vendor}-${formData.invoiceNumber}`;
     return withLock(
       lockKey,
       async () => {
+        const imagesList = formData.invoiceImages && formData.invoiceImages.length > 0
+          ? formData.invoiceImages
+          : (formData.invoiceImage ? [formData.invoiceImage] : []);
+
         const partialInv = {
           id: uid('inv'),
           vendor: formData.vendor.trim(),
@@ -206,7 +212,8 @@ export function InvoiceProvider({ children }: { children: React.ReactNode }) {
           poNumber: formData.poNumber.trim(),
           bankLast4: formData.bankLast4.trim(),
           description: formData.description.trim(),
-          invoiceImage: formData.invoiceImage,
+          invoiceImage: imagesList.length > 0 ? imagesList[0] : (formData.invoiceImage || null),
+          invoiceImages: imagesList,
           enteredBy: currentSessionUser.id,
           enteredAt: Date.now(),
           status: 'pending_verification' as const,

@@ -61,6 +61,7 @@ export interface Invoice {
   bankDetails?: BankDetails;
   description: string;
   invoiceImage: string | null;
+  invoiceImages?: string[];
   enteredBy: string;
   enteredAt: number;
   status: InvoiceStatus;
