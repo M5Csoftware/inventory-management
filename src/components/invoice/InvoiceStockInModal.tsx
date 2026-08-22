@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Button } from '@/components/ui/button';
 import {
@@ -56,6 +56,7 @@ export const InvoiceStockInModal: React.FC<InvoiceStockInModalProps> = ({
 }) => {
   const [mounted, setMounted] = useState(false);
   const { products, activeBranch } = useInventory();
+  const submittingRef = useRef(false);
 
   const defaultBranch = activeBranch === 'All' ? 'Ahmedabad' : activeBranch;
   const [stockItems, setStockItems] = useState<StockInItemEntry[]>([]);
@@ -164,6 +165,22 @@ export const InvoiceStockInModal: React.FC<InvoiceStockInModalProps> = ({
     setStockItems((prev) =>
       prev.map((item, idx) => (idx === index ? { ...item, branch } : item))
     );
+  };
+
+  const handleInvoiceOnlyClick = () => {
+    if (isSubmitting || submittingRef.current) return;
+    submittingRef.current = true;
+    onSubmitInvoiceOnly().finally(() => {
+      submittingRef.current = false;
+    });
+  };
+
+  const handleStockInClick = () => {
+    if (isSubmitting || submittingRef.current || stockItems.length === 0) return;
+    submittingRef.current = true;
+    onSubmitWithStockIn(stockItems).finally(() => {
+      submittingRef.current = false;
+    });
   };
 
   return createPortal(
@@ -374,7 +391,7 @@ export const InvoiceStockInModal: React.FC<InvoiceStockInModalProps> = ({
           <Button
             type="button"
             variant="outline"
-            onClick={onSubmitInvoiceOnly}
+            onClick={handleInvoiceOnlyClick}
             disabled={isSubmitting}
             className="w-full sm:w-auto text-xs font-semibold h-9 shadow-xs hover:bg-muted cursor-pointer"
           >
@@ -384,7 +401,7 @@ export const InvoiceStockInModal: React.FC<InvoiceStockInModalProps> = ({
 
           <Button
             type="button"
-            onClick={() => onSubmitWithStockIn(stockItems)}
+            onClick={handleStockInClick}
             disabled={isSubmitting || stockItems.length === 0}
             className="w-full sm:w-auto text-xs font-bold h-10 px-5 shadow-lg shadow-primary/20 hover:shadow-primary/40 hover:-translate-y-0.5 transition-all cursor-pointer bg-primary text-primary-foreground"
           >
