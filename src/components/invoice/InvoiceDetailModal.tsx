@@ -62,10 +62,16 @@ export function InvoiceDetailModal({
   const [showRejectForm, setShowRejectForm] = useState(false);
   const [verifyNotes, setVerifyNotes] = useState('');
   const [showVerifyForm, setShowVerifyForm] = useState(false);
+  const [selectedImgIdx, setSelectedImgIdx] = useState(0);
+
+  const attachedImages: string[] = invoice.invoiceImages && invoice.invoiceImages.length > 0
+    ? invoice.invoiceImages
+    : (invoice.invoiceImage ? [invoice.invoiceImage] : []);
 
   useEffect(() => {
     setMounted(true);
-  }, []);
+    setSelectedImgIdx(0);
+  }, [invoice]);
 
   const canApprove = canApproveInvoice(user, currentUser);
 
@@ -197,10 +203,61 @@ export function InvoiceDetailModal({
 
             {/* Column 2: Document Preview */}
             <div className="space-y-3">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground border-b border-border/40 pb-1">Attached Invoice Document</h4>
-              {invoice.invoiceImage ? (
-                <div className="relative rounded-2xl border border-border/60 overflow-hidden bg-muted/20 group max-h-64 flex items-center justify-center p-2 shadow-xs">
-                  <img src={invoice.invoiceImage} alt="Invoice Scan" className="max-h-60 w-auto object-contain rounded-xl shadow-xs" />
+              <div className="flex items-center justify-between border-b border-border/40 pb-1">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  Attached Documents {attachedImages.length > 0 && `(${attachedImages.length})`}
+                </h4>
+                {attachedImages.length > 1 && (
+                  <span className="text-[10px] font-semibold text-primary">
+                    Image {selectedImgIdx + 1} of {attachedImages.length}
+                  </span>
+                )}
+              </div>
+
+              {attachedImages.length > 0 ? (
+                <div className="space-y-2.5">
+                  <div className="relative rounded-2xl border border-border/60 overflow-hidden bg-muted/20 group max-h-64 flex items-center justify-center p-2 shadow-xs">
+                    <img
+                      src={attachedImages[selectedImgIdx] || attachedImages[0]}
+                      alt={`Invoice Document ${selectedImgIdx + 1}`}
+                      className="max-h-60 w-auto object-contain rounded-xl shadow-xs"
+                    />
+                    <a
+                      href={attachedImages[selectedImgIdx] || attachedImages[0]}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="absolute bottom-3 right-3 bg-background/80 hover:bg-background text-foreground backdrop-blur-xs p-1.5 rounded-lg border border-border/50 text-[11px] font-semibold flex items-center gap-1 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5 text-primary" /> Full Size
+                    </a>
+                  </div>
+
+                  {/* Thumbnail gallery strip if multiple images */}
+                  {attachedImages.length > 1 && (
+                    <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                      {attachedImages.map((img, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => setSelectedImgIdx(idx)}
+                          className={`relative h-14 w-14 shrink-0 rounded-xl overflow-hidden border-2 transition-all p-0.5 cursor-pointer ${
+                            selectedImgIdx === idx
+                              ? 'border-primary ring-2 ring-primary/20 scale-105'
+                              : 'border-border/60 opacity-60 hover:opacity-100'
+                          }`}
+                        >
+                          <img
+                            src={img}
+                            alt={`Thumb ${idx + 1}`}
+                            className="h-full w-full object-cover rounded-lg"
+                          />
+                          <span className="absolute bottom-0.5 right-0.5 bg-black/70 text-white text-[9px] px-1 rounded-sm font-bold">
+                            {idx + 1}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="h-48 rounded-2xl border-2 border-dashed border-border/60 flex flex-col items-center justify-center p-4 text-center text-muted-foreground bg-muted/10">

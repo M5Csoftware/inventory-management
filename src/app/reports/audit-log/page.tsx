@@ -96,7 +96,12 @@ export default function AuditLogPage() {
 
       const data = await res.json();
       if (data.success && Array.isArray(data.data)) {
-        setLogs(data.data);
+        const sorted = [...data.data].sort((a, b) => {
+          const timeA = new Date(a.timestamp || 0).getTime();
+          const timeB = new Date(b.timestamp || 0).getTime();
+          return timeB - timeA;
+        });
+        setLogs(sorted);
         if (isManualRefresh) toast.success("Audit log records refreshed");
       } else {
         toast.error(data.message || "Failed to load audit logs");
@@ -115,18 +120,24 @@ export default function AuditLogPage() {
 
   // Handle client-side search filtering on current logs
   const filteredLogs = useMemo(() => {
-    return logs.filter((log) => {
-      if (!searchQuery.trim()) return true;
-      const q = searchQuery.toLowerCase().trim();
-      return (
-        log.userName?.toLowerCase().includes(q) ||
-        log.userEmail?.toLowerCase().includes(q) ||
-        log.action?.toLowerCase().includes(q) ||
-        log.details?.toLowerCase().includes(q) ||
-        log.target?.toLowerCase().includes(q) ||
-        log.id?.toLowerCase().includes(q)
-      );
-    });
+    return logs
+      .filter((log) => {
+        if (!searchQuery.trim()) return true;
+        const q = searchQuery.toLowerCase().trim();
+        return (
+          log.userName?.toLowerCase().includes(q) ||
+          log.userEmail?.toLowerCase().includes(q) ||
+          log.action?.toLowerCase().includes(q) ||
+          log.details?.toLowerCase().includes(q) ||
+          log.target?.toLowerCase().includes(q) ||
+          log.id?.toLowerCase().includes(q)
+        );
+      })
+      .sort((a, b) => {
+        const timeA = new Date(a.timestamp || 0).getTime();
+        const timeB = new Date(b.timestamp || 0).getTime();
+        return timeB - timeA;
+      });
   }, [logs, searchQuery]);
 
   // Statistics Metrics
