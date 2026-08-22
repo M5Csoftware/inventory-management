@@ -56,6 +56,7 @@ function NewInvoiceFormContent() {
   const [linkedOrder, setLinkedOrder] = useState<Order | null>(null);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
 
+  const submittingRef = useRef(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const initialPoAppliedRef = useRef(false);
 
@@ -216,6 +217,8 @@ function NewInvoiceFormContent() {
   };
 
   const handleCreateInvoiceOnly = async () => {
+    if (submittingRef.current || isSubmitting) return;
+    submittingRef.current = true;
     setIsSubmitting(true);
     try {
       const imageUrls = invoiceImages.map((img) => img.dataUrl);
@@ -239,11 +242,14 @@ function NewInvoiceFormContent() {
         router.push('/invoice');
       }
     } finally {
+      submittingRef.current = false;
       setIsSubmitting(false);
     }
   };
 
   const handleCreateInvoiceWithStockIn = async (items: StockInItemEntry[]) => {
+    if (submittingRef.current || isSubmitting) return;
+    submittingRef.current = true;
     setIsSubmitting(true);
     try {
       const imageUrls = invoiceImages.map((img) => img.dataUrl);
@@ -298,6 +304,7 @@ function NewInvoiceFormContent() {
       console.error(err);
       toast.error('Failed to complete stock in transactions.');
     } finally {
+      submittingRef.current = false;
       setIsSubmitting(false);
     }
   };
