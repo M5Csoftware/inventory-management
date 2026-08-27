@@ -28,7 +28,8 @@ export default function ProductsPage() {
   const filteredProducts = products.filter((product: Product) =>
     (product.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
     (product.id || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (product.category || '').toLowerCase().includes(searchTerm.toLowerCase())
+    (product.category || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (product.uom || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -75,6 +76,7 @@ export default function ProductsPage() {
                     <th className="h-10 px-4 text-left align-middle font-medium text-muted-foreground">ID</th>
                     <th className="h-10 px-4 text-left align-middle font-medium text-muted-foreground">Name</th>
                     <th className="h-10 px-4 text-left align-middle font-medium text-muted-foreground">Category</th>
+                    <th className="h-10 px-4 text-left align-middle font-medium text-muted-foreground">UOM</th>
                     <th className="h-10 px-4 text-left align-middle font-medium text-muted-foreground">Price</th>
                     <th className="h-10 px-4 text-left align-middle font-medium text-muted-foreground">Branch</th>
                     <th className="h-10 px-4 text-left align-middle font-medium text-muted-foreground">Stock</th>
@@ -90,6 +92,11 @@ export default function ProductsPage() {
                       <td className="p-4 align-middle font-medium font-mono text-xs">{product.id}</td>
                       <td className="p-4 align-middle font-medium">{product.name}</td>
                       <td className="p-4 align-middle text-muted-foreground">{product.category}</td>
+                      <td className="p-4 align-middle text-muted-foreground text-sm">
+                        {product.uomValue && product.uom
+                          ? `${product.uomValue} ${product.uom}`
+                          : (product.uom || '-')}
+                      </td>
                       <td className="p-4 align-middle font-mono">₹{product.price.toLocaleString('en-IN')}</td>
                       <td className="p-4 align-middle text-muted-foreground text-sm">
                         {activeBranch === 'All'
