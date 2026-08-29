@@ -74,6 +74,7 @@ function MasterInvoiceContent() {
     invoiceNumber: string;
     invoiceDate: string;
     taxableAmount: number;
+    taxSlab?: number;
     taxOption: import('@/types/invoice').TaxOption;
     taxAmount: number;
     amount: number;
