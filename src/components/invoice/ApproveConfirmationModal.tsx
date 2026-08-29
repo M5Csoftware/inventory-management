@@ -98,7 +98,9 @@ export const ApproveConfirmationModal: React.FC<ApproveConfirmationModalProps> =
               <span className="font-mono font-semibold">₹{invoice.taxableAmount.toLocaleString('en-IN')}</span>
             </div>
             <div className="p-2 rounded-lg bg-muted/40 border border-border/30">
-              <span className="text-[10px] text-muted-foreground block">Tax ({invoice.taxOption})</span>
+              <span className="text-[10px] text-muted-foreground block">
+                Tax ({invoice.taxOption === 'IGST' ? `IGST ${invoice.taxSlab ?? 18}%` : `CGST ${(invoice.taxSlab ?? 18) / 2}% + SGST ${(invoice.taxSlab ?? 18) / 2}%`})
+              </span>
               <span className="font-mono font-semibold text-primary">₹{invoice.taxAmount.toLocaleString('en-IN')}</span>
             </div>
             <div className="p-2 rounded-lg bg-muted/40 border border-border/30">
