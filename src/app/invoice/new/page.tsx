@@ -40,12 +40,13 @@ function NewInvoiceFormContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { createInvoice } = useInvoice();
-  const { suppliers, orders, recordTransaction, updateOrderStatus } = useInventory();
+  const { suppliers, orders, recordTransaction, updateOrder } = useInventory();
 
   const [vendor, setVendor] = useState('');
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [invoiceDate, setInvoiceDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [taxableAmount, setTaxableAmount] = useState('');
+  const [taxSlab, setTaxSlab] = useState<string>('');
   const [taxOption, setTaxOption] = useState<TaxOption>('IGST');
   const [poNumber, setPoNumber] = useState('');
   const [bankLast4, setBankLast4] = useState('');
@@ -60,10 +61,15 @@ function NewInvoiceFormContent() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const initialPoAppliedRef = useRef(false);
 
-  // Auto Calculations
+  // Auto Calculations based on Tax Slab
   const parsedTaxable = parseFloat(taxableAmount) || 0;
-  const calculatedTax = parsedTaxable > 0 ? parsedTaxable * 0.18 : 0;
+  const selectedTaxRate = taxSlab !== '' ? parseFloat(taxSlab) : null;
+  const isTaxSlabSelected = selectedTaxRate !== null && !isNaN(selectedTaxRate);
+
+  const calculatedTax = isTaxSlabSelected && parsedTaxable > 0 ? (parsedTaxable * selectedTaxRate) / 100 : 0;
   const calculatedTotal = parsedTaxable + calculatedTax;
+  const halfTaxRate = isTaxSlabSelected ? selectedTaxRate / 2 : 0;
+  const halfTaxAmount = calculatedTax / 2;
 
   // Auto-fetch and populate form fields from a selected Purchase Order
   const applyOrderDetails = useCallback((order: Order) => {
@@ -74,10 +80,16 @@ function NewInvoiceFormContent() {
       setVendor(order.supplier);
     }
 
-    // Calculate pre-tax subtotal
+    // Calculate pre-tax subtotal based on leftover/remaining unfulfilled quantities
     const subtotal =
       order.items && order.items.length > 0
-        ? order.items.reduce((acc, it) => acc + (it.quantity * it.price), 0)
+        ? order.items.reduce((acc, it) => {
+            const received = it.receivedQuantity || 0;
+            const remaining = Math.max(0, it.quantity - received);
+            // If already partially received, bill for remaining; if not, bill for total
+            const billQty = received > 0 ? remaining : it.quantity;
+            return acc + (billQty * it.price);
+          }, 0)
         : order.totalAmount
         ? Number((order.totalAmount / 1.18).toFixed(2))
         : 0;
@@ -85,6 +97,7 @@ function NewInvoiceFormContent() {
     if (subtotal > 0) {
       setTaxableAmount(subtotal.toFixed(2));
     }
+    setTaxSlab((prev) => (prev !== '' ? prev : '18'));
 
     // Format full Order Details for the description box
     const orderDate = order.createdAt
@@ -92,20 +105,16 @@ function NewInvoiceFormContent() {
       : new Date().toLocaleDateString('en-IN');
     const orderedBy = (order as any).orderedBy || (order as any).createdBy || 'Admin';
 
-    if (order.items && order.items.length === 1) {
-      const item = order.items[0];
-      setDescription(
-        `Order Details\nOrder ID: ${order.id}\nSupplier: ${order.supplier || 'N/A'}\nProduct Name\n${item.name}\nDate: ${orderDate}\nOrdered By: ${orderedBy}\nQty\n${item.quantity}\nUnit Price (Rs)\n${Number(item.price || 0).toFixed(2)}`
-      );
-    } else if (order.items && order.items.length > 1) {
+    if (order.items && order.items.length > 0) {
       const itemsList = order.items
-        .map(
-          (item) =>
-            `Product Name\n${item.name}\nQty\n${item.quantity}\nUnit Price (Rs)\n${Number(item.price || 0).toFixed(2)}`
-        )
+        .map((item) => {
+          const received = item.receivedQuantity || 0;
+          const remaining = Math.max(0, item.quantity - received);
+          return `Product: ${item.name}\nPO Ordered: ${item.quantity} units${received > 0 ? ` | Already Received: ${received} | Leftover to Inward: ${remaining}` : ''}\nUnit Price: Rs. ${Number(item.price || 0).toFixed(2)}`;
+        })
         .join('\n\n');
       setDescription(
-        `Order Details\nOrder ID: ${order.id}\nSupplier: ${order.supplier || 'N/A'}\nDate: ${orderDate}\nOrdered By: ${orderedBy}\n\n${itemsList}`
+        `Order Details\nOrder ID: ${order.id}${order.status === 'Partial' ? ' (Partially Fulfilled)' : ''}\nSupplier: ${order.supplier || 'N/A'}\nDate: ${orderDate}\nOrdered By: ${orderedBy}\n\n${itemsList}`
       );
     } else {
       setDescription(
@@ -121,7 +130,7 @@ function NewInvoiceFormContent() {
       }
     }
 
-    toast.info(`Auto-fetched details from Purchase Order ${order.id}`);
+    toast.info(`Auto-fetched details from Purchase Order ${order.id}${order.status === 'Partial' ? ' (Partial PO)' : ''}`);
   }, []);
 
   // Handle PO selection from dropdown / input
@@ -212,6 +221,10 @@ function NewInvoiceFormContent() {
       toast.error('Please complete all required fields.');
       return;
     }
+    if (!isTaxSlabSelected) {
+      toast.error('Please select a Tax Slab option (0%, 5%, 18%, 40%) before proceeding.');
+      return;
+    }
     // Open the confirmation modal with Stock In options
     setIsConfirmModalOpen(true);
   };
@@ -227,6 +240,7 @@ function NewInvoiceFormContent() {
         invoiceNumber,
         invoiceDate,
         taxableAmount: parsedTaxable,
+        taxSlab: selectedTaxRate !== null ? selectedTaxRate : 0,
         taxOption,
         taxAmount: calculatedTax,
         amount: calculatedTotal,
@@ -258,6 +272,7 @@ function NewInvoiceFormContent() {
         invoiceNumber,
         invoiceDate,
         taxableAmount: parsedTaxable,
+        taxSlab: selectedTaxRate !== null ? selectedTaxRate : 0,
         taxOption,
         taxAmount: calculatedTax,
         amount: calculatedTotal,
@@ -291,9 +306,31 @@ function NewInvoiceFormContent() {
           }
         }
 
-        // If linked with an order, mark the order as Completed
-        if (linkedOrder && linkedOrder.status !== 'Completed') {
-          await updateOrderStatus(linkedOrder.id, 'Completed');
+        // If linked with a Purchase Order, update item fulfillment and PO status (Partial vs Complete)
+        if (linkedOrder) {
+          const updatedOrderItems = (linkedOrder.items || []).map((orderIt) => {
+            const matchedStockIn = items.find(
+              (si) =>
+                si.productId === orderIt.productId ||
+                si.productName.trim().toLowerCase() === orderIt.name.trim().toLowerCase()
+            );
+            const addedQty = matchedStockIn ? matchedStockIn.quantity : 0;
+            const currentReceived = orderIt.receivedQuantity || 0;
+            return {
+              ...orderIt,
+              receivedQuantity: currentReceived + addedQty,
+            };
+          });
+
+          // Check if all items in PO are completely fulfilled
+          const allCompleted = updatedOrderItems.every((it) => (it.receivedQuantity || 0) >= it.quantity);
+          const anyReceived = updatedOrderItems.some((it) => (it.receivedQuantity || 0) > 0);
+          const newStatus: Order['status'] = allCompleted ? 'Completed' : anyReceived ? 'Partial' : 'Pending';
+
+          await updateOrder(linkedOrder.id, {
+            status: newStatus,
+            items: updatedOrderItems,
+          });
         }
 
         toast.success(`Invoice created & ${totalQty} units stocked in successfully!`);
@@ -319,7 +356,7 @@ function NewInvoiceFormContent() {
             New Invoice
           </h1>
           <p className="text-muted-foreground mt-1">
-            Enter vendor details, taxable amount, 18% GST tax option, link with Purchase Order (PO), and attach multiple document scans.
+            Enter vendor details, taxable amount, tax slab (0%, 5%, 18%, 40%), tax option (IGST / CGST+SGST), link with Purchase Order (PO), and attach document scans.
           </p>
         </div>
       </div>
@@ -335,7 +372,7 @@ function NewInvoiceFormContent() {
                   New Invoice Details
                 </CardTitle>
                 <CardDescription className="text-xs mt-1">
-                  Fill in vendor details or select a Purchase Order to auto-fill. Automatic 18% GST will be calculated.
+                  Fill in vendor details or select a Purchase Order to auto-fill. Select a tax slab to calculate GST.
                 </CardDescription>
               </div>
               <span className="rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-600">
@@ -365,11 +402,20 @@ function NewInvoiceFormContent() {
                     className="h-10 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 dark:border-gray-600 dark:bg-gray-900/90 font-medium cursor-pointer"
                   >
                     <option value="">-- Select a Purchase Order (PO) to Auto-Fetch --</option>
-                    {(orders || []).map((o) => (
-                      <option key={o.id} value={o.id}>
-                        {o.id} · {o.supplier} · ₹{o.totalAmount?.toLocaleString('en-IN')} ({o.status})
-                      </option>
-                    ))}
+                    {(orders || []).map((o) => {
+                      const totalUnits = (o.items || []).reduce((a, b) => a + (b.quantity || 0), 0);
+                      const receivedUnits = (o.items || []).reduce((a, b) => a + (b.receivedQuantity || 0), 0);
+                      const remainingUnits = Math.max(0, totalUnits - receivedUnits);
+
+                      return (
+                        <option key={o.id} value={o.id}>
+                          {o.id} · {o.supplier} · ₹{o.totalAmount?.toLocaleString('en-IN')}{' '}
+                          {o.status === 'Partial'
+                            ? `(Partial: ${remainingUnits} remaining)`
+                            : `(${o.status})`}
+                        </option>
+                      );
+                    })}
                   </select>
                 </div>
                 <div>
@@ -382,11 +428,17 @@ function NewInvoiceFormContent() {
                     className="h-10 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 dark:border-gray-600 dark:bg-gray-900/90 font-mono font-bold"
                   />
                   <datalist id="po-datalist-quick">
-                    {(orders || []).map((o) => (
-                      <option key={o.id} value={o.id}>
-                        {o.id} - {o.supplier} (₹{o.totalAmount})
-                      </option>
-                    ))}
+                    {(orders || []).map((o) => {
+                      const totalUnits = (o.items || []).reduce((a, b) => a + (b.quantity || 0), 0);
+                      const receivedUnits = (o.items || []).reduce((a, b) => a + (b.receivedQuantity || 0), 0);
+                      const remainingUnits = Math.max(0, totalUnits - receivedUnits);
+
+                      return (
+                        <option key={o.id} value={o.id}>
+                          {o.id} - {o.supplier} (₹{o.totalAmount} · {o.status === 'Partial' ? `Partial: ${remainingUnits} left` : o.status})
+                        </option>
+                      );
+                    })}
                   </datalist>
                 </div>
               </div>
@@ -473,8 +525,8 @@ function NewInvoiceFormContent() {
               </div>
             </div>
 
-            {/* Row 2: Taxable Amount, Tax Option, Calculated Total */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            {/* Row 2: Taxable Amount, Tax Slab, Tax Option, Calculated Total */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
               <div className="space-y-1.5">
                 <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                   <IndianRupee className="h-3.5 w-3.5 text-primary" />
@@ -493,16 +545,61 @@ function NewInvoiceFormContent() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  Tax Option <span className="text-destructive">*</span>
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    Tax Slab (%) <span className="text-destructive">*</span>
+                  </label>
+                  {isTaxSlabSelected && (
+                    <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded">
+                      {selectedTaxRate}% Slab
+                    </span>
+                  )}
+                </div>
                 <select
+                  required
+                  value={taxSlab}
+                  onChange={(e) => setTaxSlab(e.target.value)}
+                  className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 dark:border-gray-600 dark:bg-gray-900/90 cursor-pointer font-bold text-foreground"
+                >
+                  <option value="">-- Select Tax Slab --</option>
+                  <option value="0">0% (Nil Rate)</option>
+                  <option value="5">5% (Concessional)</option>
+                  <option value="18">18% (Standard GST)</option>
+                  <option value="40">40% (Luxury / Sin Goods)</option>
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    Tax Option <span className="text-destructive">*</span>
+                  </label>
+                  {!isTaxSlabSelected && (
+                    <span className="text-[9px] font-semibold text-amber-600 dark:text-amber-400">
+                      Locked
+                    </span>
+                  )}
+                </div>
+                <select
+                  disabled={!isTaxSlabSelected}
                   value={taxOption}
                   onChange={(e) => setTaxOption(e.target.value as TaxOption)}
-                  className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 dark:border-gray-600 dark:bg-gray-900/90 cursor-pointer font-semibold"
+                  className={`h-9 w-full rounded-lg border-2 px-3 text-sm shadow-sm transition-all font-semibold ${
+                    !isTaxSlabSelected
+                      ? 'bg-muted/60 border-gray-200 text-muted-foreground cursor-not-allowed opacity-70'
+                      : 'border-gray-300 bg-white/90 hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 dark:border-gray-600 dark:bg-gray-900/90 cursor-pointer text-foreground'
+                  }`}
                 >
-                  <option value="IGST">IGST (18%)</option>
-                  <option value="CGST_SGST">CGST + SGST (9% + 9%)</option>
+                  {!isTaxSlabSelected ? (
+                    <option value="">Select Tax Slab first...</option>
+                  ) : (
+                    <>
+                      <option value="IGST">IGST ({selectedTaxRate}%)</option>
+                      <option value="CGST_SGST">
+                        CGST + SGST ({halfTaxRate}% + {halfTaxRate}%)
+                      </option>
+                    </>
+                  )}
                 </select>
               </div>
 
@@ -513,7 +610,7 @@ function NewInvoiceFormContent() {
                 <input
                   type="text"
                   readOnly
-                  value={`₹${calculatedTotal.toLocaleString('en-IN')}`}
+                  value={`₹${calculatedTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                   className="h-9 w-full rounded-lg border-2 border-gray-200 bg-muted/40 px-3 text-sm font-black font-mono text-emerald-600 dark:text-emerald-400 shadow-sm"
                 />
               </div>
@@ -521,15 +618,33 @@ function NewInvoiceFormContent() {
 
             {/* Dynamic Tax Breakup Notice */}
             {parsedTaxable > 0 && (
-              <div className="bg-primary/10 border border-primary/20 p-3.5 rounded-xl text-xs text-foreground font-medium flex flex-col sm:flex-row justify-between items-center gap-2">
-                <span>
-                  Tax Breakup (18%): <strong className="text-foreground">₹{calculatedTax.toLocaleString('en-IN')}</strong>{' '}
-                  {taxOption === 'IGST' ? '(Integrated Tax)' : '(CGST 9% + SGST 9%)'}
-                </span>
-                <span className="font-bold text-primary text-sm">
-                  Total Payable: ₹{calculatedTotal.toLocaleString('en-IN')}
-                </span>
-              </div>
+              <>
+                {!isTaxSlabSelected ? (
+                  <div className="bg-amber-500/10 border border-amber-500/30 p-3 rounded-xl text-xs text-amber-800 dark:text-amber-300 font-medium flex items-center gap-2">
+                    <span className="font-bold">⚠️ Tax Slab Required:</span> Select a tax slab (0%, 5%, 18%, or 40%) to enable Tax Option and calculate GST.
+                  </div>
+                ) : (
+                  <div className="bg-primary/10 border border-primary/20 p-3.5 rounded-xl text-xs text-foreground font-medium flex flex-col sm:flex-row justify-between items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-semibold text-primary">
+                        Tax Breakup ({selectedTaxRate}%):
+                      </span>
+                      {taxOption === 'IGST' ? (
+                        <span>
+                          IGST ({selectedTaxRate}%): <strong className="text-foreground">₹{calculatedTax.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong> (Exact full amount)
+                        </span>
+                      ) : (
+                        <span>
+                          CGST ({halfTaxRate}%): <strong className="text-foreground">₹{halfTaxAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong> + SGST ({halfTaxRate}%): <strong className="text-foreground">₹{halfTaxAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong> = Total Tax: <strong className="text-foreground">₹{calculatedTax.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+                        </span>
+                      )}
+                    </div>
+                    <span className="font-bold text-primary text-sm shrink-0">
+                      Total Payable: ₹{calculatedTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                )}
+              </>
             )}
 
             {/* Row 3: PO Number & Bank Account Last 4 */}

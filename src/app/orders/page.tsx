@@ -43,7 +43,7 @@ import { ConfirmDeleteModal } from "@/components/confirm-delete-modal";
 export default function OrdersPage() {
   const router = useRouter();
   const [animationParent] = useAutoAnimate();
-  const { orders, updateOrderStatus, deleteOrder, recordTransaction } =
+  const { orders, updateOrder, updateOrderStatus, deleteOrder, recordTransaction } =
     useInventory();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState<"all" | "active" | "past">(
@@ -60,18 +60,32 @@ export default function OrdersPage() {
     setCompletingOrderId(order.id);
 
     try {
-      for (const item of order.items) {
-        if (item.productId) {
+      const updatedItems = order.items.map((item) => {
+        const alreadyReceived = item.receivedQuantity || 0;
+        const remainingToStock = Math.max(0, item.quantity - alreadyReceived);
+        return {
+          ...item,
+          receivedQuantity: item.quantity,
+          _stockInNow: remainingToStock,
+        };
+      });
+
+      for (const item of updatedItems) {
+        if (item.productId && item._stockInNow > 0) {
           await recordTransaction(
             item.productId,
             "Stock In",
-            item.quantity,
+            item._stockInNow,
             "Purchase Order Received",
-            `Order ID: ${order.id}`,
+            `Order ID: ${order.id} (Manual Completion)`,
           );
         }
       }
-      await updateOrderStatus(order.id, "Completed");
+
+      await updateOrder(order.id, {
+        status: "Completed",
+        items: updatedItems.map(({ _stockInNow, ...it }) => it),
+      });
       toast.success("Order completed and stock updated!");
     } catch (error) {
       console.error(error);
@@ -89,7 +103,7 @@ export default function OrdersPage() {
 
     let matchesType = true;
     if (filterType === "active") {
-      matchesType = o.status === "Pending" || o.status === "Processing";
+      matchesType = o.status === "Pending" || o.status === "Processing" || o.status === "Partial";
     } else if (filterType === "past") {
       matchesType = o.status === "Completed" || o.status === "Cancelled";
     }
@@ -101,6 +115,8 @@ export default function OrdersPage() {
     switch (status) {
       case "Completed":
         return "text-emerald-500 bg-emerald-500/10 border-emerald-500/20";
+      case "Partial":
+        return "text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-500/30 font-semibold";
       case "Processing":
         return "text-blue-500 bg-blue-500/10 border-blue-500/20";
       case "Cancelled":
@@ -359,14 +375,24 @@ export default function OrdersPage() {
                         {order.supplier}
                       </td>
                       <td className="px-4 sm:px-6 py-4">
-                        <span className="text-xs text-muted-foreground whitespace-nowrap">
-                          {order.items.length} product(s) -{" "}
-                          {order.items.reduce(
-                            (acc, it) => acc + it.quantity,
-                            0,
-                          )}{" "}
-                          units total
-                        </span>
+                        {(() => {
+                          const totalUnits = order.items.reduce((acc, it) => acc + it.quantity, 0);
+                          const receivedUnits = order.items.reduce((acc, it) => acc + (it.receivedQuantity || 0), 0);
+                          const remainingUnits = Math.max(0, totalUnits - receivedUnits);
+
+                          return (
+                            <div className="space-y-1">
+                              <span className="text-xs text-muted-foreground whitespace-nowrap block">
+                                {order.items.length} product(s) · {totalUnits} units total
+                              </span>
+                              {receivedUnits > 0 && (
+                                <span className="text-[11px] font-semibold text-amber-600 dark:text-amber-400 block whitespace-nowrap">
+                                  Fulfilled: {receivedUnits}/{totalUnits} ({remainingUnits} left)
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </td>
                       <td className="px-4 sm:px-6 py-4 font-medium text-emerald-500 whitespace-nowrap">
                         ₹{order.totalAmount.toLocaleString("en-IN")}

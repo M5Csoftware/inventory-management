@@ -69,13 +69,14 @@ export interface OrderItem {
   name: string;
   quantity: number;
   price: number;
+  receivedQuantity?: number;
 }
 
 export interface Order {
   id: string;
   supplier: string;
   items: OrderItem[];
-  status: "Pending" | "Processing" | "Completed" | "Cancelled";
+  status: "Pending" | "Processing" | "Completed" | "Cancelled" | "Partial";
   totalAmount: number;
   createdAt?: string;
 }
@@ -166,6 +167,32 @@ export interface MaintenanceRecord {
   notes?: string;
 }
 
+export interface PhysicalVerificationItem {
+  productId: string;
+  productName: string;
+  category?: string;
+  invoicedQuantity: number;
+  physicalQuantity: number;
+  variance: number; // physicalQuantity - invoicedQuantity
+  status: 'Matched' | 'Shortage' | 'Excess';
+  condition: 'Good Condition' | 'Damaged' | 'Packaging Defect' | 'Seal Broken' | 'Other';
+  notes?: string;
+}
+
+export interface PhysicalVerificationRecord {
+  id: string;
+  invoiceNumber?: string;
+  poNumber?: string;
+  supplier?: string;
+  branch: string;
+  verifiedBy: string;
+  verifiedAt: string;
+  items: PhysicalVerificationItem[];
+  overallStatus: 'Matched' | 'Discrepancy';
+  generalNotes?: string;
+  createdAt: string;
+}
+
 interface InventoryContextType {
   activeBranch: string;
   setActiveBranch: (branch: string) => void;
@@ -175,6 +202,9 @@ interface InventoryContextType {
   suppliers: Supplier[];
   orders: Order[];
   assets: AssetAssignment[];
+  physicalVerifications: PhysicalVerificationRecord[];
+  addPhysicalVerification: (record: Omit<PhysicalVerificationRecord, 'id' | 'createdAt'>) => Promise<void>;
+  deletePhysicalVerification: (id: string) => Promise<void>;
   addOrder: (order: Omit<Order, "id" | "createdAt">) => Promise<void>;
   updateOrder: (id: string, orderData: Partial<Order>) => Promise<void>;
   updateOrderStatus: (id: string, status: Order["status"]) => Promise<void>;
@@ -284,6 +314,21 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [assets, setAssets] = useState<AssetAssignment[]>([]);
+  const [physicalVerifications, setPhysicalVerifications] = useState<PhysicalVerificationRecord[]>([]);
+
+  // Load physical verifications from localStorage on mount
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem("physical_verifications_data");
+        if (stored) {
+          setPhysicalVerifications(JSON.parse(stored));
+        }
+      } catch (e) {
+        console.error("Failed to load physical verifications:", e);
+      }
+    }
+  }, []);
 
   // Fetch initial data
   const fetchData = async () => {
@@ -919,6 +964,40 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
     );
   };
 
+  const addPhysicalVerification = async (
+    record: Omit<PhysicalVerificationRecord, "id" | "createdAt">
+  ) => {
+    const newRecord: PhysicalVerificationRecord = {
+      ...record,
+      id: `PV-${Date.now().toString().slice(-6)}`,
+      createdAt: new Date().toISOString(),
+    };
+
+    const updated = [newRecord, ...physicalVerifications];
+    setPhysicalVerifications(updated);
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("physical_verifications_data", JSON.stringify(updated));
+      } catch (e) {
+        console.error("Failed to save physical verification to storage:", e);
+      }
+    }
+    toast.success(`Physical verification recorded (${newRecord.id})! Note: Inventory stock is unchanged.`);
+  };
+
+  const deletePhysicalVerification = async (id: string) => {
+    const updated = physicalVerifications.filter((r) => r.id !== id);
+    setPhysicalVerifications(updated);
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("physical_verifications_data", JSON.stringify(updated));
+      } catch (e) {
+        console.error("Failed to update physical verification storage:", e);
+      }
+    }
+    toast.success("Physical verification record removed.");
+  };
+
   return (
     <InventoryContext.Provider
       value={{
@@ -929,6 +1008,9 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
         categories,
         suppliers,
         orders,
+        physicalVerifications,
+        addPhysicalVerification,
+        deletePhysicalVerification,
         addProduct,
         addCategory,
         addSupplier,

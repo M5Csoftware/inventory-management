@@ -25,7 +25,8 @@ import {
   FileSpreadsheet,
   ExternalLink,
   ShieldCheck,
-  CheckCircle2
+  CheckCircle2,
+  ClipboardCheck,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -52,6 +53,7 @@ export const navItems: NavItem[] = [
     icon: Box,
     subItems: [
       { href: "/products", label: "All Products", icon: List },
+      { href: "/products/physical-verification", label: "Physical Verification", icon: ClipboardCheck },
       { href: "/products/new", label: "Add Product", icon: PlusCircle },
     ],
   },

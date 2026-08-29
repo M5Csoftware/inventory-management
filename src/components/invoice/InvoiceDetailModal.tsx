@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import Link from 'next/link';
 import { Invoice } from '@/types/invoice';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import { useInventory } from '@/context/inventory-context';
 import {
   FileSpreadsheet,
   X,
@@ -20,6 +22,7 @@ import {
   ExternalLink,
   History,
   Info,
+  ClipboardCheck,
 } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { canApproveInvoice } from '@/utils/invoice-permissions';
@@ -57,12 +60,24 @@ export function InvoiceDetailModal({
   config,
 }: InvoiceDetailModalProps) {
   const { user } = useAuth();
+  const { physicalVerifications } = useInventory();
   const [mounted, setMounted] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
   const [showRejectForm, setShowRejectForm] = useState(false);
   const [verifyNotes, setVerifyNotes] = useState('');
   const [showVerifyForm, setShowVerifyForm] = useState(false);
   const [selectedImgIdx, setSelectedImgIdx] = useState(0);
+
+  const linkedPv = physicalVerifications.find(
+    (pv) =>
+      (pv.invoiceNumber &&
+        invoice.invoiceNumber &&
+        pv.invoiceNumber.trim().toLowerCase() ===
+          invoice.invoiceNumber.trim().toLowerCase()) ||
+      (pv.poNumber &&
+        invoice.poNumber &&
+        pv.poNumber.trim().toLowerCase() === invoice.poNumber.trim().toLowerCase())
+  );
 
   const attachedImages: string[] = invoice.invoiceImages && invoice.invoiceImages.length > 0
     ? invoice.invoiceImages
@@ -142,7 +157,9 @@ export function InvoiceDetailModal({
               <p className="text-base font-extrabold text-foreground mt-0.5">₹{invoice.taxableAmount.toLocaleString('en-IN')}</p>
             </div>
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Tax ({invoice.taxOption})</p>
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Tax ({invoice.taxOption === 'IGST' ? `IGST ${invoice.taxSlab ?? 18}%` : `CGST ${(invoice.taxSlab ?? 18) / 2}% + SGST ${(invoice.taxSlab ?? 18) / 2}%`})
+              </p>
               <p className="text-base font-extrabold text-primary mt-0.5">₹{invoice.taxAmount.toLocaleString('en-IN')}</p>
             </div>
             <div>
@@ -197,6 +214,44 @@ export function InvoiceDetailModal({
                   </div>
                 ) : (
                   <p className="text-xs text-muted-foreground italic">No detailed bank record added. (Last 4: {invoice.bankLast4 || 'N/A'})</p>
+                )}
+              </div>
+
+              {/* 2-Step Inward Physical Verification Card */}
+              <div className="p-4 rounded-2xl bg-card border border-border/60 space-y-2 shadow-xs">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold flex items-center gap-1.5">
+                    <ClipboardCheck className="h-4 w-4 text-primary" /> Physical Verification Tally
+                  </span>
+                  <Link
+                    href="/products/physical-verification"
+                    className="text-[11px] font-semibold text-primary hover:underline"
+                  >
+                    {linkedPv ? 'View Tally Log &rarr;' : '+ Record Physical Count'}
+                  </Link>
+                </div>
+                {linkedPv ? (
+                  <div className="space-y-1 pt-1 text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Status:</span>
+                      <span
+                        className={`font-bold px-2 py-0.5 rounded-full text-[10px] ${
+                          linkedPv.overallStatus === 'Matched'
+                            ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/25'
+                            : 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/25'
+                        }`}
+                      >
+                        {linkedPv.overallStatus === 'Matched' ? '✓ 100% Matched' : '⚠️ Discrepancy'}
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-muted-foreground pt-0.5">
+                      Verified by <strong>{linkedPv.verifiedBy}</strong> ({linkedPv.items.length} items checked on {new Date(linkedPv.verifiedAt).toLocaleDateString('en-IN')})
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground italic pt-1">
+                    No physical count recorded yet for this invoice inward entry.
+                  </p>
                 )}
               </div>
             </div>

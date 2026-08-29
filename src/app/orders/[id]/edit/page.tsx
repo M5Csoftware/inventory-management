@@ -18,7 +18,7 @@ export default function EditOrderPage() {
   const { orders, suppliers, products, updateOrder, activeBranch } = useInventory();
   
   const [supplier, setSupplier] = useState('');
-  const [status, setStatus] = useState<'Pending' | 'Processing' | 'Completed' | 'Cancelled'>('Pending');
+  const [status, setStatus] = useState<'Pending' | 'Processing' | 'Completed' | 'Cancelled' | 'Partial'>('Pending');
   const [items, setItems] = useState([{ productId: '', name: '', quantity: 1, price: 0 }]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -145,6 +145,7 @@ export default function EditOrderPage() {
                 >
                   <option value="Pending">Pending</option>
                   <option value="Processing">Processing</option>
+                  <option value="Partial">Partial</option>
                   <option value="Completed">Completed</option>
                   <option value="Cancelled">Cancelled</option>
                 </select>
