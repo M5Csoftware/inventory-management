@@ -22,6 +22,7 @@ interface InvoiceContextType {
     invoiceNumber: string;
     invoiceDate: string;
     taxableAmount: number;
+    taxSlab?: number;
     taxOption: TaxOption;
     taxAmount: number;
     amount: number;
@@ -183,6 +184,7 @@ export function InvoiceProvider({ children }: { children: React.ReactNode }) {
     invoiceNumber: string;
     invoiceDate: string;
     taxableAmount: number;
+    taxSlab?: number;
     taxOption: TaxOption;
     taxAmount: number;
     amount: number;
@@ -206,6 +208,7 @@ export function InvoiceProvider({ children }: { children: React.ReactNode }) {
           invoiceNumber: formData.invoiceNumber.trim(),
           invoiceDate: formData.invoiceDate,
           taxableAmount: formData.taxableAmount,
+          taxSlab: formData.taxSlab !== undefined ? formData.taxSlab : (formData.taxAmount > 0 && formData.taxableAmount > 0 ? Math.round((formData.taxAmount / formData.taxableAmount) * 100) : 0),
           taxOption: formData.taxOption,
           taxAmount: formData.taxAmount,
           amount: formData.amount,
