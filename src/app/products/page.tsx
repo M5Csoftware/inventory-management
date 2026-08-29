@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Plus, Search, Edit2, Trash2 } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, ClipboardCheck } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useInventory, Product } from '@/context/inventory-context';
@@ -39,11 +39,18 @@ export default function ProductsPage() {
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Products</h1>
           <p className="text-sm text-muted-foreground mt-1">Manage and edit your product directory.</p>
         </div>
-        <Link href="/products/new">
-          <Button size="sm" className="shadow-lg shadow-primary/20 transition-all hover:shadow-primary/40 hover:-translate-y-0.5 w-full sm:w-auto">
-            <Plus className="mr-2 h-4 w-4" /> Add Product
-          </Button>
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link href="/products/physical-verification">
+            <Button variant="outline" size="sm" className="shadow-xs hover:bg-muted font-semibold w-full sm:w-auto">
+              <ClipboardCheck className="mr-2 h-4 w-4 text-primary" /> Physical Verification
+            </Button>
+          </Link>
+          <Link href="/products/new">
+            <Button size="sm" className="shadow-lg shadow-primary/20 transition-all hover:shadow-primary/40 hover:-translate-y-0.5 w-full sm:w-auto">
+              <Plus className="mr-2 h-4 w-4" /> Add Product
+            </Button>
+          </Link>
+        </div>
       </div>
 
       <Card className="bg-background/60 backdrop-blur-sm shadow-sm border-border/50">
