@@ -14,6 +14,7 @@ import {
 import { toast } from "react-toastify";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { ConfirmModal } from "@/components/confirm-modal";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/inventory";
 const DB_HEADER = { "x-database": "m5c-inventory", "Content-Type": "application/json" };
@@ -125,6 +126,7 @@ export default function CreateUserPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const submittingRef = useRef(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   // User credentials
   const [name, setName] = useState("");
@@ -167,12 +169,12 @@ export default function CreateUserPage() {
   };
 
   // Quick Preset Actions
-  const applyPreset = (preset: "all" | "standard" | "invoice" | "reports" | "clear") => {
-    if (preset === "all") {
+  const applyPreset = (preset: "all" | "standard" | "invoice" | "reports" | "clear" | "admin" | "stock" | "custom") => {
+    if (preset === "all" || preset === "admin") {
       setRole("admin");
       const allPaths = SIDEBAR_TABS_STRUCTURE.flatMap((f) => f.tabs.map((t) => t.path));
       setSelectedTabs(allPaths);
-    } else if (preset === "standard") {
+    } else if (preset === "standard" || preset === "stock") {
       setRole("stock_manager");
       setSelectedTabs([
         "/",
@@ -214,10 +216,8 @@ export default function CreateUserPage() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (submittingRef.current || loading) return;
-
     if (!name.trim() || !email.trim() || !password) {
       toast.error("Please fill in all required fields");
       return;
@@ -227,6 +227,12 @@ export default function CreateUserPage() {
       toast.error("Password and Confirm Password do not match");
       return;
     }
+
+    setShowConfirmModal(true);
+  };
+
+  const executeCreateUser = async () => {
+    if (submittingRef.current || loading) return;
 
     submittingRef.current = true;
     setLoading(true);
@@ -252,6 +258,7 @@ export default function CreateUserPage() {
       const data = await res.json();
       if (data.success) {
         toast.success("User account created successfully!");
+        setShowConfirmModal(false);
         router.push("/manage-roles");
       } else {
         toast.error(data.message || "Failed to create user");
@@ -266,6 +273,38 @@ export default function CreateUserPage() {
 
   return (
     <div className="p-4 sm:p-8 w-full space-y-6">
+      <ConfirmModal
+        isOpen={showConfirmModal}
+        onClose={() => setShowConfirmModal(false)}
+        onConfirm={executeCreateUser}
+        title="Confirm Create User Account"
+        description="Are you sure you want to create this user account with the configured access permissions?"
+        variant="primary"
+        confirmText="Create Account"
+        confirmLoadingText="Creating Account..."
+        icon={<UserPlus className="h-5 w-5" />}
+        itemName={
+          <div className="space-y-1.5 text-xs">
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">Full Name:</span>
+              <span className="font-bold text-foreground">{name}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">Email:</span>
+              <span className="font-mono text-foreground">{email}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">Role:</span>
+              <span className="font-semibold text-primary capitalize">{role.replace('_', ' ')}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">Assigned Branch:</span>
+              <span className="text-foreground">{branch}</span>
+            </div>
+          </div>
+        }
+      />
+
       {/* Header Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-5">
         <div className="flex items-center gap-3">
@@ -308,7 +347,7 @@ export default function CreateUserPage() {
         </div>
       </div>
 
-      <form id="create-user-form" onSubmit={handleSubmit} className="space-y-6">
+      <form id="create-user-form" onSubmit={handleFormSubmit} className="space-y-6">
         {/* ROW 1: Profile Credentials (Left) & Account Access Role (Right) */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Card 1: Profile Credentials */}

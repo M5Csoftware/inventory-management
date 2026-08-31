@@ -35,6 +35,7 @@ import {
 import { useInvoice } from '@/context/invoice-context';
 import { useAuth } from '@/context/auth-context';
 import { toast } from 'react-toastify';
+import { ConfirmModal, ConfirmDeleteModal } from '@/components/confirm-modal';
 
 export default function PhysicalVerificationPage() {
   const { user } = useAuth();
@@ -67,6 +68,7 @@ export default function PhysicalVerificationPage() {
   );
   const [generalNotes, setGeneralNotes] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [showSubmitConfirm, setShowSubmitConfirm] = useState<boolean>(false);
   const submittingRef = useRef(false);
 
   // Line items state
@@ -77,6 +79,8 @@ export default function PhysicalVerificationPage() {
   const [statusFilter, setStatusFilter] = useState<'all' | 'Matched' | 'Discrepancy'>('all');
   const [branchFilter, setBranchFilter] = useState<string>('All');
   const [selectedRecordForDetail, setSelectedRecordForDetail] =
+    useState<PhysicalVerificationRecord | null>(null);
+  const [recordToDelete, setRecordToDelete] =
     useState<PhysicalVerificationRecord | null>(null);
 
   // Sync user name
@@ -302,14 +306,18 @@ export default function PhysicalVerificationPage() {
     );
   };
 
-  // Form submission
-  const handleSubmitVerification = async (e: React.FormEvent) => {
+  // Form submission validation & trigger confirm modal
+  const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (submittingRef.current || isSubmitting) return;
     if (items.length === 0) {
       toast.warn('Please add at least one line item to verify.');
       return;
     }
+    setShowSubmitConfirm(true);
+  };
+
+  const executeSubmitVerification = async () => {
+    if (submittingRef.current || isSubmitting) return;
 
     submittingRef.current = true;
     setIsSubmitting(true);
@@ -348,6 +356,7 @@ export default function PhysicalVerificationPage() {
     } finally {
       submittingRef.current = false;
       setIsSubmitting(false);
+      setShowSubmitConfirm(false);
     }
   };
 
@@ -440,7 +449,7 @@ export default function PhysicalVerificationPage() {
 
       {activeTab === 'form' ? (
         /* Conduct Verification Form */
-        <form onSubmit={handleSubmitVerification} className="space-y-6">
+        <form onSubmit={handleFormSubmit} className="space-y-6">
           <Card className="border-border/60 shadow-sm bg-gradient-to-br from-card to-card/80 rounded-2xl overflow-hidden">
             <CardHeader className="border-b border-border/40 pb-4">
               <CardTitle className="text-base font-bold flex items-center gap-2">
@@ -976,7 +985,7 @@ export default function PhysicalVerificationPage() {
                                   type="button"
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() => deletePhysicalVerification(rec.id)}
+                                  onClick={() => setRecordToDelete(rec)}
                                   className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg cursor-pointer"
                                   title="Delete verification record"
                                 >
@@ -1131,6 +1140,55 @@ export default function PhysicalVerificationPage() {
           </div>
         </div>
       )}
+
+      {/* Confirmation Modal for Verification Form Submission */}
+      <ConfirmModal
+        isOpen={showSubmitConfirm}
+        onClose={() => setShowSubmitConfirm(false)}
+        onConfirm={executeSubmitVerification}
+        title="Save Physical Verification Record"
+        description="Are you sure you want to save this inward physical verification record to the audit ledger?"
+        variant={items.some((it) => it.variance !== 0) ? 'warning' : 'success'}
+        confirmText="Save Verification"
+        confirmLoadingText="Saving Record..."
+        icon={<ClipboardCheck className="h-5 w-5" />}
+        itemName={
+          <div className="space-y-1.5">
+            <div className="flex justify-between items-center text-xs">
+              <span className="text-muted-foreground">Branch:</span>
+              <span className="font-semibold text-foreground">{branch}</span>
+            </div>
+            <div className="flex justify-between items-center text-xs">
+              <span className="text-muted-foreground">Items Verified:</span>
+              <span className="font-semibold text-foreground">{items.length} line item(s)</span>
+            </div>
+            <div className="flex justify-between items-center text-xs">
+              <span className="text-muted-foreground">Total Physical Count:</span>
+              <span className="font-bold text-foreground">{totalPhysicalUnits} units</span>
+            </div>
+            <div className="flex justify-between items-center text-xs pt-1 border-t border-border/40">
+              <span className="text-muted-foreground">Result:</span>
+              <span className={`font-bold ${isFormFullyMatched ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
+                {isFormFullyMatched ? '100% Matched' : `Discrepancy (Variance: ${totalVariance > 0 ? `+${totalVariance}` : totalVariance})`}
+              </span>
+            </div>
+          </div>
+        }
+      />
+
+      {/* Confirmation Modal for Record Deletion */}
+      <ConfirmDeleteModal
+        isOpen={recordToDelete !== null}
+        onClose={() => setRecordToDelete(null)}
+        onConfirm={async () => {
+          if (recordToDelete) {
+            await deletePhysicalVerification(recordToDelete.id);
+          }
+        }}
+        title="Delete Verification Record"
+        description="Are you sure you want to delete this physical verification tally? This cannot be undone."
+        itemName={recordToDelete ? `${recordToDelete.id} (Verified by: ${recordToDelete.verifiedBy})` : ''}
+      />
     </div>
   );
 }

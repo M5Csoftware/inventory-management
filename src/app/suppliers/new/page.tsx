@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useInventory } from '@/context/inventory-context';
+import { ConfirmModal } from '@/components/confirm-modal';
 
 export default function NewSupplierPage() {
   const { addSupplier, activeBranch } = useInventory();
@@ -35,10 +36,16 @@ export default function NewSupplierPage() {
   const [location, setLocation] = useState('');
   const [branch, setBranch] = useState(activeBranch && activeBranch !== 'All' ? activeBranch : 'Delhi');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
   const submittingRef = useRef(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!name || !contact || !email || !phone || !location) return;
+    setShowConfirmModal(true);
+  };
+
+  const executeAddSupplier = async () => {
     if (submittingRef.current || !name || !contact || !email || !phone || !location) return;
 
     submittingRef.current = true;
@@ -46,6 +53,7 @@ export default function NewSupplierPage() {
 
     try {
       await addSupplier({ name, contact, email, phone, location, branch });
+      setShowConfirmModal(false);
       router.push('/suppliers');
     } finally {
       submittingRef.current = false;
@@ -104,7 +112,7 @@ export default function NewSupplierPage() {
           </CardHeader>
 
           <CardContent className="pt-4">
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleFormSubmit} className="space-y-4">
               {/* Company & Contact Names */}
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-1.5">
@@ -268,6 +276,35 @@ export default function NewSupplierPage() {
           </span>
         </div>
       </div>
+
+      {/* Confirmation Modal for Supplier Creation */}
+      <ConfirmModal
+        isOpen={showConfirmModal}
+        onClose={() => setShowConfirmModal(false)}
+        onConfirm={executeAddSupplier}
+        title="Confirm Create Supplier"
+        description="Are you sure you want to register this supplier in your partner network?"
+        variant="primary"
+        confirmText="Create Supplier"
+        confirmLoadingText="Registering..."
+        icon={<Building2 className="h-5 w-5" />}
+        itemName={
+          <div className="space-y-1.5 text-xs">
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">Supplier Name:</span>
+              <span className="font-bold text-foreground">{name}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">Contact Person:</span>
+              <span className="font-semibold text-foreground">{contact}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">Location & Branch:</span>
+              <span className="text-foreground">{location} ({branch})</span>
+            </div>
+          </div>
+        }
+      />
     </div>
   );
 }

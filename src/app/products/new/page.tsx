@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useInventory, Category, Supplier, BRANCHES } from '@/context/inventory-context';
+import { ConfirmModal } from '@/components/confirm-modal';
 
 interface SupplierRow {
   supplierName: string;
@@ -63,6 +64,7 @@ export default function NewProductPage() {
   const [width, setWidth] = useState('');
   const [height, setHeight] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
   const submittingRef = useRef(false);
 
   // Multi-supplier list state
@@ -104,8 +106,13 @@ export default function NewProductPage() {
     );
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!name || !stock || !category) return;
+    setShowConfirmModal(true);
+  };
+
+  const executeAddProduct = async () => {
     if (submittingRef.current || !name || !stock || !category) return;
 
     submittingRef.current = true;
@@ -156,6 +163,7 @@ export default function NewProductPage() {
         ...({ branch: targetBranch } as any),
       });
 
+      setShowConfirmModal(false);
       router.push('/products');
     } finally {
       submittingRef.current = false;
@@ -234,7 +242,7 @@ export default function NewProductPage() {
             </CardHeader>
 
             <CardContent className="pt-4">
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleFormSubmit} className="space-y-4">
                 {/* Product Name & SKU */}
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                   <div className="space-y-1.5 md:col-span-2 lg:col-span-2">
@@ -628,6 +636,41 @@ export default function NewProductPage() {
           </span>
         </div>
       </div>
+
+      {/* Confirmation Modal for Product Creation */}
+      <ConfirmModal
+        isOpen={showConfirmModal}
+        onClose={() => setShowConfirmModal(false)}
+        onConfirm={executeAddProduct}
+        title="Confirm Create Product"
+        description="Are you sure you want to add this product to the global inventory catalog?"
+        variant="primary"
+        confirmText="Create Product"
+        confirmLoadingText="Creating..."
+        icon={<Package className="h-5 w-5" />}
+        itemName={
+          <div className="space-y-1.5 text-xs">
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">Product Name:</span>
+              <span className="font-bold text-foreground">{name}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">Category:</span>
+              <span className="font-semibold text-foreground">{category}</span>
+            </div>
+            {sku && (
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">SKU / Model:</span>
+                <span className="font-mono text-foreground font-semibold">{sku}</span>
+              </div>
+            )}
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">Initial Stock ({initialBranch}):</span>
+              <span className="font-bold text-emerald-600 dark:text-emerald-400 font-mono">{stock || 0} {uom}</span>
+            </div>
+          </div>
+        }
+      />
     </div>
   );
 }

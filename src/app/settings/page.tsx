@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'react-toastify';
 import { useAuth } from '@/context/auth-context';
 import { useInventory } from '@/context/inventory-context';
+import { ConfirmModal } from '@/components/confirm-modal';
 
 export default function SettingsPage() {
   const { user } = useAuth();
@@ -32,6 +33,7 @@ export default function SettingsPage() {
   });
 
   const [isSaved, setIsSaved] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
   const submittingRef = useRef(false);
 
   useEffect(() => {
@@ -46,8 +48,12 @@ export default function SettingsPage() {
     }
   }, []);
 
-  const handleSubmitProfile = (e: React.FormEvent) => {
+  const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setShowConfirmModal(true);
+  };
+
+  const executeSaveSettings = () => {
     if (submittingRef.current || isSaved) return;
     submittingRef.current = true;
     localStorage.setItem('m5c_user_settings', JSON.stringify(profile));
@@ -55,6 +61,7 @@ export default function SettingsPage() {
       setActiveBranch(profile.branch);
     }
     setIsSaved(true);
+    setShowConfirmModal(false);
     toast.success('System settings saved successfully!');
     setTimeout(() => {
       submittingRef.current = false;
@@ -91,7 +98,7 @@ export default function SettingsPage() {
       </div>
 
       {/* Main Full-Width Grid */}
-      <form id="settings-form" onSubmit={handleSubmitProfile} className="space-y-6">
+      <form id="settings-form" onSubmit={handleFormSubmit} className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Card 1: User Profile Settings */}
           <Card className="border-border/60 shadow-sm bg-card">
@@ -263,6 +270,35 @@ export default function SettingsPage() {
           </div>
         </div>
       </form>
+
+      {/* Confirmation Modal for Saving System Settings */}
+      <ConfirmModal
+        isOpen={showConfirmModal}
+        onClose={() => setShowConfirmModal(false)}
+        onConfirm={executeSaveSettings}
+        title="Save System Settings"
+        description="Are you sure you want to apply and save these system configuration preferences?"
+        variant="primary"
+        confirmText="Save Settings"
+        confirmLoadingText="Saving..."
+        icon={<SettingsIcon className="h-5 w-5" />}
+        itemName={
+          <div className="space-y-1.5 text-xs">
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">Default Facility Branch:</span>
+              <span className="font-bold text-foreground">{profile.branch}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">Low Stock Threshold:</span>
+              <span className="font-mono text-foreground font-semibold">{profile.defaultThreshold} units</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">Currency:</span>
+              <span className="font-medium text-foreground">{profile.currency}</span>
+            </div>
+          </div>
+        }
+      />
     </div>
   );
 }

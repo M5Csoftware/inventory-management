@@ -8,23 +8,26 @@ import { Button } from '@/components/ui/button';
 import { PlusCircle, Search, Laptop, Undo2, ArrowUpRight } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useAutoAnimate } from '@formkit/auto-animate/react';
+import { ConfirmModal } from '@/components/confirm-modal';
 
 export default function AssetsPage() {
   const { assets, returnAsset } = useInventory();
   const [searchTerm, setSearchTerm] = useState('');
   const [returningId, setReturningId] = useState<string | null>(null);
+  const [assetToReturn, setAssetToReturn] = useState<AssetAssignment | null>(null);
   const returningRef = useRef<string | null>(null);
   const [animationParent] = useAutoAnimate();
 
-  const handleReturn = async (id: string) => {
+  const handleReturn = async (asset: AssetAssignment) => {
     if (returningRef.current) return;
-    returningRef.current = id;
-    setReturningId(id);
+    returningRef.current = asset.id;
+    setReturningId(asset.id);
     try {
-      await returnAsset(id);
+      await returnAsset(asset.id);
     } finally {
       returningRef.current = null;
       setReturningId(null);
+      setAssetToReturn(null);
     }
   };
 
@@ -158,7 +161,7 @@ export default function AssetsPage() {
                             size="sm"
                             disabled={returningId === asset.id}
                             className="h-8 hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200 dark:hover:bg-emerald-950 dark:hover:border-emerald-800 disabled:opacity-50 disabled:pointer-events-none"
-                            onClick={() => handleReturn(asset.id)}
+                            onClick={() => setAssetToReturn(asset)}
                           >
                             <Undo2 className="mr-2 h-3.5 w-3.5" />
                             {returningId === asset.id ? 'Returning...' : 'Return Asset'}
@@ -178,6 +181,35 @@ export default function AssetsPage() {
           </div>
         </CardContent>
       </Card>
+
+      <ConfirmModal
+        isOpen={assetToReturn !== null}
+        onClose={() => setAssetToReturn(null)}
+        onConfirm={async () => {
+          if (assetToReturn) {
+            await handleReturn(assetToReturn);
+          }
+        }}
+        title="Confirm Asset Return"
+        description="Are you sure you want to mark this asset as returned? It will be checked back into active inventory."
+        variant="warning"
+        confirmText="Confirm Return"
+        confirmLoadingText="Returning..."
+        icon={<Undo2 className="h-5 w-5" />}
+        itemName={
+          assetToReturn ? (
+            <div className="space-y-1">
+              <div className="font-bold text-foreground">
+                {assetToReturn.productName} ({assetToReturn.id})
+              </div>
+              <div className="text-[11px] text-muted-foreground">
+                Assigned to: <span className="font-semibold text-foreground">{assetToReturn.assignedTo}</span> ({assetToReturn.department || 'General'})
+                {assetToReturn.serialNumber && ` · Serial: ${assetToReturn.serialNumber}`}
+              </div>
+            </div>
+          ) : undefined
+        }
+      />
     </div>
   );
 }

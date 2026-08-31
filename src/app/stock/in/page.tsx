@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useInventory, Product, Supplier, BRANCHES } from "@/context/inventory-context";
+import { ConfirmModal } from "@/components/confirm-modal";
 
 export default function StockInPage() {
   const {
@@ -63,6 +64,7 @@ export default function StockInPage() {
   const [location, setLocation] = useState("Warehouse A (Zone 1)");
   const [notes, setNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
   const submittingRef = useRef(false);
 
   useEffect(() => {
@@ -156,8 +158,13 @@ export default function StockInPage() {
     setProductSearchTerm("");
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!productId || !quantity || !location) return;
+    setShowConfirmModal(true);
+  };
+
+  const executeStockIn = async () => {
     if (submittingRef.current || isSubmitting || !productId || !quantity || !location) return;
 
     submittingRef.current = true;
@@ -168,7 +175,7 @@ export default function StockInPage() {
         supplier === "CUSTOM_SUPPLIER" ? customSupplier : supplier;
 
       if (isEditMode && selectedProduct) {
-        const targetBranch = activeBranch === "All" ? "Ahmedabad" : activeBranch;
+        const targetBranchToUse = activeBranch === "All" ? targetBranch : activeBranch;
         const existingStockMap =
           typeof selectedProduct.stock === "object" && selectedProduct.stock !== null
             ? selectedProduct.stock
@@ -176,12 +183,13 @@ export default function StockInPage() {
 
         const updatedStockMap = {
           ...existingStockMap,
-          [targetBranch]: parseInt(quantity || "0"),
+          [targetBranchToUse]: parseInt(quantity || "0"),
         };
 
         await updateProduct(selectedProduct.id, {
           stock: updatedStockMap,
         });
+        setShowConfirmModal(false);
         router.push("/stock");
         return;
       }
@@ -218,6 +226,7 @@ export default function StockInPage() {
       );
 
       if (success) {
+        setShowConfirmModal(false);
         router.push("/stock");
       }
     } finally {
@@ -291,7 +300,7 @@ export default function StockInPage() {
             </CardHeader>
 
             <CardContent className="pt-4 overflow-visible">
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleFormSubmit} className="space-y-4">
                 {/* 1. Item Name & Supplier */}
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-1.5 relative z-30">
@@ -589,6 +598,57 @@ export default function StockInPage() {
           </span>
         </div>
       </div>
+
+      {/* Confirmation Modal for Stock In */}
+      <ConfirmModal
+        isOpen={showConfirmModal}
+        onClose={() => setShowConfirmModal(false)}
+        onConfirm={executeStockIn}
+        title={isEditMode ? "Confirm Stock Update" : "Confirm Stock In"}
+        description={
+          isEditMode
+            ? "Are you sure you want to adjust the current stock level for this item?"
+            : "Are you sure you want to record this incoming stock shipment into active inventory?"
+        }
+        variant={isEditMode ? "primary" : "success"}
+        confirmText={isEditMode ? "Update Stock" : "Record Stock In"}
+        confirmLoadingText={isEditMode ? "Updating..." : "Recording Stock..."}
+        icon={isEditMode ? <Save className="h-5 w-5" /> : <ArrowUpRight className="h-5 w-5" />}
+        itemName={
+          <div className="space-y-1.5 text-xs">
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">Product:</span>
+              <span className="font-bold text-foreground">{selectedProduct?.name || productId}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">Quantity:</span>
+              <span className="font-bold text-emerald-600 dark:text-emerald-400 font-mono">+{quantity} units</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">Facility / Branch:</span>
+              <span className="font-semibold text-foreground">{targetBranch}</span>
+            </div>
+            {location && (
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">Location:</span>
+                <span className="text-foreground">{location}</span>
+              </div>
+            )}
+            {supplier && (
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">Supplier:</span>
+                <span className="text-foreground">{supplier === "CUSTOM_SUPPLIER" ? customSupplier : supplier}</span>
+              </div>
+            )}
+            {amount && (
+              <div className="flex justify-between items-center pt-1 border-t border-border/40 font-semibold">
+                <span className="text-muted-foreground">Total Value:</span>
+                <span className="font-mono text-foreground">₹{(parseFloat(amount) * (parseInt(quantity) || 1)).toLocaleString('en-IN')}</span>
+              </div>
+            )}
+          </div>
+        }
+      />
     </div>
   );
 }

@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useInventory, Product } from "@/context/inventory-context";
+import { ConfirmModal } from "@/components/confirm-modal";
 
 export default function StockOutPage() {
   const { products, categories, recordTransaction, updateProduct, activeBranch } =
@@ -40,6 +41,7 @@ export default function StockOutPage() {
   const [handedTo, setHandedTo] = useState("");
   const [notes, setNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
   const submittingRef = useRef(false);
 
   // Searchable Select Product dropdown states
@@ -112,8 +114,13 @@ export default function StockOutPage() {
     setProductSearchTerm("");
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!productId || !quantity || !reason) return;
+    setShowConfirmModal(true);
+  };
+
+  const executeStockOut = async () => {
     if (submittingRef.current || !productId || !quantity || !reason) return;
 
     submittingRef.current = true;
@@ -135,6 +142,7 @@ export default function StockOutPage() {
         await updateProduct(selectedProduct.id, {
           stock: updatedStockMap,
         });
+        setShowConfirmModal(false);
         router.push("/stock");
         return;
       }
@@ -150,6 +158,7 @@ export default function StockOutPage() {
       );
 
       if (success) {
+        setShowConfirmModal(false);
         router.push("/stock");
       }
     } finally {
@@ -221,7 +230,7 @@ export default function StockOutPage() {
             </CardHeader>
 
             <CardContent className="pt-4">
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleFormSubmit} className="space-y-4">
                 {/* Select Product */}
                 <div className="space-y-1.5">
                   <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -396,6 +405,49 @@ export default function StockOutPage() {
           </span>
         </div>
       </div>
+
+      {/* Confirmation Modal for Stock Out */}
+      <ConfirmModal
+        isOpen={showConfirmModal}
+        onClose={() => setShowConfirmModal(false)}
+        onConfirm={executeStockOut}
+        title={isEditMode ? "Confirm Stock Update" : "Confirm Stock Out"}
+        description={
+          isEditMode
+            ? "Are you sure you want to adjust the stock level for this item?"
+            : "Are you sure you want to record this outgoing stock dispatch and decrease inventory?"
+        }
+        variant={isEditMode ? "primary" : "warning"}
+        confirmText={isEditMode ? "Update Stock" : "Confirm Stock Out"}
+        confirmLoadingText={isEditMode ? "Updating..." : "Recording Stock Out..."}
+        icon={isEditMode ? <Save className="h-5 w-5" /> : <ArrowDownRight className="h-5 w-5" />}
+        itemName={
+          <div className="space-y-1.5 text-xs">
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">Product:</span>
+              <span className="font-bold text-foreground">{selectedProduct?.name || productId}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">Quantity Out:</span>
+              <span className="font-bold text-destructive font-mono">-{quantity} units</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">Branch:</span>
+              <span className="font-semibold text-foreground">{activeBranch}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">Reason:</span>
+              <span className="text-foreground font-medium">{reason}</span>
+            </div>
+            {handedTo && (
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">Handed To:</span>
+                <span className="text-foreground">{handedTo}</span>
+              </div>
+            )}
+          </div>
+        }
+      />
     </div>
   );
 }

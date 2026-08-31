@@ -11,6 +11,7 @@ import {
   User, Eye, EyeOff, Pencil, X, Check, Save,
 } from 'lucide-react';
 import { toast } from 'react-toastify';
+import { ConfirmDeleteModal } from '@/components/confirm-modal';
 
 interface TeamSettingsViewProps {
   team: TeamMember[];
@@ -53,6 +54,7 @@ export const TeamSettingsView: React.FC<TeamSettingsViewProps> = ({
   const [currency, setCurrency] = useState<AppConfig['currency']>(config.currency);
   const [threshold, setThreshold] = useState<string>(config.threshold.toString());
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [memberToRemove, setMemberToRemove] = useState<TeamMember | null>(null);
   const submittingRef = React.useRef(false);
 
   const handleSettingsSubmit = (e: React.FormEvent) => {
@@ -173,7 +175,7 @@ export const TeamSettingsView: React.FC<TeamSettingsViewProps> = ({
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => onRemoveMember(m.id)}
+                          onClick={() => setMemberToRemove(m)}
                           className="h-7 w-7 text-rose-600 hover:bg-rose-500/10"
                           title="Remove member"
                         >
@@ -188,6 +190,20 @@ export const TeamSettingsView: React.FC<TeamSettingsViewProps> = ({
           </div>
         </CardContent>
       </Card>
+
+      <ConfirmDeleteModal
+        isOpen={memberToRemove !== null}
+        onClose={() => setMemberToRemove(null)}
+        onConfirm={async () => {
+          if (memberToRemove) {
+            onRemoveMember(memberToRemove.id);
+            setMemberToRemove(null);
+          }
+        }}
+        title="Remove Team Member"
+        description="Are you sure you want to remove this user from invoice management permissions?"
+        itemName={memberToRemove ? `${memberToRemove.name} (@${memberToRemove.username} - ${memberToRemove.role})` : ''}
+      />
     </div>
   );
 };

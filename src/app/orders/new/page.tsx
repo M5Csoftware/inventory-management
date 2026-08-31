@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { PlusCircle, Trash2, ArrowLeft, Building2, Package, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'react-toastify';
+import { ConfirmModal } from '@/components/confirm-modal';
 
 export default function NewOrderPage() {
   const router = useRouter();
@@ -18,6 +19,7 @@ export default function NewOrderPage() {
   const [supplier, setSupplier] = useState('');
   const [items, setItems] = useState([{ productId: '', name: '', quantity: 1, price: 0 }]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
   const submittingRef = useRef(false);
 
   // Filter products by selected supplier (both primary supplier & secondary supplier rate mapping)
@@ -107,8 +109,20 @@ export default function NewOrderPage() {
   const gstAmount = subtotal * 0.18;
   const totalAmount = subtotal + gstAmount;
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!supplier) {
+      toast.error('Please select a supplier first.');
+      return;
+    }
+    if (items.some((item) => !item.productId || item.quantity <= 0)) {
+      toast.error('Please fill out all product details with valid quantities.');
+      return;
+    }
+    setShowConfirmModal(true);
+  };
+
+  const executeAddOrder = async () => {
     if (submittingRef.current) return;
     if (!supplier) {
       toast.error('Please select a supplier first.');
@@ -129,6 +143,7 @@ export default function NewOrderPage() {
         status: 'Pending'
       });
       toast.success('Purchase order generated successfully!');
+      setShowConfirmModal(false);
       router.push('/orders');
     } catch (err) {
       toast.error('Failed to create purchase order.');
@@ -153,7 +168,7 @@ export default function NewOrderPage() {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleFormSubmit}>
         <Card className="border-border/60 shadow-sm">
           <CardHeader className="border-b border-border/40 pb-4">
             <CardTitle className="text-base font-bold flex items-center gap-2">
@@ -352,6 +367,37 @@ export default function NewOrderPage() {
           </CardFooter>
         </Card>
       </form>
+
+      {/* Confirmation Modal for Generating Purchase Order */}
+      <ConfirmModal
+        isOpen={showConfirmModal}
+        onClose={() => setShowConfirmModal(false)}
+        onConfirm={executeAddOrder}
+        title="Generate Purchase Order"
+        description="Are you sure you want to generate and issue this purchase order?"
+        variant="primary"
+        confirmText="Generate Order"
+        confirmLoadingText="Generating..."
+        icon={<Building2 className="h-5 w-5" />}
+        itemName={
+          <div className="space-y-1.5 text-xs">
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">Supplier:</span>
+              <span className="font-bold text-foreground">{supplier}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">Items:</span>
+              <span className="font-semibold text-foreground">{items.length} product(s)</span>
+            </div>
+            <div className="flex justify-between items-center pt-1 border-t border-border/40">
+              <span className="text-muted-foreground">Grand Total (incl. GST):</span>
+              <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                ₹{totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+            </div>
+          </div>
+        }
+      />
     </div>
   );
 }
