@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useInventory, Category, Supplier, Product, ProductSupplierEntry, BRANCHES } from '@/context/inventory-context';
+import { ConfirmModal } from '@/components/confirm-modal';
 
 interface SupplierRow {
   supplierName: string;
@@ -68,6 +69,7 @@ export default function EditProductPage() {
   const [width, setWidth] = useState('');
   const [height, setHeight] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
   const submittingRef = useRef(false);
 
   // Multi-supplier list state
@@ -149,8 +151,13 @@ export default function EditProductPage() {
     );
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!product || !name || !stock || !category) return;
+    setShowConfirmModal(true);
+  };
+
+  const executeUpdateProduct = async () => {
     if (submittingRef.current || !product || !name || !stock || !category) return;
 
     submittingRef.current = true;
@@ -207,6 +214,7 @@ export default function EditProductPage() {
         dimensions: dimensionStr
       });
 
+      setShowConfirmModal(false);
       router.push('/products');
     } finally {
       submittingRef.current = false;
@@ -286,7 +294,7 @@ export default function EditProductPage() {
           </CardHeader>
 
           <CardContent className="pt-4">
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleFormSubmit} className="space-y-4">
               {/* Product Name & SKU */}
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 <div className="space-y-1.5 md:col-span-2 lg:col-span-2">
@@ -684,6 +692,35 @@ export default function EditProductPage() {
           </span>
         </div>
       </div>
+
+      {/* Confirmation Modal for Product Update */}
+      <ConfirmModal
+        isOpen={showConfirmModal}
+        onClose={() => setShowConfirmModal(false)}
+        onConfirm={executeUpdateProduct}
+        title="Save Product Changes"
+        description="Are you sure you want to update the specifications and stock for this product?"
+        variant="primary"
+        confirmText="Save Changes"
+        confirmLoadingText="Saving..."
+        icon={<Save className="h-5 w-5" />}
+        itemName={
+          <div className="space-y-1.5 text-xs">
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">Product:</span>
+              <span className="font-bold text-foreground">{name} ({id})</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">Category:</span>
+              <span className="font-semibold text-foreground">{category}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">Stock ({selectedBranch}):</span>
+              <span className="font-bold text-primary font-mono">{stock} {uom}</span>
+            </div>
+          </div>
+        }
+      />
     </div>
   );
 }

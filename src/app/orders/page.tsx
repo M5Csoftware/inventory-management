@@ -38,7 +38,7 @@ import {
 import { toast } from "react-toastify";
 import { useAutoAnimate } from "@formkit/auto-animate/react";
 
-import { ConfirmDeleteModal } from "@/components/confirm-delete-modal";
+import { ConfirmDeleteModal, ConfirmModal } from "@/components/confirm-modal";
 
 export default function OrdersPage() {
   const router = useRouter();
@@ -50,6 +50,7 @@ export default function OrdersPage() {
     "all",
   );
   const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
+  const [orderToComplete, setOrderToComplete] = useState<Order | null>(null);
   const [completingOrderId, setCompletingOrderId] = useState<string | null>(null);
   const completingRef = useRef<Set<string>>(new Set());
 
@@ -412,7 +413,7 @@ export default function OrdersPage() {
                           <DropdownMenuContent align="end">
                             {order.status !== "Completed" && order.status !== "Cancelled" && (
                               <DropdownMenuItem
-                                onClick={() => handleCompleteOrder(order)}
+                                onClick={() => setOrderToComplete(order)}
                                 className="text-emerald-600 focus:text-emerald-600 cursor-pointer font-medium"
                               >
                                 <CheckCircle className="mr-2 h-4 w-4 text-emerald-600" />
@@ -461,6 +462,36 @@ export default function OrdersPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Confirmation Modal for Complete & Stock */}
+      <ConfirmModal
+        isOpen={orderToComplete !== null}
+        onClose={() => setOrderToComplete(null)}
+        onConfirm={async () => {
+          if (orderToComplete) {
+            await handleCompleteOrder(orderToComplete);
+            setOrderToComplete(null);
+          }
+        }}
+        title="Complete Order & Stock In"
+        description="Are you sure you want to mark this purchase order as Completed? All remaining quantities will be stocked into active inventory."
+        variant="success"
+        confirmText="Complete & Stock In"
+        confirmLoadingText="Completing Order..."
+        icon={<CheckCircle className="h-5 w-5" />}
+        itemName={
+          orderToComplete ? (
+            <div className="space-y-1">
+              <div className="font-bold text-foreground">
+                Order #{orderToComplete.id} ({orderToComplete.supplier})
+              </div>
+              <div className="text-[11px] text-muted-foreground">
+                {orderToComplete.items?.length || 0} product(s) · Total: ₹{orderToComplete.totalAmount.toLocaleString('en-IN')}
+              </div>
+            </div>
+          ) : undefined
+        }
+      />
 
       <ConfirmDeleteModal
         isOpen={orderToDelete !== null}

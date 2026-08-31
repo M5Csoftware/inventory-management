@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useInventory, Product, ProductSupplierEntry } from "@/context/inventory-context";
+import { ConfirmModal } from "@/components/confirm-modal";
 import { toast } from "react-toastify";
 
 interface RateItem {
@@ -65,6 +66,7 @@ export default function SupplierRatesPage() {
   const [editingRateItem, setEditingRateItem] = useState<RateItem | null>(null);
   const [newRateValue, setNewRateValue] = useState<string>("");
   const [isSaving, setIsSaving] = useState(false);
+  const [showRateConfirm, setShowRateConfirm] = useState(false);
   const savingRef = useRef(false);
 
   // Extract all categories
@@ -229,7 +231,16 @@ export default function SupplierRatesPage() {
     setNewRateValue(item.rate.toString());
   };
 
-  const handleSaveRate = async () => {
+  const handlePromptSaveRate = () => {
+    const parsedRate = parseFloat(newRateValue);
+    if (isNaN(parsedRate) || parsedRate < 0) {
+      toast.error("Please enter a valid rate amount.");
+      return;
+    }
+    setShowRateConfirm(true);
+  };
+
+  const executeSaveRate = async () => {
     if (savingRef.current || isSaving || !editingRateItem) return;
     const parsedRate = parseFloat(newRateValue);
     if (isNaN(parsedRate) || parsedRate < 0) {
@@ -284,6 +295,7 @@ export default function SupplierRatesPage() {
       await updateProduct(targetProduct.id, updates);
       toast.success(`Updated rate for ${editingRateItem.supplierName} to ₹${parsedRate.toLocaleString("en-IN")}`);
       setEditingRateItem(null);
+      setShowRateConfirm(false);
     } catch (err) {
       toast.error("Failed to update supplier rate.");
     } finally {
@@ -820,7 +832,7 @@ export default function SupplierRatesPage() {
                   type="button"
                   size="sm"
                   disabled={isSaving}
-                  onClick={handleSaveRate}
+                  onClick={handlePromptSaveRate}
                   className="h-9 gap-1.5 bg-gradient-to-r from-emerald-600 to-emerald-500 shadow-md shadow-emerald-500/20 hover:shadow-emerald-500/30"
                 >
                   <Save className="h-4 w-4" />
@@ -831,6 +843,32 @@ export default function SupplierRatesPage() {
           </Card>
         </div>
       )}
+
+      {/* Confirmation Modal for Supplier Rate Update */}
+      <ConfirmModal
+        isOpen={showRateConfirm && editingRateItem !== null}
+        onClose={() => setShowRateConfirm(false)}
+        onConfirm={executeSaveRate}
+        title="Confirm Supplier Rate Update"
+        description="Are you sure you want to update the contracted rate for this supplier?"
+        variant="primary"
+        confirmText="Update Rate"
+        confirmLoadingText="Saving Rate..."
+        icon={<IndianRupee className="h-5 w-5" />}
+        itemName={
+          editingRateItem ? (
+            <div className="space-y-1">
+              <div className="font-bold text-foreground">
+                {editingRateItem.productName} ({editingRateItem.productId})
+              </div>
+              <div className="text-[11px] text-muted-foreground flex justify-between">
+                <span>Supplier: <strong className="text-foreground">{editingRateItem.supplierName}</strong></span>
+                <span>New Rate: <strong className="text-emerald-600 dark:text-emerald-400 font-mono">₹{parseFloat(newRateValue || '0').toLocaleString('en-IN')}</strong></span>
+              </div>
+            </div>
+          ) : undefined
+        }
+      />
     </div>
   );
 }

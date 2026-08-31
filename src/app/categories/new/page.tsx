@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useInventory } from '@/context/inventory-context';
+import { ConfirmModal } from '@/components/confirm-modal';
 import { toast } from 'react-toastify';
 
 function NewCategoryForm() {
@@ -40,6 +41,7 @@ function NewCategoryForm() {
   const [categoryCode, setCategoryCode] = useState('');
   const [isAsset, setIsAsset] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
   const submittingRef = useRef(false);
 
   // Top-level categories that can act as parent categories
@@ -52,8 +54,18 @@ function NewCategoryForm() {
     }
   }, [initialParent]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!name.trim() || !description.trim()) return;
+
+    if (categoryType === 'sub' && !parentCategory) {
+      toast.error('Please select a Major Category for this subcategory.');
+      return;
+    }
+    setShowConfirmModal(true);
+  };
+
+  const executeAddCategory = async () => {
     if (submittingRef.current || !name.trim() || !description.trim()) return;
 
     if (categoryType === 'sub' && !parentCategory) {
@@ -72,6 +84,7 @@ function NewCategoryForm() {
         parentCategory: categoryType === 'sub' ? parentCategory : undefined,
         categoryCode: categoryCode.trim() || undefined,
       });
+      setShowConfirmModal(false);
       router.push('/categories');
     } finally {
       submittingRef.current = false;
@@ -186,7 +199,7 @@ function NewCategoryForm() {
           </CardHeader>
 
           <CardContent className="pt-4">
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleFormSubmit} className="space-y-4">
               {/* If Subcategory: Choose Major Category */}
               {categoryType === 'sub' && (
                 <div className="space-y-1.5 p-3.5 rounded-xl bg-primary/5 border border-primary/20 animate-in fade-in duration-200">
@@ -316,6 +329,35 @@ function NewCategoryForm() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Confirmation Modal for Category Creation */}
+      <ConfirmModal
+        isOpen={showConfirmModal}
+        onClose={() => setShowConfirmModal(false)}
+        onConfirm={executeAddCategory}
+        title={categoryType === 'major' ? "Create Major Category" : "Create Subcategory"}
+        description={`Are you sure you want to create this new ${categoryType === 'major' ? 'major category' : 'subcategory'} in the system?`}
+        variant="primary"
+        confirmText={categoryType === 'major' ? "Create Major Category" : "Create Subcategory"}
+        confirmLoadingText="Creating Category..."
+        icon={<FolderPlus className="h-5 w-5" />}
+        itemName={
+          <div className="space-y-1.5 text-xs">
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">Category Name:</span>
+              <span className="font-bold text-foreground">{name}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">Type:</span>
+              <span className="font-semibold text-primary">{categoryType === 'major' ? 'Major Category (Top Level)' : `Subcategory (under ${parentCategory})`}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">Asset Tracking:</span>
+              <span className="text-foreground">{isAsset ? 'Yes (Fixed Asset)' : 'No (Consumable)'}</span>
+            </div>
+          </div>
+        }
+      />
     </div>
   );
 }

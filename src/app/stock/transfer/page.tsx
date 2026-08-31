@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useInventory, Product } from '@/context/inventory-context';
+import { ConfirmModal } from '@/components/confirm-modal';
 import { toast } from 'react-toastify';
 
 export default function StockTransferPage() {
@@ -33,6 +34,7 @@ export default function StockTransferPage() {
   const [destinationBranch, setDestinationBranch] = useState('');
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
   const submittingRef = useRef(false);
 
   const nonAssetProducts = products.filter((prod) => {
@@ -54,8 +56,18 @@ export default function StockTransferPage() {
     }
   }, [activeBranch, branches, destinationBranch]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!productId || !quantity || !destinationBranch) return;
+
+    if (activeBranch === 'All') {
+      toast.error('Please select a specific branch from the sidebar before transferring stock.');
+      return;
+    }
+    setShowConfirmModal(true);
+  };
+
+  const executeTransfer = async () => {
     if (submittingRef.current || !productId || !quantity || !destinationBranch) return;
 
     if (activeBranch === 'All') {
@@ -75,6 +87,7 @@ export default function StockTransferPage() {
       );
 
       if (success) {
+        setShowConfirmModal(false);
         router.push('/stock');
       }
     } finally {
@@ -156,7 +169,7 @@ export default function StockTransferPage() {
             </CardHeader>
 
             <CardContent className="pt-4">
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleFormSubmit} className="space-y-4">
                 {/* Select Product */}
                 <div className="space-y-1.5">
                   <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -246,6 +259,44 @@ export default function StockTransferPage() {
           </Card>
         )}
       </div>
+
+      {/* Confirmation Modal for Stock Transfer */}
+      <ConfirmModal
+        isOpen={showConfirmModal}
+        onClose={() => setShowConfirmModal(false)}
+        onConfirm={executeTransfer}
+        title="Confirm Stock Transfer"
+        description="Are you sure you want to transfer stock from this facility to the destination branch?"
+        variant="primary"
+        confirmText="Transfer Stock"
+        confirmLoadingText="Transferring..."
+        icon={<ArrowRight className="h-5 w-5" />}
+        itemName={
+          (() => {
+            const selectedProd = nonAssetProducts.find((p) => p.id === productId);
+            return (
+              <div className="space-y-1.5 text-xs">
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Product:</span>
+                  <span className="font-bold text-foreground">{selectedProd?.name || productId}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Quantity to Move:</span>
+                  <span className="font-bold text-purple-600 dark:text-purple-400 font-mono">{quantity} units</span>
+                </div>
+                <div className="flex justify-between items-center pt-1 border-t border-border/40">
+                  <span className="text-muted-foreground">Transfer Route:</span>
+                  <span className="font-semibold text-foreground flex items-center gap-1.5">
+                    <span>{activeBranch}</span>
+                    <ArrowRight className="h-3 w-3 text-muted-foreground" />
+                    <span className="text-primary font-bold">{destinationBranch}</span>
+                  </span>
+                </div>
+              </div>
+            );
+          })()
+        }
+      />
     </div>
   );
 }

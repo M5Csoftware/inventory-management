@@ -35,6 +35,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useInventory } from "@/context/inventory-context";
+import { ConfirmModal } from "@/components/confirm-modal";
 import { toast } from "react-toastify";
 
 // Define MaintenanceRecord type locally
@@ -468,6 +469,7 @@ export default function MaintenancePage() {
   const [isLoadingSerials, setIsLoadingSerials] = useState(false);
   const [serialRefreshTick, setSerialRefreshTick] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showCreateConfirm, setShowCreateConfirm] = useState(false);
   const submittingRef = useRef(false);
 
   const [formData, setFormData] = useState({
@@ -868,8 +870,16 @@ export default function MaintenancePage() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handlePromptSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.assetId) {
+      toast.warn("Please select an asset product.");
+      return;
+    }
+    setShowCreateConfirm(true);
+  };
+
+  const executeSubmitMaintenance = async () => {
     if (submittingRef.current || isSubmitting) return;
     submittingRef.current = true;
     setIsSubmitting(true);
@@ -1008,6 +1018,7 @@ export default function MaintenancePage() {
         }
 
         toast.success("Maintenance record created successfully!");
+        setShowCreateConfirm(false);
         setIsModalOpen(false);
         resetForm();
       } else {
@@ -1653,7 +1664,7 @@ export default function MaintenancePage() {
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+          <form onSubmit={handlePromptSubmit} className="space-y-4 mt-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Product selection - Full width */}
               <SearchableSelect
@@ -2820,6 +2831,55 @@ export default function MaintenancePage() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Confirmation Modal for Creating Maintenance Record */}
+      <ConfirmModal
+        isOpen={showCreateConfirm}
+        onClose={() => setShowCreateConfirm(false)}
+        onConfirm={executeSubmitMaintenance}
+        title={`Confirm ${formData.type} Record`}
+        description={
+          formData.type === "Dismantle"
+            ? "Are you sure you want to record this asset as dismantled? If a serial number is linked, it will be retired from active inventory."
+            : formData.type === "Retire"
+            ? "Are you sure you want to record this asset as retired/scrapped?"
+            : `Are you sure you want to record this ${formData.type.toLowerCase()} record?`
+        }
+        variant={formData.type === "Dismantle" || formData.type === "Retire" ? "danger" : "warning"}
+        confirmText={`Record ${formData.type}`}
+        confirmLoadingText="Saving Record..."
+        icon={getTypeIcon(formData.type) || <Wrench className="h-5 w-5" />}
+        itemName={
+          (() => {
+            const productArray = Array.isArray(products) ? products : [];
+            const selectedProd = productArray.find((p: Product) => p.id === formData.assetId);
+            return (
+              <div className="space-y-1.5 text-xs">
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Product / Asset:</span>
+                  <span className="font-bold text-foreground">{selectedProd?.name || formData.assetId}</span>
+                </div>
+                {formData.serialNumber && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Serial Number:</span>
+                    <span className="font-mono text-foreground font-semibold">{formData.serialNumber}</span>
+                  </div>
+                )}
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Action Type:</span>
+                  <span className="font-bold text-primary">{formData.type}</span>
+                </div>
+                {formData.cost && (
+                  <div className="flex justify-between items-center pt-1 border-t border-border/40">
+                    <span className="text-muted-foreground">Estimated Cost:</span>
+                    <span className="font-mono font-bold text-foreground">₹{parseFloat(formData.cost || '0').toLocaleString('en-IN')}</span>
+                  </div>
+                )}
+              </div>
+            );
+          })()
+        }
+      />
     </div>
   );
 }

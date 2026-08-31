@@ -7,6 +7,7 @@ import { useInventory, Product, ASSET_DEPARTMENTS, ASSET_APPROVED_BY, BRANCHES }
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Laptop, User, FileText, Package, ShieldCheck, Building2, CheckCircle2 } from 'lucide-react';
+import { ConfirmModal } from '@/components/confirm-modal';
 
 export default function NewAssetAssignmentPage() {
   const { products, categories, assignAsset, activeBranch } = useInventory();
@@ -32,6 +33,7 @@ export default function NewAssetAssignmentPage() {
   const [warranty, setWarranty] = useState('');
   const [quantity, setQuantity] = useState('1');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
   const submittingRef = useRef(false);
 
   // Filter products that belong to an asset category
@@ -61,8 +63,13 @@ export default function NewAssetAssignmentPage() {
     }
   }, [assetProducts, productId]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!productId || !assignedTo || !quantity) return;
+    setShowConfirmModal(true);
+  };
+
+  const executeAssignAsset = async () => {
     if (submittingRef.current || !productId || !assignedTo || !quantity) return;
 
     const selectedProduct = products.find(p => p.id === productId);
@@ -86,6 +93,7 @@ export default function NewAssetAssignmentPage() {
       });
 
       if (success) {
+        setShowConfirmModal(false);
         router.push('/stock/assets');
       }
     } finally {
@@ -140,7 +148,7 @@ export default function NewAssetAssignmentPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-6">
-              <form onSubmit={handleSubmit} className="space-y-6">
+              <form onSubmit={handleFormSubmit} className="space-y-6">
                 <div className="grid gap-6 md:grid-cols-2">
                   <div className="space-y-1.5">
                     <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -328,6 +336,50 @@ export default function NewAssetAssignmentPage() {
           </Card>
         )}
       </div>
+
+      {/* Confirmation Modal for Asset Assignment */}
+      <ConfirmModal
+        isOpen={showConfirmModal}
+        onClose={() => setShowConfirmModal(false)}
+        onConfirm={executeAssignAsset}
+        title="Confirm Asset Assignment"
+        description="Are you sure you want to assign this asset to the selected individual or department?"
+        variant="primary"
+        confirmText="Assign Asset"
+        confirmLoadingText="Assigning..."
+        icon={<Laptop className="h-5 w-5" />}
+        itemName={
+          (() => {
+            const selectedProd = products.find((p) => p.id === productId);
+            return (
+              <div className="space-y-1.5 text-xs">
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Asset / Product:</span>
+                  <span className="font-bold text-foreground">{selectedProd?.name || productId}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Assigned To:</span>
+                  <span className="font-bold text-primary">{assignedTo} ({department})</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Approved By:</span>
+                  <span className="font-semibold text-foreground">{approvedBy}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Facility / Branch:</span>
+                  <span className="font-semibold text-foreground">{selectedBranch}</span>
+                </div>
+                {serialNumber && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Serial Number:</span>
+                    <span className="font-mono text-foreground font-semibold">{serialNumber}</span>
+                  </div>
+                )}
+              </div>
+            );
+          })()
+        }
+      />
     </div>
   );
 }

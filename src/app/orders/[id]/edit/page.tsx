@@ -7,9 +7,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { PlusCircle, Trash2, ArrowLeft } from 'lucide-react';
+import { PlusCircle, Trash2, ArrowLeft, Save } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'react-toastify';
+import { ConfirmModal } from '@/components/confirm-modal';
 
 export default function EditOrderPage() {
   const router = useRouter();
@@ -22,6 +23,7 @@ export default function EditOrderPage() {
   const [items, setItems] = useState([{ productId: '', name: '', quantity: 1, price: 0 }]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
   const submittingRef = useRef(false);
 
   useEffect(() => {
@@ -67,15 +69,27 @@ export default function EditOrderPage() {
   const gstAmount = subtotal * 0.18;
   const totalAmount = subtotal + gstAmount;
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (submittingRef.current) return;
     if (!supplier) {
-      alert('Please select a supplier.');
+      toast.error('Please select a supplier.');
       return;
     }
     if (items.some(item => !item.productId || item.quantity <= 0)) {
-      alert('Please fill out all product details with valid quantities.');
+      toast.error('Please fill out all product details with valid quantities.');
+      return;
+    }
+    setShowConfirmModal(true);
+  };
+
+  const executeUpdateOrder = async () => {
+    if (submittingRef.current) return;
+    if (!supplier) {
+      toast.error('Please select a supplier.');
+      return;
+    }
+    if (items.some(item => !item.productId || item.quantity <= 0)) {
+      toast.error('Please fill out all product details with valid quantities.');
       return;
     }
 
@@ -88,7 +102,11 @@ export default function EditOrderPage() {
         totalAmount,
         status
       });
+      toast.success('Order updated successfully!');
+      setShowConfirmModal(false);
       router.push('/orders');
+    } catch (err) {
+      toast.error('Failed to update purchase order.');
     } finally {
       submittingRef.current = false;
       setIsSubmitting(false);
@@ -111,7 +129,7 @@ export default function EditOrderPage() {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleFormSubmit}>
         <Card className="border-border/50 shadow-sm">
           <CardHeader className="border-b border-border/50 pb-4">
             <CardTitle>Order Details</CardTitle>
@@ -248,6 +266,41 @@ export default function EditOrderPage() {
           </CardFooter>
         </Card>
       </form>
+
+      {/* Confirmation Modal for Updating Purchase Order */}
+      <ConfirmModal
+        isOpen={showConfirmModal}
+        onClose={() => setShowConfirmModal(false)}
+        onConfirm={executeUpdateOrder}
+        title="Save Purchase Order Changes"
+        description="Are you sure you want to update this purchase order details?"
+        variant="primary"
+        confirmText="Save Order Changes"
+        confirmLoadingText="Saving..."
+        icon={<Save className="h-5 w-5" />}
+        itemName={
+          <div className="space-y-1.5 text-xs">
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">Order ID:</span>
+              <span className="font-bold text-foreground">#{id}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">Supplier:</span>
+              <span className="font-bold text-foreground">{supplier}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">Status:</span>
+              <span className="font-semibold text-primary">{status}</span>
+            </div>
+            <div className="flex justify-between items-center pt-1 border-t border-border/40">
+              <span className="text-muted-foreground">Grand Total:</span>
+              <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                ₹{totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+            </div>
+          </div>
+        }
+      />
     </div>
   );
 }
