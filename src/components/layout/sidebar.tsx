@@ -27,6 +27,7 @@ import {
   ShieldCheck,
   CheckCircle2,
   ClipboardCheck,
+  History,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -53,8 +54,8 @@ export const navItems: NavItem[] = [
     icon: Box,
     subItems: [
       { href: "/products", label: "All Products", icon: List },
-      { href: "/products/physical-verification", label: "Physical Verification", icon: ClipboardCheck },
       { href: "/products/new", label: "Add Product", icon: PlusCircle },
+      { href: "/products/audit", label: "Products Log", icon: History },
     ],
   },
   {
@@ -62,10 +63,12 @@ export const navItems: NavItem[] = [
     icon: Truck,
     subItems: [
       { href: "/stock", label: "Current Stock", icon: List },
+      { href: "/stock/physical-verification", label: "Physical Verification", icon: ClipboardCheck },
       // { href: "/stock/in", label: "Stock In (Add)", icon: PlusCircle },
       { href: "/stock/out", label: "Stock Out (Remove)", icon: PlusCircle },
       { href: "/stock/transfer", label: "Transfer Stock", icon: Truck },
       { href: "/stock/alerts", label: "Low Stock Alerts", icon: AlertTriangle },
+      { href: "/stock/audit", label: "Stock Log", icon: History },
     ],
   },
   {
@@ -75,6 +78,7 @@ export const navItems: NavItem[] = [
       { href: "/stock/assets/in", label: "Stock In Assets", icon: PlusCircle },
       { href: "/stock/assets", label: "Assets (Assigned)", icon: List },
       { href: "/stock/assets/maintenance", label: "Maintenance", icon: Hammer },
+      { href: "/stock/assets/audit", label: "Assets Log", icon: History },
     ],
   },
   {
@@ -83,6 +87,7 @@ export const navItems: NavItem[] = [
     subItems: [
       { href: "/categories", label: "All Categories", icon: List },
       { href: "/categories/new", label: "Add Category", icon: PlusCircle },
+      { href: "/categories/audit", label: "Categories Log", icon: History },
     ],
   },
   {
@@ -97,6 +102,7 @@ export const navItems: NavItem[] = [
         icon: Package,
       },
       { href: "/suppliers/new", label: "Add Supplier", icon: PlusCircle },
+      { href: "/suppliers/audit", label: "Suppliers Log", icon: History },
     ],
   },
   {
@@ -105,6 +111,7 @@ export const navItems: NavItem[] = [
     subItems: [
       { href: "/orders", label: "All Orders", icon: List },
       { href: "/orders/new", label: "Generate Order", icon: PlusCircle },
+      { href: "/orders/audit", label: "Orders Log", icon: History },
     ],
   },
   {
@@ -133,7 +140,7 @@ export const navItems: NavItem[] = [
       },
       {
         href: "/reports/audit-log",
-        label: "Audit Log",
+        label: "Master Audit Log",
         icon: ShieldCheck,
       },
     ],
@@ -145,7 +152,7 @@ export const navItems: NavItem[] = [
       { href: "/invoice", label: "Dashboard", icon: List },
       { href: "/invoice/new", label: "New Invoice", icon: PlusCircle },
       { href: "/invoice/approvals", label: "Approvals", icon: CheckCircle2 },
-      { href: "/invoice/audit", label: "Invoice Audit", icon: FileText },
+      { href: "/invoice/audit", label: "Invoice Log", icon: History },
     ],
   },
 ];
