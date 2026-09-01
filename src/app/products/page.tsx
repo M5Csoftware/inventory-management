@@ -40,11 +40,6 @@ export default function ProductsPage() {
           <p className="text-sm text-muted-foreground mt-1">Manage and edit your product directory.</p>
         </div>
         <div className="flex items-center gap-2">
-          <Link href="/products/physical-verification">
-            <Button variant="outline" size="sm" className="shadow-xs hover:bg-muted font-semibold w-full sm:w-auto">
-              <ClipboardCheck className="mr-2 h-4 w-4 text-primary" /> Physical Verification
-            </Button>
-          </Link>
           <Link href="/products/new">
             <Button size="sm" className="shadow-lg shadow-primary/20 transition-all hover:shadow-primary/40 hover:-translate-y-0.5 w-full sm:w-auto">
               <Plus className="mr-2 h-4 w-4" /> Add Product
