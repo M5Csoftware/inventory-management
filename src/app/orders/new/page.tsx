@@ -17,6 +17,7 @@ export default function NewOrderPage() {
   const { suppliers, products, addOrder, activeBranch } = useInventory();
   
   const [supplier, setSupplier] = useState('');
+  const [branch, setBranch] = useState(activeBranch && activeBranch !== 'All' ? activeBranch : 'Delhi');
   const [items, setItems] = useState([{ productId: '', name: '', quantity: 1, price: 0 }]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -115,6 +116,10 @@ export default function NewOrderPage() {
       toast.error('Please select a supplier first.');
       return;
     }
+    if (!branch) {
+      toast.error('Please select a destination facility branch.');
+      return;
+    }
     if (items.some((item) => !item.productId || item.quantity <= 0)) {
       toast.error('Please fill out all product details with valid quantities.');
       return;
@@ -126,6 +131,10 @@ export default function NewOrderPage() {
     if (submittingRef.current) return;
     if (!supplier) {
       toast.error('Please select a supplier first.');
+      return;
+    }
+    if (!branch) {
+      toast.error('Please select a destination facility branch.');
       return;
     }
     if (items.some((item) => !item.productId || item.quantity <= 0)) {
@@ -140,6 +149,7 @@ export default function NewOrderPage() {
         supplier,
         items,
         totalAmount,
+        branch,
         status: 'Pending'
       });
       toast.success('Purchase order generated successfully!');
@@ -164,7 +174,7 @@ export default function NewOrderPage() {
         </Link>
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Generate Purchase Order</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">Select a vendor supplier to filter their offered catalog items and rates.</p>
+          <p className="text-sm text-muted-foreground mt-0.5">Select a vendor supplier and destination branch to prepare supply order.</p>
         </div>
       </div>
 
@@ -172,30 +182,51 @@ export default function NewOrderPage() {
         <Card className="border-border/60 shadow-sm">
           <CardHeader className="border-b border-border/40 pb-4">
             <CardTitle className="text-base font-bold flex items-center gap-2">
-              <Building2 className="w-4.5 h-4.5 text-primary" /> Vendor &amp; Product Selection
+              <Building2 className="w-4.5 h-4.5 text-primary" /> Vendor &amp; Facility Selection
             </CardTitle>
             <CardDescription className="text-xs">
-              Selecting a supplier automatically restricts the product dropdown to items provided by that supplier.
+              Select the vendor supplier and destination branch receiving this shipment.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6 pt-6">
             
-            {/* Supplier Selector */}
-            <div className="space-y-2 max-w-lg">
-              <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Select Vendor Supplier *
-              </Label>
-              <select 
-                className="w-full h-10 bg-background border border-input rounded-lg px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary cursor-pointer transition-colors"
-                value={supplier}
-                onChange={(e) => handleSupplierChange(e.target.value)}
-                required
-              >
-                <option value="">-- Select a Supplier --</option>
-                {suppliers.map((s) => (
-                  <option key={s.name} value={s.name}>{s.name}</option>
-                ))}
-              </select>
+            {/* Supplier and Branch Selectors */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Supplier Selector */}
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Select Vendor Supplier *
+                </Label>
+                <select 
+                  className="w-full h-10 bg-background border border-input rounded-lg px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary cursor-pointer transition-colors"
+                  value={supplier}
+                  onChange={(e) => handleSupplierChange(e.target.value)}
+                  required
+                >
+                  <option value="">-- Select a Supplier --</option>
+                  {suppliers.map((s) => (
+                    <option key={s.name} value={s.name}>{s.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Branch Selector */}
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Destination Facility Branch *
+                </Label>
+                <select 
+                  className="w-full h-10 bg-background border border-input rounded-lg px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary cursor-pointer transition-colors"
+                  value={branch}
+                  onChange={(e) => setBranch(e.target.value)}
+                  required
+                >
+                  <option value="Delhi">🏭 Delhi (HO)</option>
+                  <option value="Ahmedabad">🏭 Ahmedabad</option>
+                  <option value="Ludhiana">🏭 Ludhiana</option>
+                  <option value="Mumbai">🏭 Mumbai</option>
+                </select>
+              </div>
             </div>
 
             {/* Empty Supplier Product Notice */}
@@ -265,9 +296,9 @@ export default function NewOrderPage() {
                               : 'Select Product...'}
                           </option>
                           {availableProducts.map((p, pIdx) => {
-                            const stockCount = activeBranch === 'All' 
+                            const stockCount = branch === 'All' 
                               ? Object.values(p.stock || {}).reduce((a, b) => a + b, 0) 
-                              : p.stock?.[activeBranch] || 0;
+                              : p.stock?.[branch] || 0;
                             return (
                               <option key={`${p.id}-${pIdx}`} value={p.id}>
                                 {p.name} (Cat: {p.category} | Stock: {stockCount})
@@ -384,6 +415,10 @@ export default function NewOrderPage() {
             <div className="flex justify-between items-center">
               <span className="text-muted-foreground">Supplier:</span>
               <span className="font-bold text-foreground">{supplier}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">Destination Branch:</span>
+              <span className="font-semibold text-foreground">{branch}</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-muted-foreground">Items:</span>

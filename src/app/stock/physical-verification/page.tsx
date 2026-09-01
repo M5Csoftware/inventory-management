@@ -32,18 +32,15 @@ import {
   PhysicalVerificationItem,
   PhysicalVerificationRecord,
 } from '@/context/inventory-context';
-import { useInvoice } from '@/context/invoice-context';
 import { useAuth } from '@/context/auth-context';
 import { toast } from 'react-toastify';
 import { ConfirmModal, ConfirmDeleteModal } from '@/components/confirm-modal';
 
 export default function PhysicalVerificationPage() {
   const { user } = useAuth();
-  const { invoices } = useInvoice();
   const {
     products,
     categories,
-    transactions,
     orders,
     activeBranch,
     physicalVerifications,
@@ -55,9 +52,8 @@ export default function PhysicalVerificationPage() {
   const [activeTab, setActiveTab] = useState<'form' | 'history'>('form');
 
   // Form states
-  const [selectedInvoiceId, setSelectedInvoiceId] = useState<string>('');
+  const [selectedPoId, setSelectedPoId] = useState<string>('');
   const [invoiceNumber, setInvoiceNumber] = useState<string>('');
-  const [poNumber, setPoNumber] = useState<string>('');
   const [supplier, setSupplier] = useState<string>('');
   const [branch, setBranch] = useState<string>(() =>
     activeBranch === 'All' ? 'Ahmedabad' : activeBranch
@@ -107,70 +103,31 @@ export default function PhysicalVerificationPage() {
     });
   }, [products, categories]);
 
-  // Handle Invoice Selection to auto-populate items and metadata
-  const handleInvoiceChange = (invId: string) => {
-    setSelectedInvoiceId(invId);
-    if (!invId) {
-      setInvoiceNumber('');
-      setPoNumber('');
+  // Handle PO Selection to auto-populate items, supplier, and branch
+  const handlePoChange = (poId: string) => {
+    setSelectedPoId(poId);
+    if (!poId) {
       setSupplier('');
       setItems([]);
       return;
     }
 
-    const matchedInvoice = invoices.find((inv) => inv.id === invId);
-    if (!matchedInvoice) return;
-
-    setInvoiceNumber(matchedInvoice.invoiceNumber || '');
-    setPoNumber(matchedInvoice.poNumber || '');
-    setSupplier(matchedInvoice.vendor || '');
-
-    // Check if there are transactions recorded for this invoice number
-    const invoiceTransactions = transactions.filter(
-      (tx) =>
-        tx.type === 'Stock In' &&
-        ((tx.invoiceNumber &&
-          tx.invoiceNumber.trim().toLowerCase() ===
-            matchedInvoice.invoiceNumber.trim().toLowerCase()) ||
-          (tx.notes &&
-            tx.notes.toLowerCase().includes(matchedInvoice.invoiceNumber.toLowerCase())))
+    const matchedOrder = orders.find(
+      (o) => o.id.trim().toLowerCase() === poId.trim().toLowerCase()
     );
+    if (!matchedOrder) return;
 
-    // Check if there is a linked order
-    const linkedOrder = orders.find(
-      (o) =>
-        o.id.trim().toLowerCase() === (matchedInvoice.poNumber || '').trim().toLowerCase()
-    );
+    if (matchedOrder.supplier) {
+      setSupplier(matchedOrder.supplier);
+    }
+    if (matchedOrder.branch && matchedOrder.branch !== 'All') {
+      setBranch(matchedOrder.branch);
+    }
 
     let populatedItems: PhysicalVerificationItem[] = [];
 
-    if (invoiceTransactions.length > 0) {
-      // Group by productId
-      const prodMap = new Map<string, { qty: number; name: string }>();
-      invoiceTransactions.forEach((tx) => {
-        const current = prodMap.get(tx.productId) || { qty: 0, name: tx.productName };
-        prodMap.set(tx.productId, {
-          qty: current.qty + tx.quantity,
-          name: tx.productName,
-        });
-      });
-
-      populatedItems = Array.from(prodMap.entries()).map(([prodId, data]) => {
-        const prod = products.find((p) => p.id === prodId);
-        return {
-          productId: prodId,
-          productName: prod?.name || data.name,
-          category: prod?.category,
-          invoicedQuantity: data.qty,
-          physicalQuantity: data.qty, // Default to invoiced quantity for convenient checking
-          variance: 0,
-          status: 'Matched',
-          condition: 'Good Condition',
-          notes: '',
-        };
-      });
-    } else if (linkedOrder && linkedOrder.items?.length > 0) {
-      populatedItems = linkedOrder.items.map((it) => {
+    if (matchedOrder.items && matchedOrder.items.length > 0) {
+      populatedItems = matchedOrder.items.map((it) => {
         const prod = products.find(
           (p) =>
             p.id === it.productId ||
@@ -182,7 +139,7 @@ export default function PhysicalVerificationPage() {
           productName: prod?.name || it.name,
           category: prod?.category,
           invoicedQuantity: qty,
-          physicalQuantity: qty,
+          physicalQuantity: qty, // Default to ordered quantity for inspector convenience
           variance: 0,
           status: 'Matched',
           condition: 'Good Condition',
@@ -207,7 +164,7 @@ export default function PhysicalVerificationPage() {
     }
 
     setItems(populatedItems);
-    toast.info(`Auto-loaded items from Invoice ${matchedInvoice.invoiceNumber}`);
+    toast.info(`Auto-loaded items from Purchase Order ${matchedOrder.id}`);
   };
 
   // Line item manipulation helpers
@@ -332,7 +289,7 @@ export default function PhysicalVerificationPage() {
 
       await addPhysicalVerification({
         invoiceNumber: invoiceNumber.trim() || undefined,
-        poNumber: poNumber.trim() || undefined,
+        poNumber: selectedPoId.trim() || undefined,
         supplier: supplier.trim() || undefined,
         branch,
         verifiedBy: verifiedBy.trim() || 'Inspector',
@@ -343,9 +300,8 @@ export default function PhysicalVerificationPage() {
       });
 
       // Reset form
-      setSelectedInvoiceId('');
+      setSelectedPoId('');
       setInvoiceNumber('');
-      setPoNumber('');
       setSupplier('');
       setGeneralNotes('');
       setItems([]);
@@ -395,8 +351,8 @@ export default function PhysicalVerificationPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border/40 pb-6">
         <div>
           <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-            <Link href="/products" className="hover:text-primary transition-colors flex items-center gap-1">
-              <ArrowLeft className="h-3.5 w-3.5" /> Products
+            <Link href="/stock" className="hover:text-primary transition-colors flex items-center gap-1">
+              <ArrowLeft className="h-3.5 w-3.5" /> Stock Management
             </Link>
             <span>/</span>
             <span className="text-foreground font-semibold">Physical Verification</span>
@@ -406,7 +362,7 @@ export default function PhysicalVerificationPage() {
             Physical Verification (Inward Tally)
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Conduct 2-step physical inspection of received goods to tally against invoice inward records.
+            Conduct 2-step physical inspection of received goods against Purchase Orders before booking inward invoices.
           </p>
         </div>
 
@@ -441,7 +397,7 @@ export default function PhysicalVerificationPage() {
             2-Step Inward Verification &amp; Audit Tally Rule
           </p>
           <p className="opacity-90">
-            Physical verification records physical counts and variance strictly for quality checking and inward audit records. 
+            Physical verification records physical counts and variance strictly for quality checking and inward audit records against the Purchase Order. 
             <strong> Inventory stock is officially booked and updated via the Invoice module and will not be altered by this form.</strong>
           </p>
         </div>
@@ -454,29 +410,30 @@ export default function PhysicalVerificationPage() {
             <CardHeader className="border-b border-border/40 pb-4">
               <CardTitle className="text-base font-bold flex items-center gap-2">
                 <FileCheck className="h-5 w-5 text-primary" />
-                Step 1: Link Inward Invoice &amp; Reference Details
+                Step 1: Select Purchase Order (PO) &amp; Enter Vendor Invoice
               </CardTitle>
               <CardDescription className="text-xs">
-                Select an existing inward invoice to auto-load products and expected quantities, or enter reference details manually.
+                Select an issued Purchase Order to auto-fetch expected items and enter the vendor&apos;s physical invoice number.
               </CardDescription>
             </CardHeader>
 
             <CardContent className="pt-5 space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                {/* Invoice Selector */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* PO Selector */}
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                    <Receipt className="h-3.5 w-3.5 text-primary" /> Select Inward Invoice (Auto-Fetch)
+                    <ShoppingCart className="h-3.5 w-3.5 text-primary" /> Select Purchase Order (PO) *
                   </label>
                   <select
-                    value={selectedInvoiceId}
-                    onChange={(e) => handleInvoiceChange(e.target.value)}
+                    value={selectedPoId}
+                    onChange={(e) => handlePoChange(e.target.value)}
                     className="h-9 w-full rounded-lg border-2 border-gray-300 bg-background px-3 text-xs font-semibold focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-gray-700 cursor-pointer"
+                    required
                   >
-                    <option value="">-- Select Inward Invoice --</option>
-                    {invoices.map((inv) => (
-                      <option key={inv.id} value={inv.id}>
-                        {inv.invoiceNumber} · {inv.vendor} (₹{inv.amount?.toLocaleString('en-IN')})
+                    <option value="">-- Select Purchase Order (PO) --</option>
+                    {orders.map((ord) => (
+                      <option key={ord.id} value={ord.id}>
+                        {ord.id} · {ord.supplier} ({ord.branch || 'Global'}) · ₹{ord.totalAmount?.toLocaleString('en-IN')} [{ord.status}]
                       </option>
                     ))}
                   </select>
@@ -484,29 +441,16 @@ export default function PhysicalVerificationPage() {
 
                 {/* Manual Invoice Number */}
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-foreground">
-                    Invoice Number
+                  <label className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                    <Receipt className="h-3.5 w-3.5 text-primary" /> Vendor Invoice / Bill Number *
                   </label>
                   <input
                     type="text"
                     value={invoiceNumber}
                     onChange={(e) => setInvoiceNumber(e.target.value)}
-                    placeholder="e.g. INV-9901"
+                    placeholder="e.g. INV-2024-8890"
+                    required
                     className="h-9 w-full rounded-lg border-2 border-gray-300 bg-background px-3 text-xs font-mono font-bold focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-gray-700"
-                  />
-                </div>
-
-                {/* Linked PO Number */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-foreground flex items-center gap-1">
-                    <ShoppingCart className="h-3.5 w-3.5 text-primary" /> PO Number (Optional)
-                  </label>
-                  <input
-                    type="text"
-                    value={poNumber}
-                    onChange={(e) => setPoNumber(e.target.value)}
-                    placeholder="e.g. PO-102"
-                    className="h-9 w-full rounded-lg border-2 border-gray-300 bg-background px-3 text-xs font-mono focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-gray-700"
                   />
                 </div>
               </div>
@@ -603,7 +547,7 @@ export default function PhysicalVerificationPage() {
                 <div className="p-8 text-center rounded-xl border-2 border-dashed border-border bg-muted/10 space-y-3">
                   <Package className="h-8 w-8 text-muted-foreground/40 mx-auto" />
                   <p className="text-xs text-muted-foreground">
-                    No products added for physical verification. Select an inward invoice above or click &quot;Add Item Line&quot;.
+                    No products added for physical verification. Select a purchase order above or click &quot;Add Item Line&quot;.
                   </p>
                   <Button
                     type="button"
@@ -820,7 +764,7 @@ export default function PhysicalVerificationPage() {
                   rows={3}
                   value={generalNotes}
                   onChange={(e) => setGeneralNotes(e.target.value)}
-                  placeholder="e.g. All 100 cartons physically verified, seal intact, matched with invoice and PO."
+                  placeholder="e.g. All cartons physically verified, seal intact, matched with invoice and PO."
                   className="w-full rounded-lg border-2 border-gray-300 bg-background p-2.5 text-xs focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 dark:border-gray-700"
                 />
               </div>
@@ -850,7 +794,7 @@ export default function PhysicalVerificationPage() {
                 <div>
                   <CardTitle className="text-lg font-bold">Physical Verification Audit Log</CardTitle>
                   <CardDescription className="text-xs">
-                    Historical physical count tallies against inward invoices and purchase orders.
+                    Historical physical count tallies against purchase orders and inward invoices.
                   </CardDescription>
                 </div>
 

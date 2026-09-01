@@ -43,7 +43,7 @@ import { ConfirmDeleteModal, ConfirmModal } from "@/components/confirm-modal";
 export default function OrdersPage() {
   const router = useRouter();
   const [animationParent] = useAutoAnimate();
-  const { orders, updateOrder, updateOrderStatus, deleteOrder, recordTransaction } =
+  const { orders, updateOrder, updateOrderStatus, deleteOrder, recordTransaction, activeBranch } =
     useInventory();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState<"all" | "active" | "past">(
@@ -79,6 +79,10 @@ export default function OrdersPage() {
             item._stockInNow,
             "Purchase Order Received",
             `Order ID: ${order.id} (Manual Completion)`,
+            {
+              branch: order.branch || (activeBranch !== "All" ? activeBranch : "Delhi"),
+              supplier: order.supplier,
+            },
           );
         }
       }
@@ -170,7 +174,7 @@ export default function OrdersPage() {
       110,
       68,
     );
-    doc.text(`Ordered By: Admin`, 110, 75);
+    doc.text(`Branch: ${order.branch || "Delhi"}`, 110, 75);
 
     // Table
     const tableColumn = [
@@ -373,7 +377,8 @@ export default function OrdersPage() {
                         {order.id}
                       </td>
                       <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
-                        {order.supplier}
+                        <div className="font-medium text-foreground">{order.supplier}</div>
+                        <div className="text-[11px] text-muted-foreground mt-0.5">🏭 {order.branch || "Delhi"}</div>
                       </td>
                       <td className="px-4 sm:px-6 py-4">
                         {(() => {

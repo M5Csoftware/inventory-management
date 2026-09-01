@@ -235,7 +235,7 @@ export default function EditSupplierPage() {
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-1.5">
                     <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                      Tax ID / VAT Number
+                      Tax ID / VAT Number <span className="text-muted-foreground/60 lowercase text-[9px] font-normal">(optional)</span>
                     </label>
                     <input
                       type="text"
@@ -247,10 +247,10 @@ export default function EditSupplierPage() {
                   </div>
                   <div className="space-y-1.5">
                     <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                      Website
+                      Website <span className="text-muted-foreground/60 lowercase text-[9px] font-normal">(optional)</span>
                     </label>
                     <input
-                      type="url"
+                      type="text"
                       value={website}
                       onChange={(e) => setWebsite(e.target.value)}
                       placeholder="e.g. https://apexsupplies.com"
