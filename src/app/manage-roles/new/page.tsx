@@ -61,6 +61,7 @@ export const SIDEBAR_TABS_STRUCTURE: SidebarFolderGroup[] = [
     folder: "Assets",
     icon: "💻",
     tabs: [
+      { path: "/stock/assets/all", label: "All Assets" },
       { path: "/stock/assets/in", label: "Stock In Assets" },
       { path: "/stock/assets", label: "Assets (Assigned)" },
       { path: "/stock/assets/maintenance", label: "Maintenance" },
