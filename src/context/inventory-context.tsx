@@ -128,6 +128,27 @@ export interface AssetAssignment {
   notes?: string;
   warranty?: string;
 }
+
+export interface AssetSerialItem {
+  id: string;
+  productId: string;
+  productName: string;
+  serialNumber: string;
+  model?: string;
+  warranty?: string;
+  purchaseDate?: string;
+  invoiceNumber?: string;
+  supplier?: string;
+  branch: string;
+  amount?: number;
+  status: "In Stock" | "Assigned" | "Maintenance" | "Retired" | "Dismantled";
+  notes?: string;
+  assignedTo?: string;
+  assignedDate?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 // Add this interface after AssetAssignment
 export interface MaintenanceRecord {
   id: string;
@@ -248,6 +269,13 @@ interface InventoryContextType {
     >,
   ) => Promise<boolean>;
   returnAsset: (id: string) => Promise<boolean>;
+  updateAssetAssignment: (id: string, updates: Partial<AssetAssignment>) => Promise<boolean>;
+  deleteAssetAssignment: (id: string) => Promise<boolean>;
+  assetSerials: AssetSerialItem[];
+  fetchAssetSerials: () => Promise<void>;
+  addAssetSerial: (item: Omit<AssetSerialItem, "id" | "createdAt" | "updatedAt">) => Promise<boolean>;
+  updateAssetSerial: (id: string, updates: Partial<AssetSerialItem>) => Promise<boolean>;
+  deleteAssetSerial: (id: string) => Promise<boolean>;
   revertAuditLog: (id: string, reason?: string, password?: string) => Promise<boolean>;
 }
 
@@ -351,6 +379,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [assets, setAssets] = useState<AssetAssignment[]>([]);
+  const [assetSerials, setAssetSerials] = useState<AssetSerialItem[]>([]);
   const [physicalVerifications, setPhysicalVerifications] = useState<PhysicalVerificationRecord[]>([]);
 
   // Load physical verifications from localStorage on mount
@@ -385,7 +414,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
         }
       };
 
-      const [prods, txs, cats, sups, ords, asts] = await Promise.all([
+      const [prods, txs, cats, sups, ords, asts, serials] = await Promise.all([
         safeFetchJson(`${API_BASE}/products${branchQuery}`, {
           headers: NO_BODY_HEADER,
         }),
@@ -398,6 +427,9 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
           headers: NO_BODY_HEADER,
         }),
         safeFetchJson(`${API_BASE}/assets${branchQuery}`, {
+          headers: NO_BODY_HEADER,
+        }),
+        safeFetchJson(`${API_BASE}/asset-serials${branchQuery}`, {
           headers: NO_BODY_HEADER,
         }),
       ]);
@@ -428,6 +460,14 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
           return timeB - timeA;
         });
         setAssets(sortedAsts);
+      }
+      if (serials?.success) {
+        const sortedSerials = [...serials.data].sort((a, b) => {
+          const timeA = new Date(a.createdAt || a.purchaseDate || 0).getTime();
+          const timeB = new Date(b.createdAt || b.purchaseDate || 0).getTime();
+          return timeB - timeA;
+        });
+        setAssetSerials(sortedSerials);
       }
     } catch (error) {
       console.error("Failed to load inventory data from backend:", error);
@@ -1038,6 +1078,134 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
     toast.success("Physical verification record removed.");
   };
 
+  const updateAssetAssignment = async (id: string, updates: Partial<AssetAssignment>): Promise<boolean> => {
+    try {
+      const res = await fetch(`${API_BASE}/assets/${id}`, {
+        method: "PUT",
+        headers: getDbHeader(),
+        body: JSON.stringify(updates),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success("Asset assignment updated successfully!");
+        await fetchData();
+        return true;
+      } else {
+        toast.error(data.message || "Failed to update asset assignment");
+        return false;
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Error updating asset assignment");
+      return false;
+    }
+  };
+
+  const deleteAssetAssignment = async (id: string): Promise<boolean> => {
+    try {
+      const res = await fetch(`${API_BASE}/assets/${id}`, {
+        method: "DELETE",
+        headers: getDbHeader(),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success("Asset assignment deleted successfully!");
+        await fetchData();
+        return true;
+      } else {
+        toast.error(data.message || "Failed to delete asset assignment");
+        return false;
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Error deleting asset assignment");
+      return false;
+    }
+  };
+
+  const fetchAssetSerials = async () => {
+    try {
+      const branchQuery = activeBranch !== "All" ? `?branch=${activeBranch}` : "";
+      const res = await fetch(`${API_BASE}/asset-serials${branchQuery}`, {
+        headers: getDbHeader(),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setAssetSerials(data.data || []);
+      }
+    } catch (error) {
+      console.warn("Could not fetch asset serials:", error);
+    }
+  };
+
+  const addAssetSerial = async (
+    item: Omit<AssetSerialItem, "id" | "createdAt" | "updatedAt">
+  ): Promise<boolean> => {
+    try {
+      const res = await fetch(`${API_BASE}/asset-serials`, {
+        method: "POST",
+        headers: getDbHeader(),
+        body: JSON.stringify(item),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success("Asset unit/serial registered successfully!");
+        await fetchData();
+        return true;
+      } else {
+        toast.error(data.message || "Failed to register asset serial");
+        return false;
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Error adding asset serial");
+      return false;
+    }
+  };
+
+  const updateAssetSerial = async (
+    id: string,
+    updates: Partial<AssetSerialItem>
+  ): Promise<boolean> => {
+    try {
+      const res = await fetch(`${API_BASE}/asset-serials/${id}`, {
+        method: "PUT",
+        headers: getDbHeader(),
+        body: JSON.stringify(updates),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success("Asset unit/serial updated successfully!");
+        await fetchData();
+        return true;
+      } else {
+        toast.error(data.message || "Failed to update asset serial");
+        return false;
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Error updating asset serial");
+      return false;
+    }
+  };
+
+  const deleteAssetSerial = async (id: string): Promise<boolean> => {
+    try {
+      const res = await fetch(`${API_BASE}/asset-serials/${id}`, {
+        method: "DELETE",
+        headers: getDbHeader(),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success("Asset unit/serial deleted successfully!");
+        await fetchData();
+        return true;
+      } else {
+        toast.error(data.message || "Failed to delete asset serial");
+        return false;
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Error deleting asset serial");
+      return false;
+    }
+  };
+
   const revertAuditLog = async (id: string, reason?: string, password?: string): Promise<boolean> => {
     try {
       const res = await fetch(`${API_BASE}/audit-logs/${id}/revert`, {
@@ -1091,6 +1259,13 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
         assets,
         assignAsset,
         returnAsset,
+        updateAssetAssignment,
+        deleteAssetAssignment,
+        assetSerials,
+        fetchAssetSerials,
+        addAssetSerial,
+        updateAssetSerial,
+        deleteAssetSerial,
         revertAuditLog,
       }}
     >
