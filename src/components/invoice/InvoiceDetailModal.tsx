@@ -224,7 +224,7 @@ export function InvoiceDetailModal({
                     <ClipboardCheck className="h-4 w-4 text-primary" /> Physical Verification Tally
                   </span>
                   <Link
-                    href="/products/physical-verification"
+                    href="/stock/physical-verification"
                     className="text-[11px] font-semibold text-primary hover:underline"
                   >
                     {linkedPv ? 'View Tally Log &rarr;' : '+ Record Physical Count'}
