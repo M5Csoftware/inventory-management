@@ -10,7 +10,7 @@ import { ArrowLeft, Laptop, User, FileText, Package, ShieldCheck, Building2, Che
 import { ConfirmModal } from '@/components/confirm-modal';
 
 export default function NewAssetAssignmentPage() {
-  const { products, categories, assignAsset, activeBranch } = useInventory();
+  const { products, categories, assignAsset, activeBranch, assetSerials } = useInventory();
   const router = useRouter();
 
   const [selectedBranch, setSelectedBranch] = useState<string>(() =>
@@ -35,6 +35,26 @@ export default function NewAssetAssignmentPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const submittingRef = useRef(false);
+
+  // Available in-stock serials for selected product & branch
+  const availableSerials = assetSerials.filter((s) => {
+    const matchProd = !productId || s.productId === productId;
+    const matchBranch = selectedBranch === 'All' || s.branch === selectedBranch;
+    const matchStatus = s.status === 'In Stock';
+    return matchProd && matchBranch && matchStatus;
+  });
+
+  const handleSerialChange = (sn: string) => {
+    setSerialNumber(sn);
+    const matched = assetSerials.find(
+      (s) => s.serialNumber.toLowerCase() === sn.trim().toLowerCase()
+    );
+    if (matched) {
+      if (matched.model && !modelNumber) setModelNumber(matched.model);
+      if (matched.warranty && !warranty) setWarranty(matched.warranty);
+      if (matched.notes && !notes) setNotes(matched.notes);
+    }
+  };
 
   // Filter products that belong to an asset category
   const assetProducts = products.filter((prod) => {
@@ -273,16 +293,33 @@ export default function NewAssetAssignmentPage() {
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                      Serial Number (Optional)
-                    </label>
+                    <div className="flex items-center justify-between">
+                      <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        Serial Number (Optional)
+                      </label>
+                      {availableSerials.length > 0 && (
+                        <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
+                          {availableSerials.length} In-Stock available
+                        </span>
+                      )}
+                    </div>
                     <input
                       type="text"
+                      list="available-serials"
                       value={serialNumber}
-                      onChange={(e) => setSerialNumber(e.target.value)}
-                      placeholder="e.g. SN-88392019"
+                      onChange={(e) => handleSerialChange(e.target.value)}
+                      placeholder="e.g. SN-88392019 (or pick from list)"
                       className="h-10 w-full rounded-lg border-2 border-muted bg-background px-3 text-sm shadow-sm transition-all placeholder:text-muted-foreground/50 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 font-mono"
                     />
+                    <datalist id="available-serials">
+                      {availableSerials.map((s) => (
+                        <option
+                          key={s.id}
+                          value={s.serialNumber}
+                          label={`${s.serialNumber} (${s.model || s.productName} - ${s.branch})`}
+                        />
+                      ))}
+                    </datalist>
                   </div>
                 </div>
 
