@@ -54,7 +54,23 @@ const actionBadgeStyles: Record<string, string> = {
   "User Account Updated": "bg-violet-500/15 text-violet-700 dark:text-violet-300 border-violet-500/30",
   "User Account Deleted": "bg-pink-500/15 text-pink-700 dark:text-pink-300 border-pink-500/30",
   "Order Created": "bg-teal-500/15 text-teal-700 dark:text-teal-300 border-teal-500/30",
+  "Order Updated": "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30",
+  "Order Deleted": "bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/30",
+  "Category Created": "bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 border-cyan-500/30",
   "Category Added": "bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 border-cyan-500/30",
+  "Category Updated": "bg-sky-500/15 text-sky-700 dark:text-sky-300 border-sky-500/30",
+  "Category Deleted": "bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/30",
+  "Supplier Created": "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30",
+  "Supplier Updated": "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30",
+  "Supplier Deleted": "bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/30",
+  "Asset Assigned": "bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border-indigo-500/30",
+  "Asset Returned": "bg-teal-500/15 text-teal-700 dark:text-teal-300 border-teal-500/30",
+  "Maintenance Scheduled": "bg-orange-500/15 text-orange-700 dark:text-orange-300 border-orange-500/30",
+  "Maintenance Updated": "bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30",
+  "Maintenance Deleted": "bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/30",
+  "Asset Serial Created": "bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 border-cyan-500/30",
+  "Asset Serial Updated": "bg-sky-500/15 text-sky-700 dark:text-sky-300 border-sky-500/30",
+  "Asset Serial Deleted": "bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/30",
 };
 
 export default function AuditLogPage() {
@@ -222,7 +238,7 @@ export default function AuditLogPage() {
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
-                Audit Log
+                Master Audit Log
               </h1>
               <span className="inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20">
                 <ShieldCheck className="w-3.5 h-3.5" /> Universal Activity Trail
@@ -325,7 +341,7 @@ export default function AuditLogPage() {
       {/* Filter Control Bar */}
       <Card className="border-border/60 shadow-sm bg-card">
         <CardContent className="p-4 sm:p-5 space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
             {/* Search Input */}
             <div className="lg:col-span-2 relative">
               <Search className="w-4 h-4 absolute left-3 top-3 text-muted-foreground" />
@@ -352,6 +368,7 @@ export default function AuditLogPage() {
                 <option value="Orders">🛒 Orders</option>
                 <option value="Assets">💻 Assets</option>
                 <option value="Categories">🏷️ Categories</option>
+                <option value="Suppliers">🤝 Suppliers</option>
                 <option value="System">⚙️ System</option>
               </select>
             </div>
@@ -373,14 +390,31 @@ export default function AuditLogPage() {
             </div>
 
             {/* Date Range Start */}
-            <div className="flex items-center gap-2">
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="w-full h-10 px-3 text-xs bg-background border border-input rounded-xl focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
-                title="Start Date Filter"
-              />
+            <div>
+              <div className="relative">
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="w-full h-10 px-3 text-xs bg-background border border-input rounded-xl focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
+                  title="From Date"
+                  placeholder="From Date"
+                />
+              </div>
+            </div>
+
+            {/* Date Range End */}
+            <div>
+              <div className="relative">
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="w-full h-10 px-3 text-xs bg-background border border-input rounded-xl focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
+                  title="To Date"
+                  placeholder="To Date"
+                />
+              </div>
             </div>
           </div>
 
