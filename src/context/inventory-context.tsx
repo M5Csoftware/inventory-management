@@ -78,6 +78,7 @@ export interface Order {
   items: OrderItem[];
   status: "Pending" | "Processing" | "Completed" | "Cancelled" | "Partial";
   totalAmount: number;
+  branch?: string;
   createdAt?: string;
 }
 
@@ -247,6 +248,7 @@ interface InventoryContextType {
     >,
   ) => Promise<boolean>;
   returnAsset: (id: string) => Promise<boolean>;
+  revertAuditLog: (id: string, reason?: string, password?: string) => Promise<boolean>;
 }
 
 const InventoryContext = createContext<InventoryContextType | undefined>(
@@ -255,11 +257,46 @@ const InventoryContext = createContext<InventoryContextType | undefined>(
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/inventory";
-const DB_HEADER = {
-  "x-database": "m5c-inventory",
-  "Content-Type": "application/json",
+const getDbHeader = () => {
+  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+  return {
+    "x-database": "m5c-inventory",
+    "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
 };
-const NO_BODY_HEADER = { "x-database": "m5c-inventory" };
+
+const getNoBodyHeader = () => {
+  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+  return {
+    "x-database": "m5c-inventory",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+};
+
+const DB_HEADER = new Proxy({}, {
+  get(_, prop) {
+    return (getDbHeader() as any)[prop];
+  },
+  ownKeys() {
+    return Reflect.ownKeys(getDbHeader());
+  },
+  getOwnPropertyDescriptor(_, prop) {
+    return Reflect.getOwnPropertyDescriptor(getDbHeader(), prop);
+  },
+}) as Record<string, string>;
+
+const NO_BODY_HEADER = new Proxy({}, {
+  get(_, prop) {
+    return (getNoBodyHeader() as any)[prop];
+  },
+  ownKeys() {
+    return Reflect.ownKeys(getNoBodyHeader());
+  },
+  getOwnPropertyDescriptor(_, prop) {
+    return Reflect.getOwnPropertyDescriptor(getNoBodyHeader(), prop);
+  },
+}) as Record<string, string>;
 
 export function InventoryProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
@@ -806,7 +843,10 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
           const res = await fetch(`${API_BASE}/orders`, {
             method: "POST",
             headers: DB_HEADER,
-            body: JSON.stringify({ ...order, branch: activeBranch }),
+            body: JSON.stringify({
+              branch: activeBranch !== "All" ? activeBranch : "Delhi",
+              ...order,
+            }),
           });
           const data = await res.json();
           if (data.success) {
@@ -998,6 +1038,28 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
     toast.success("Physical verification record removed.");
   };
 
+  const revertAuditLog = async (id: string, reason?: string, password?: string): Promise<boolean> => {
+    try {
+      const res = await fetch(`${API_BASE}/audit-logs/${id}/revert`, {
+        method: "POST",
+        headers: getDbHeader(),
+        body: JSON.stringify({ reason, password }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(data.message || "Action successfully rolled back!");
+        await fetchData();
+        return true;
+      } else {
+        toast.error(data.message || "Failed to rollback action.");
+        return false;
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Error rolling back action.");
+      return false;
+    }
+  };
+
   return (
     <InventoryContext.Provider
       value={{
@@ -1029,6 +1091,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
         assets,
         assignAsset,
         returnAsset,
+        revertAuditLog,
       }}
     >
       {children}
