@@ -12,6 +12,7 @@ import {
   Filter,
   Edit2,
   Trash2,
+  ClipboardCheck,
 } from "lucide-react";
 import {
   Card,
