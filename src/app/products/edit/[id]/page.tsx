@@ -17,6 +17,7 @@ import {
   Plus,
   Building2,
   Trash2,
+  Laptop,
 } from "lucide-react";
 import {
   Card,
@@ -151,14 +152,22 @@ export default function EditProductPage() {
     );
   };
 
+  const selectedCategoryObj = categories.find(
+    (c) => c.name.trim().toLowerCase() === category.trim().toLowerCase()
+  );
+  const isAssetCategory = !!selectedCategoryObj?.isAsset;
+
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!product || !name || !stock || !category) return;
+    if (!product || !name || !category) return;
+    if (!isAssetCategory && !stock) return;
     setShowConfirmModal(true);
   };
 
   const executeUpdateProduct = async () => {
-    if (submittingRef.current || !product || !name || !stock || !category) return;
+    if (!product || !name || !category) return;
+    if (!isAssetCategory && !stock) return;
+    if (submittingRef.current) return;
 
     submittingRef.current = true;
     setIsSubmitting(true);
@@ -189,13 +198,15 @@ export default function EditProductPage() {
 
       const targetBranchToUse = activeBranch === "All" ? selectedBranch : activeBranch;
 
-      const updatedStockMap = {
-        Ahmedabad: existingStockMap.Ahmedabad || 0,
-        Ludhiana: existingStockMap.Ludhiana || 0,
-        Delhi: existingStockMap.Delhi || 0,
-        Mumbai: existingStockMap.Mumbai || 0,
-        [targetBranchToUse]: parseInt(stock || "0"),
-      };
+      const updatedStockMap = isAssetCategory
+        ? existingStockMap
+        : {
+            Ahmedabad: existingStockMap.Ahmedabad || 0,
+            Ludhiana: existingStockMap.Ludhiana || 0,
+            Delhi: existingStockMap.Delhi || 0,
+            Mumbai: existingStockMap.Mumbai || 0,
+            [targetBranchToUse]: parseInt(stock || "0"),
+          };
 
       await updateProduct(product.id, {
         name,
@@ -421,197 +432,220 @@ export default function EditProductPage() {
                 />
               </div>
 
-                {/* Suppliers & Rates Section */}
-                <div className="rounded-lg bg-muted/30 p-3 sm:p-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <IndianRupee className="h-3.5 w-3.5 text-primary" />
-                      <span className="text-xs font-semibold uppercase tracking-wider text-foreground">
-                        Suppliers &amp; Cost Rates
-                      </span>
+                {/* Suppliers & Rates Section (Hidden for Fixed Assets) */}
+                {!isAssetCategory && (
+                  <div className="rounded-lg bg-muted/30 p-3 sm:p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <IndianRupee className="h-3.5 w-3.5 text-primary" />
+                        <span className="text-xs font-semibold uppercase tracking-wider text-foreground">
+                          Suppliers &amp; Cost Rates
+                        </span>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleAddSupplierRow}
+                        className="h-7 text-xs gap-1 border-dashed text-primary hover:bg-primary/10"
+                      >
+                        <Plus className="h-3 w-3" /> Add Supplier
+                      </Button>
                     </div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={handleAddSupplierRow}
-                      className="h-7 text-xs gap-1 border-dashed text-primary hover:bg-primary/10"
-                    >
-                      <Plus className="h-3 w-3" /> Add Supplier
-                    </Button>
-                  </div>
 
-                  <div className="space-y-2.5">
-                    {productSuppliers.map((supRow, idx) => (
-                      <div key={idx} className="flex flex-col sm:flex-row gap-2 items-start sm:items-center bg-background/60 p-2.5 rounded-lg border border-border/50 shadow-xs">
-                        <div className="flex-1 w-full space-y-1">
-                          <select
-                            value={supRow.isCustom ? "CUSTOM_NEW" : supRow.supplierName}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              if (val === "CUSTOM_NEW") {
-                                updateSupplierRow(idx, { isCustom: true, supplierName: "" });
-                              } else {
-                                updateSupplierRow(idx, { isCustom: false, supplierName: val });
-                              }
-                            }}
-                            className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-xs shadow-sm transition-all dark:border-gray-600 dark:bg-gray-900/90"
-                          >
-                            <option value="" disabled>Select Supplier</option>
-                            {suppliers.map((s) => (
-                              <option key={s.name} value={s.name}>{s.name}</option>
-                            ))}
-                            <option value="CUSTOM_NEW">+ Enter Custom Supplier Name...</option>
-                          </select>
+                    <div className="space-y-2.5">
+                      {productSuppliers.map((supRow, idx) => (
+                        <div key={idx} className="flex flex-col sm:flex-row gap-2 items-start sm:items-center bg-background/60 p-2.5 rounded-lg border border-border/50 shadow-xs">
+                          <div className="flex-1 w-full space-y-1">
+                            <select
+                              value={supRow.isCustom ? "CUSTOM_NEW" : supRow.supplierName}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                if (val === "CUSTOM_NEW") {
+                                  updateSupplierRow(idx, { isCustom: true, supplierName: "" });
+                                } else {
+                                  updateSupplierRow(idx, { isCustom: false, supplierName: val });
+                                }
+                              }}
+                              className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-xs shadow-sm transition-all dark:border-gray-600 dark:bg-gray-900/90"
+                            >
+                              <option value="" disabled>Select Supplier</option>
+                              {suppliers.map((s) => (
+                                <option key={s.name} value={s.name}>{s.name}</option>
+                              ))}
+                              <option value="CUSTOM_NEW">+ Enter Custom Supplier Name...</option>
+                            </select>
 
-                          {supRow.isCustom && (
-                            <input
-                              type="text"
-                              value={supRow.customName || ""}
-                              onChange={(e) => updateSupplierRow(idx, { customName: e.target.value })}
-                              placeholder="Type new supplier name..."
-                              className="h-8 w-full rounded-md border border-primary/50 bg-background px-2.5 text-xs focus:ring-1 focus:ring-primary mt-1"
-                              required
-                            />
+                            {supRow.isCustom && (
+                              <input
+                                type="text"
+                                value={supRow.customName || ""}
+                                onChange={(e) => updateSupplierRow(idx, { customName: e.target.value })}
+                                placeholder="Type new supplier name..."
+                                className="h-8 w-full rounded-md border border-primary/50 bg-background px-2.5 text-xs focus:ring-1 focus:ring-primary mt-1"
+                                required
+                              />
+                            )}
+                          </div>
+
+                          <div className="w-full sm:w-36 space-y-1">
+                            <div className="relative">
+                              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">
+                                ₹
+                              </span>
+                              <input
+                                type="number"
+                                step="0.01"
+                                value={supRow.rate}
+                                onChange={(e) => updateSupplierRow(idx, { rate: e.target.value })}
+                                placeholder="Cost Rate"
+                                className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 pl-6 pr-2 text-xs shadow-sm dark:border-gray-600 dark:bg-gray-900/90"
+                                required
+                              />
+                            </div>
+                          </div>
+
+                          {productSuppliers.length > 1 && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleRemoveSupplierRow(idx)}
+                              className="h-9 w-9 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg shrink-0 self-end sm:self-center"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           )}
                         </div>
-
-                        <div className="w-full sm:w-36 space-y-1">
-                          <div className="relative">
-                            <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">
-                              ₹
-                            </span>
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={supRow.rate}
-                              onChange={(e) => updateSupplierRow(idx, { rate: e.target.value })}
-                              placeholder="Cost Rate"
-                              className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 pl-6 pr-2 text-xs shadow-sm dark:border-gray-600 dark:bg-gray-900/90"
-                              required
-                            />
-                          </div>
-                        </div>
-
-                        {productSuppliers.length > 1 && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleRemoveSupplierRow(idx)}
-                            className="h-9 w-9 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg shrink-0 self-end sm:self-center"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Packaging & Stock Info */}
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                  <div className="space-y-1.5 md:col-span-2">
-                    <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                      Base Measurement
-                    </label>
-                    <div className="flex gap-2">
-                      <input
-                        type="number"
-                        step="0.01"
-                        value={packaging === 'units' || packaging === 'unit' ? '1' : uomValue}
-                        onChange={(e) => setUomValue(e.target.value)}
-                        disabled={packaging === 'units' || packaging === 'unit'}
-                        placeholder="1"
-                        className="h-9 w-24 rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-center text-sm shadow-sm transition-all hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:cursor-not-allowed disabled:bg-muted/70 disabled:text-muted-foreground dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
-                      />
-                      <select 
-                        value={uom}
-                        onChange={(e) => setUom(e.target.value)}
-                        className="h-9 flex-1 rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22currentColor%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E')] bg-[length:16px] bg-[right_10px_center] bg-no-repeat hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
-                      >
-                        <optgroup label="Count">
-                          <option value="pcs">Pieces (pcs)</option>
-                          <option value="units">Units</option>
-                        </optgroup>
-                        <optgroup label="Length">
-                          <option value="mm">Millimeters (mm)</option>
-                          <option value="cm">Centimeters (cm)</option>
-                          <option value="m">Meters (m)</option>
-                        </optgroup>
-                        <optgroup label="Weight">
-                          <option value="g">Grams (g)</option>
-                          <option value="kg">Kilograms (kg)</option>
-                        </optgroup>
-                        <optgroup label="Volume">
-                          <option value="ml">Milliliters (ml)</option>
-                          <option value="liters">Liters (L)</option>
-                        </optgroup>
-                      </select>
+                      ))}
                     </div>
                   </div>
-                  <div className="space-y-1.5">
-                    <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                      Packaging Type
-                    </label>
-                    <select 
-                      value={packaging}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setPackaging(val);
-                        if (val === 'units' || val === 'unit') {
-                          setUomValue('1');
-                          setUom('units');
-                        }
-                      }}
-                      className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22currentColor%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E')] bg-[length:16px] bg-[right_10px_center] bg-no-repeat hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
-                    >
-                      <option value="units">Units</option>
-                      <option value="boxes">Boxes</option>
-                      <option value="cartons">Cartons</option>
-                      <option value="pallets">Pallets</option>
-                      <option value="rolls">Rolls</option>
-                      <option value="bags">Bags</option>
-                      <option value="loose">Loose</option>
-                    </select>
+                )}
+
+                {/* Packaging & Stock Info */}
+                {isAssetCategory ? (
+                  <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/25 text-blue-900 dark:text-blue-200 flex items-start gap-3">
+                    <Laptop className="h-5 w-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+                    <div className="space-y-1 text-xs">
+                      <p className="font-bold text-foreground flex items-center gap-2">
+                        Fixed Asset Category Active ({selectedCategoryObj?.name})
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-700 dark:text-blue-300 font-semibold">
+                          Asset Product
+                        </span>
+                      </p>
+                      <p className="text-muted-foreground leading-relaxed">
+                        This product is classified as a Fixed Asset. Quantity balances are maintained automatically through physical asset serial intakes and assignments. View and manage all device units in{' '}
+                        <Link href="/stock/assets" className="text-primary font-semibold underline hover:text-primary/80">
+                          Assets Registry
+                        </Link>
+                        .
+                      </p>
+                    </div>
                   </div>
-                  <div className="space-y-1.5">
-                    <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                      Current Quantity (in {packaging}) <span className="text-destructive">*</span>
-                    </label>
-                    <input
-                      type="number"
-                      value={stock}
-                      onChange={(e) => setStock(e.target.value)}
-                      placeholder="0"
-                      className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all placeholder:text-muted-foreground/50 hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-1.5 md:col-span-2 lg:col-span-1">
-                    <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                      <Building2 className="h-3 w-3 text-primary" />
-                      Target Branch <span className="text-destructive">*</span>
-                    </label>
-                    {activeBranch === "All" ? (
-                      <select
-                        value={selectedBranch}
-                        onChange={(e) => setSelectedBranch(e.target.value)}
-                        className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22currentColor%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E')] bg-[length:16px] bg-[right_10px_center] bg-no-repeat hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500 font-medium cursor-pointer"
-                      >
-                        {BRANCHES.map((b: string) => (
-                          <option key={b} value={b}>
-                            🏢 {b} Branch
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <div className="h-9 w-full rounded-lg border-2 border-gray-200 bg-muted/40 px-3 text-sm flex items-center font-semibold text-foreground">
-                        🏢 {activeBranch} Branch
+                ) : (
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                    <div className="space-y-1.5 md:col-span-2">
+                      <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        Base Measurement
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={packaging === 'units' || packaging === 'unit' ? '1' : uomValue}
+                          onChange={(e) => setUomValue(e.target.value)}
+                          disabled={packaging === 'units' || packaging === 'unit'}
+                          placeholder="1"
+                          className="h-9 w-24 rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-center text-sm shadow-sm transition-all hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:cursor-not-allowed disabled:bg-muted/70 disabled:text-muted-foreground dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
+                        />
+                        <select 
+                          value={uom}
+                          onChange={(e) => setUom(e.target.value)}
+                          className="h-9 flex-1 rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22currentColor%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E')] bg-[length:16px] bg-[right_10px_center] bg-no-repeat hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
+                        >
+                          <optgroup label="Count">
+                            <option value="pcs">Pieces (pcs)</option>
+                            <option value="units">Units</option>
+                          </optgroup>
+                          <optgroup label="Length">
+                            <option value="mm">Millimeters (mm)</option>
+                            <option value="cm">Centimeters (cm)</option>
+                            <option value="m">Meters (m)</option>
+                          </optgroup>
+                          <optgroup label="Weight">
+                            <option value="g">Grams (g)</option>
+                            <option value="kg">Kilograms (kg)</option>
+                          </optgroup>
+                          <optgroup label="Volume">
+                            <option value="ml">Milliliters (ml)</option>
+                            <option value="liters">Liters (L)</option>
+                          </optgroup>
+                        </select>
                       </div>
-                    )}
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        Packaging Type
+                      </label>
+                      <select 
+                        value={packaging}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setPackaging(val);
+                          if (val === 'units' || val === 'unit') {
+                            setUomValue('1');
+                            setUom('units');
+                          }
+                        }}
+                        className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22currentColor%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E')] bg-[length:16px] bg-[right_10px_center] bg-no-repeat hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
+                      >
+                        <option value="units">Units</option>
+                        <option value="boxes">Boxes</option>
+                        <option value="cartons">Cartons</option>
+                        <option value="pallets">Pallets</option>
+                        <option value="rolls">Rolls</option>
+                        <option value="bags">Bags</option>
+                        <option value="loose">Loose</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        Current Quantity (in {packaging}) <span className="text-destructive">*</span>
+                      </label>
+                      <input
+                        type="number"
+                        value={stock}
+                        onChange={(e) => setStock(e.target.value)}
+                        placeholder="0"
+                        className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all placeholder:text-muted-foreground/50 hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
+                        required={!isAssetCategory}
+                      />
+                    </div>
+                    <div className="space-y-1.5 md:col-span-2 lg:col-span-1">
+                      <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        <Building2 className="h-3 w-3 text-primary" />
+                        Target Branch <span className="text-destructive">*</span>
+                      </label>
+                      {activeBranch === "All" ? (
+                        <select
+                          value={selectedBranch}
+                          onChange={(e) => setSelectedBranch(e.target.value)}
+                          className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22currentColor%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E')] bg-[length:16px] bg-[right_10px_center] bg-no-repeat hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500 font-medium cursor-pointer"
+                        >
+                          {BRANCHES.map((b: string) => (
+                            <option key={b} value={b}>
+                              🏢 {b} Branch
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <div className="h-9 w-full rounded-lg border-2 border-gray-200 bg-muted/40 px-3 text-sm flex items-center font-semibold text-foreground">
+                          🏢 {activeBranch} Branch
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Weight & Dimensions */}
                 <div className="grid gap-4 md:grid-cols-2">

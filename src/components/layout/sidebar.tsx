@@ -75,6 +75,7 @@ export const navItems: NavItem[] = [
     label: "Assets",
     icon: Laptop,
     subItems: [
+      { href: "/stock/assets/all", label: "All Assets", icon: Laptop },
       { href: "/stock/assets/in", label: "Stock In Assets", icon: PlusCircle },
       { href: "/stock/assets", label: "Assets (Assigned)", icon: List },
       { href: "/stock/assets/maintenance", label: "Maintenance", icon: Hammer },
