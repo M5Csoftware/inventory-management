@@ -19,6 +19,7 @@ export default function EditOrderPage() {
   const { orders, suppliers, products, updateOrder, activeBranch } = useInventory();
   
   const [supplier, setSupplier] = useState('');
+  const [branch, setBranch] = useState('Delhi');
   const [status, setStatus] = useState<'Pending' | 'Processing' | 'Completed' | 'Cancelled' | 'Partial'>('Pending');
   const [items, setItems] = useState([{ productId: '', name: '', quantity: 1, price: 0 }]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -31,6 +32,7 @@ export default function EditOrderPage() {
       const orderToEdit = orders.find(o => o.id === id);
       if (orderToEdit) {
         setSupplier(orderToEdit.supplier);
+        setBranch(orderToEdit.branch || 'Delhi');
         setStatus(orderToEdit.status);
         setItems(orderToEdit.items.map(item => ({ ...item })));
         setIsLoaded(true);
@@ -75,6 +77,10 @@ export default function EditOrderPage() {
       toast.error('Please select a supplier.');
       return;
     }
+    if (!branch) {
+      toast.error('Please select a destination facility branch.');
+      return;
+    }
     if (items.some(item => !item.productId || item.quantity <= 0)) {
       toast.error('Please fill out all product details with valid quantities.');
       return;
@@ -88,6 +94,10 @@ export default function EditOrderPage() {
       toast.error('Please select a supplier.');
       return;
     }
+    if (!branch) {
+      toast.error('Please select a destination facility branch.');
+      return;
+    }
     if (items.some(item => !item.productId || item.quantity <= 0)) {
       toast.error('Please fill out all product details with valid quantities.');
       return;
@@ -98,6 +108,7 @@ export default function EditOrderPage() {
     try {
       await updateOrder(id, {
         supplier,
+        branch,
         items,
         totalAmount,
         status
@@ -125,7 +136,7 @@ export default function EditOrderPage() {
         </Link>
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Edit Order {id}</h1>
-          <p className="text-muted-foreground mt-1">Modify supplier, items, or status for this purchase order.</p>
+          <p className="text-muted-foreground mt-1">Modify supplier, branch, items, or status for this purchase order.</p>
         </div>
       </div>
 
@@ -133,11 +144,11 @@ export default function EditOrderPage() {
         <Card className="border-border/50 shadow-sm">
           <CardHeader className="border-b border-border/50 pb-4">
             <CardTitle>Order Details</CardTitle>
-            <CardDescription>Update the supplier and list the products required.</CardDescription>
+            <CardDescription>Update the supplier, destination facility, and list the products required.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6 pt-6">
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label>Supplier</Label>
                 <select 
@@ -150,6 +161,21 @@ export default function EditOrderPage() {
                   {suppliers.map((s) => (
                     <option key={s.name} value={s.name}>{s.name}</option>
                   ))}
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Destination Branch</Label>
+                <select 
+                  className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm outline-none focus:border-primary"
+                  value={branch}
+                  onChange={(e) => setBranch(e.target.value)}
+                  required
+                >
+                  <option value="Delhi">🏭 Delhi (HO)</option>
+                  <option value="Ahmedabad">🏭 Ahmedabad</option>
+                  <option value="Ludhiana">🏭 Ludhiana</option>
+                  <option value="Mumbai">🏭 Mumbai</option>
                 </select>
               </div>
 
