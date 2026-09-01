@@ -166,7 +166,7 @@ export const VerifyConfirmationModal: React.FC<VerifyConfirmationModalProps> = (
               <Info className="h-3.5 w-3.5 text-primary" /> Physical Verification: Not recorded yet for this invoice.
             </span>
             <Link
-              href="/products/physical-verification"
+              href="/stock/physical-verification"
               target="_blank"
               className="text-primary hover:underline text-[11px] font-semibold"
             >
