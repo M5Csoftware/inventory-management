@@ -22,6 +22,7 @@ import {
   Pencil,
   Trash,
   CheckCircle,
+  FilePlus,
 } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -37,18 +38,19 @@ import {
 import { toast } from "react-toastify";
 import { useAutoAnimate } from "@formkit/auto-animate/react";
 
-import { ConfirmDeleteModal } from "@/components/confirm-delete-modal";
+import { ConfirmDeleteModal, ConfirmModal } from "@/components/confirm-modal";
 
 export default function OrdersPage() {
   const router = useRouter();
   const [animationParent] = useAutoAnimate();
-  const { orders, updateOrderStatus, deleteOrder, recordTransaction } =
+  const { orders, updateOrder, updateOrderStatus, deleteOrder, recordTransaction, activeBranch } =
     useInventory();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState<"all" | "active" | "past">(
     "all",
   );
   const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
+  const [orderToComplete, setOrderToComplete] = useState<Order | null>(null);
   const [completingOrderId, setCompletingOrderId] = useState<string | null>(null);
   const completingRef = useRef<Set<string>>(new Set());
 
@@ -59,18 +61,36 @@ export default function OrdersPage() {
     setCompletingOrderId(order.id);
 
     try {
-      for (const item of order.items) {
-        if (item.productId) {
+      const updatedItems = order.items.map((item) => {
+        const alreadyReceived = item.receivedQuantity || 0;
+        const remainingToStock = Math.max(0, item.quantity - alreadyReceived);
+        return {
+          ...item,
+          receivedQuantity: item.quantity,
+          _stockInNow: remainingToStock,
+        };
+      });
+
+      for (const item of updatedItems) {
+        if (item.productId && item._stockInNow > 0) {
           await recordTransaction(
             item.productId,
             "Stock In",
-            item.quantity,
+            item._stockInNow,
             "Purchase Order Received",
-            `Order ID: ${order.id}`,
+            `Order ID: ${order.id} (Manual Completion)`,
+            {
+              branch: order.branch || (activeBranch !== "All" ? activeBranch : "Delhi"),
+              supplier: order.supplier,
+            },
           );
         }
       }
-      await updateOrderStatus(order.id, "Completed");
+
+      await updateOrder(order.id, {
+        status: "Completed",
+        items: updatedItems.map(({ _stockInNow, ...it }) => it),
+      });
       toast.success("Order completed and stock updated!");
     } catch (error) {
       console.error(error);
@@ -88,7 +108,7 @@ export default function OrdersPage() {
 
     let matchesType = true;
     if (filterType === "active") {
-      matchesType = o.status === "Pending" || o.status === "Processing";
+      matchesType = o.status === "Pending" || o.status === "Processing" || o.status === "Partial";
     } else if (filterType === "past") {
       matchesType = o.status === "Completed" || o.status === "Cancelled";
     }
@@ -100,6 +120,8 @@ export default function OrdersPage() {
     switch (status) {
       case "Completed":
         return "text-emerald-500 bg-emerald-500/10 border-emerald-500/20";
+      case "Partial":
+        return "text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-500/30 font-semibold";
       case "Processing":
         return "text-blue-500 bg-blue-500/10 border-blue-500/20";
       case "Cancelled":
@@ -152,7 +174,7 @@ export default function OrdersPage() {
       110,
       68,
     );
-    doc.text(`Ordered By: Admin`, 110, 75);
+    doc.text(`Branch: ${order.branch || "Delhi"}`, 110, 75);
 
     // Table
     const tableColumn = [
@@ -324,9 +346,6 @@ export default function OrdersPage() {
                     Total Amount
                   </th>
                   <th className="px-4 sm:px-6 py-4 font-medium">Status</th>
-                  <th className="px-4 sm:px-6 py-4 font-medium text-center">
-                    Fulfillment
-                  </th>
                   <th className="px-4 sm:px-6 py-4 font-medium text-right">
                     Actions
                   </th>
@@ -339,7 +358,7 @@ export default function OrdersPage() {
                 {filteredOrders.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={7}
+                      colSpan={6}
                       className="px-6 py-12 text-center text-muted-foreground"
                     >
                       <div className="flex flex-col items-center justify-center">
@@ -358,17 +377,28 @@ export default function OrdersPage() {
                         {order.id}
                       </td>
                       <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
-                        {order.supplier}
+                        <div className="font-medium text-foreground">{order.supplier}</div>
+                        <div className="text-[11px] text-muted-foreground mt-0.5">🏭 {order.branch || "Delhi"}</div>
                       </td>
                       <td className="px-4 sm:px-6 py-4">
-                        <span className="text-xs text-muted-foreground whitespace-nowrap">
-                          {order.items.length} product(s) -{" "}
-                          {order.items.reduce(
-                            (acc, it) => acc + it.quantity,
-                            0,
-                          )}{" "}
-                          units total
-                        </span>
+                        {(() => {
+                          const totalUnits = order.items.reduce((acc, it) => acc + it.quantity, 0);
+                          const receivedUnits = order.items.reduce((acc, it) => acc + (it.receivedQuantity || 0), 0);
+                          const remainingUnits = Math.max(0, totalUnits - receivedUnits);
+
+                          return (
+                            <div className="space-y-1">
+                              <span className="text-xs text-muted-foreground whitespace-nowrap block">
+                                {order.items.length} product(s) · {totalUnits} units total
+                              </span>
+                              {receivedUnits > 0 && (
+                                <span className="text-[11px] font-semibold text-amber-600 dark:text-amber-400 block whitespace-nowrap">
+                                  Fulfilled: {receivedUnits}/{totalUnits} ({remainingUnits} left)
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </td>
                       <td className="px-4 sm:px-6 py-4 font-medium text-emerald-500 whitespace-nowrap">
                         ₹{order.totalAmount.toLocaleString("en-IN")}
@@ -380,35 +410,30 @@ export default function OrdersPage() {
                           {order.status}
                         </span>
                       </td>
-                      <td className="px-4 sm:px-6 py-4 text-center">
-                        {order.status === "Completed" ? (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 whitespace-nowrap">
-                            <CheckCircle className="h-3 w-3" />
-                            Added to Stock
-                          </span>
-                        ) : order.status === "Cancelled" ? (
-                          <span className="text-xs text-muted-foreground">
-                            -
-                          </span>
-                        ) : (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            disabled={completingOrderId === order.id}
-                            onClick={() => handleCompleteOrder(order)}
-                            className="h-8 text-xs gap-2 text-emerald-600 border-emerald-500/30 hover:bg-emerald-500/10 hover:text-emerald-700 whitespace-nowrap disabled:opacity-50 disabled:pointer-events-none"
-                          >
-                            <CheckCircle className="h-3.5 w-3.5" />
-                            {completingOrderId === order.id ? "Completing..." : "Complete & Stock"}
-                          </Button>
-                        )}
-                      </td>
                       <td className="px-4 sm:px-6 py-4 text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger className="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-muted/50 transition-colors outline-none text-muted-foreground hover:text-foreground cursor-pointer">
                             <MoreVertical className="h-4 w-4" />
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
+                            {order.status !== "Completed" && order.status !== "Cancelled" && (
+                              <DropdownMenuItem
+                                onClick={() => setOrderToComplete(order)}
+                                className="text-emerald-600 focus:text-emerald-600 cursor-pointer font-medium"
+                              >
+                                <CheckCircle className="mr-2 h-4 w-4 text-emerald-600" />
+                                <span>{completingOrderId === order.id ? "Completing..." : "Complete & Stock"}</span>
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuItem
+                              onClick={() =>
+                                router.push(`/invoice/new?po=${encodeURIComponent(order.id)}`)
+                              }
+                              className="text-primary font-semibold focus:text-primary cursor-pointer"
+                            >
+                              <FilePlus className="mr-2 h-4 w-4 text-primary" />
+                              <span>Create Invoice</span>
+                            </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() =>
                                 router.push(`/orders/${order.id}/edit`)
@@ -442,6 +467,36 @@ export default function OrdersPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Confirmation Modal for Complete & Stock */}
+      <ConfirmModal
+        isOpen={orderToComplete !== null}
+        onClose={() => setOrderToComplete(null)}
+        onConfirm={async () => {
+          if (orderToComplete) {
+            await handleCompleteOrder(orderToComplete);
+            setOrderToComplete(null);
+          }
+        }}
+        title="Complete Order & Stock In"
+        description="Are you sure you want to mark this purchase order as Completed? All remaining quantities will be stocked into active inventory."
+        variant="success"
+        confirmText="Complete & Stock In"
+        confirmLoadingText="Completing Order..."
+        icon={<CheckCircle className="h-5 w-5" />}
+        itemName={
+          orderToComplete ? (
+            <div className="space-y-1">
+              <div className="font-bold text-foreground">
+                Order #{orderToComplete.id} ({orderToComplete.supplier})
+              </div>
+              <div className="text-[11px] text-muted-foreground">
+                {orderToComplete.items?.length || 0} product(s) · Total: ₹{orderToComplete.totalAmount.toLocaleString('en-IN')}
+              </div>
+            </div>
+          ) : undefined
+        }
+      />
 
       <ConfirmDeleteModal
         isOpen={orderToDelete !== null}

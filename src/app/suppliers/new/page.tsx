@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useInventory } from '@/context/inventory-context';
+import { ConfirmModal } from '@/components/confirm-modal';
 
 export default function NewSupplierPage() {
   const { addSupplier, activeBranch } = useInventory();
@@ -34,18 +35,27 @@ export default function NewSupplierPage() {
   const [phone, setPhone] = useState('');
   const [location, setLocation] = useState('');
   const [branch, setBranch] = useState(activeBranch && activeBranch !== 'All' ? activeBranch : 'Delhi');
+  const [taxId, setTaxId] = useState('');
+  const [website, setWebsite] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
   const submittingRef = useRef(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!name || !contact || !email || !phone || !location) return;
+    setShowConfirmModal(true);
+  };
+
+  const executeAddSupplier = async () => {
     if (submittingRef.current || !name || !contact || !email || !phone || !location) return;
 
     submittingRef.current = true;
     setIsSubmitting(true);
 
     try {
-      await addSupplier({ name, contact, email, phone, location, branch });
+      await addSupplier({ name, contact, email, phone, location, branch, taxId, website });
+      setShowConfirmModal(false);
       router.push('/suppliers');
     } finally {
       submittingRef.current = false;
@@ -104,7 +114,7 @@ export default function NewSupplierPage() {
           </CardHeader>
 
           <CardContent className="pt-4">
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleFormSubmit} className="space-y-4">
               {/* Company & Contact Names */}
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-1.5">
@@ -212,20 +222,24 @@ export default function NewSupplierPage() {
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-1.5">
                     <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                      Tax ID / VAT Number
+                      Tax ID / VAT Number <span className="text-muted-foreground/60 lowercase text-[9px] font-normal">(optional)</span>
                     </label>
                     <input
                       type="text"
+                      value={taxId}
+                      onChange={(e) => setTaxId(e.target.value)}
                       placeholder="e.g. 12-3456789"
                       className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all placeholder:text-muted-foreground/50 hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
                     />
                   </div>
                   <div className="space-y-1.5">
                     <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                      Website
+                      Website <span className="text-muted-foreground/60 lowercase text-[9px] font-normal">(optional)</span>
                     </label>
                     <input
-                      type="url"
+                      type="text"
+                      value={website}
+                      onChange={(e) => setWebsite(e.target.value)}
                       placeholder="e.g. https://apexsupplies.com"
                       className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all placeholder:text-muted-foreground/50 hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
                     />
@@ -268,6 +282,35 @@ export default function NewSupplierPage() {
           </span>
         </div>
       </div>
+
+      {/* Confirmation Modal for Supplier Creation */}
+      <ConfirmModal
+        isOpen={showConfirmModal}
+        onClose={() => setShowConfirmModal(false)}
+        onConfirm={executeAddSupplier}
+        title="Confirm Create Supplier"
+        description="Are you sure you want to register this supplier in your partner network?"
+        variant="primary"
+        confirmText="Create Supplier"
+        confirmLoadingText="Registering..."
+        icon={<Building2 className="h-5 w-5" />}
+        itemName={
+          <div className="space-y-1.5 text-xs">
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">Supplier Name:</span>
+              <span className="font-bold text-foreground">{name}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">Contact Person:</span>
+              <span className="font-semibold text-foreground">{contact}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">Location & Branch:</span>
+              <span className="text-foreground">{location} ({branch})</span>
+            </div>
+          </div>
+        }
+      />
     </div>
   );
 }

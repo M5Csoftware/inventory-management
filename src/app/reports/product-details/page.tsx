@@ -221,6 +221,16 @@ export default function ProductDetailsReportPage() {
       const valA = stockA * (a.price || 0);
       const valB = stockB * (b.price || 0);
 
+      if (sortBy === "date-desc") {
+        const timeA = new Date((a as any).createdAt || (a as any).date || 0).getTime();
+        const timeB = new Date((b as any).createdAt || (b as any).date || 0).getTime();
+        return timeB - timeA;
+      }
+      if (sortBy === "date-asc") {
+        const timeA = new Date((a as any).createdAt || (a as any).date || 0).getTime();
+        const timeB = new Date((b as any).createdAt || (b as any).date || 0).getTime();
+        return timeA - timeB;
+      }
       if (sortBy === "valuation-desc") return valB - valA;
       if (sortBy === "valuation-asc") return valA - valB;
       if (sortBy === "stock-desc") return stockB - stockA;
@@ -369,11 +379,17 @@ export default function ProductDetailsReportPage() {
   // Product specific transactions
   const productTransactions = useMemo(() => {
     if (!selectedProduct) return [];
-    return transactions.filter(
-      (t) =>
-        t.productId?.toLowerCase() === selectedProduct.id.toLowerCase() ||
-        t.productName?.toLowerCase() === selectedProduct.name.toLowerCase()
-    );
+    return transactions
+      .filter(
+        (t) =>
+          t.productId?.toLowerCase() === selectedProduct.id.toLowerCase() ||
+          t.productName?.toLowerCase() === selectedProduct.name.toLowerCase()
+      )
+      .sort((a, b) => {
+        const timeA = new Date(a.date || (a as any).createdAt || 0).getTime();
+        const timeB = new Date(b.date || (b as any).createdAt || 0).getTime();
+        return timeB - timeA;
+      });
   }, [selectedProduct, transactions]);
 
   return (
@@ -637,6 +653,8 @@ export default function ProductDetailsReportPage() {
                   className="w-full h-9 px-3 text-sm bg-background border border-input rounded-md focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
                 >
                   <option value="valuation-desc">Valuation (High → Low)</option>
+                  <option value="date-desc">Latest Added / Modified</option>
+                  <option value="date-asc">Oldest Added First</option>
                   <option value="valuation-asc">Valuation (Low → High)</option>
                   <option value="stock-desc">Stock Qty (High → Low)</option>
                   <option value="stock-asc">Stock Qty (Low → High)</option>

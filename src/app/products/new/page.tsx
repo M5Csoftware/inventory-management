@@ -17,6 +17,7 @@ import {
   Truck,
   Building2,
   Trash2,
+  Laptop,
 } from "lucide-react";
 import {
   Card,
@@ -27,6 +28,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useInventory, Category, Supplier, BRANCHES } from '@/context/inventory-context';
+import { ConfirmModal } from '@/components/confirm-modal';
 
 interface SupplierRow {
   supplierName: string;
@@ -63,6 +65,7 @@ export default function NewProductPage() {
   const [width, setWidth] = useState('');
   const [height, setHeight] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
   const submittingRef = useRef(false);
 
   // Multi-supplier list state
@@ -104,9 +107,22 @@ export default function NewProductPage() {
     );
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const selectedCategoryObj = categories.find(
+    (c) => c.name.trim().toLowerCase() === category.trim().toLowerCase()
+  );
+  const isAssetCategory = !!selectedCategoryObj?.isAsset;
+
+  const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (submittingRef.current || !name || !stock || !category || !length || !width || !height) return;
+    if (!name || !category) return;
+    if (!isAssetCategory && !stock) return;
+    setShowConfirmModal(true);
+  };
+
+  const executeAddProduct = async () => {
+    if (!name || !category) return;
+    if (!isAssetCategory && !stock) return;
+    if (submittingRef.current) return;
 
     submittingRef.current = true;
     setIsSubmitting(true);
@@ -127,14 +143,19 @@ export default function NewProductPage() {
       const derivedPrice = validSuppliers.length > 0 ? validSuppliers[0].rate : 0;
 
       const targetBranch = initialBranch;
-      const initialStockMap = {
-        Ahmedabad: targetBranch === 'Ahmedabad' ? parseInt(stock || '0') : 0,
-        Ludhiana: targetBranch === 'Ludhiana' ? parseInt(stock || '0') : 0,
-        Delhi: targetBranch === 'Delhi' ? parseInt(stock || '0') : 0,
-        Mumbai: targetBranch === 'Mumbai' ? parseInt(stock || '0') : 0,
-      };
 
-      const dimensionStr = `${length}x${width}x${height}`;
+      const initialStockMap = isAssetCategory
+        ? { Ahmedabad: 0, Ludhiana: 0, Delhi: 0, Mumbai: 0 }
+        : {
+            Ahmedabad: targetBranch === 'Ahmedabad' ? parseInt(stock || '0') : 0,
+            Ludhiana: targetBranch === 'Ludhiana' ? parseInt(stock || '0') : 0,
+            Delhi: targetBranch === 'Delhi' ? parseInt(stock || '0') : 0,
+            Mumbai: targetBranch === 'Mumbai' ? parseInt(stock || '0') : 0,
+          };
+
+      const dimensionStr = (length || width || height) 
+        ? `${length || 0}x${width || 0}x${height || 0}` 
+        : undefined;
 
       await addProduct({
         name,
@@ -154,6 +175,7 @@ export default function NewProductPage() {
         ...({ branch: targetBranch } as any),
       });
 
+      setShowConfirmModal(false);
       router.push('/products');
     } finally {
       submittingRef.current = false;
@@ -232,7 +254,7 @@ export default function NewProductPage() {
             </CardHeader>
 
             <CardContent className="pt-4">
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleFormSubmit} className="space-y-4">
                 {/* Product Name & SKU */}
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                   <div className="space-y-1.5 md:col-span-2 lg:col-span-2">
@@ -252,7 +274,7 @@ export default function NewProductPage() {
                   <div className="space-y-1.5">
                     <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                       <Layers className="h-3 w-3" />
-                      SKU / Barcode <span className="text-destructive">*</span>
+                      SKU / Barcode <span className="text-muted-foreground font-normal">(Optional)</span>
                     </label>
                     <input
                       type="text"
@@ -260,7 +282,6 @@ export default function NewProductPage() {
                       onChange={(e) => setSku(e.target.value)}
                       placeholder="e.g. FURN-DSK-02"
                       className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 font-mono text-sm shadow-sm transition-all placeholder:text-muted-foreground/50 hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
-                      required
                     />
                   </div>
                 </div>
@@ -274,11 +295,60 @@ export default function NewProductPage() {
                     <select 
                       value={category}
                       onChange={(e) => setCategory(e.target.value)}
-                      className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22currentColor%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E')] bg-[length:16px] bg-[right_10px_center] bg-no-repeat hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
+                      className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22currentColor%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E')] bg-[length:16px] bg-[right_10px_center] bg-no-repeat hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500 font-medium cursor-pointer"
                     >
-                      {categories.map((cat: Category) => (
-                        <option key={cat.name} value={cat.name}>{cat.name}</option>
-                      ))}
+                      {(() => {
+                        const topLevels = (categories || []).filter((c: Category) => !c.parentCategory);
+                        const subMap: Record<string, Category[]> = {};
+                        const renderedSubs = new Set<string>();
+
+                        (categories || []).forEach((c: Category) => {
+                          if (c.parentCategory) {
+                            const key = c.parentCategory.trim().toLowerCase();
+                            if (!subMap[key]) subMap[key] = [];
+                            subMap[key].push(c);
+                          }
+                        });
+
+                        const elements = topLevels.map((top: Category) => {
+                          const subs = subMap[top.name.trim().toLowerCase()] || [];
+                          subs.forEach((s) => renderedSubs.add(s.name));
+                          if (subs.length > 0) {
+                            return (
+                              <optgroup key={top.name} label={`📁 ${top.name}`}>
+                                <option value={top.name}>{top.name} (General / Major)</option>
+                                {subs.map((s) => (
+                                  <option key={s.name} value={s.name}>
+                                    &nbsp;&nbsp;↳ {s.name}
+                                  </option>
+                                ))}
+                              </optgroup>
+                            );
+                          }
+                          return (
+                            <option key={top.name} value={top.name}>
+                              {top.name}
+                            </option>
+                          );
+                        });
+
+                        const unlinkedSubs = (categories || []).filter(
+                          (c: Category) => c.parentCategory && !renderedSubs.has(c.name),
+                        );
+                        if (unlinkedSubs.length > 0) {
+                          elements.push(
+                            <optgroup key="other-subs" label="Other Subcategories">
+                              {unlinkedSubs.map((s) => (
+                                <option key={s.name} value={s.name}>
+                                  {s.name} ({s.parentCategory})
+                                </option>
+                              ))}
+                            </optgroup>,
+                          );
+                        }
+
+                        return elements;
+                      })()}
                     </select>
                   </div>
                   <div className="space-y-1.5">
@@ -311,25 +381,26 @@ export default function NewProductPage() {
                   />
                 </div>
 
-                {/* Suppliers & Rates Section */}
-                <div className="rounded-lg bg-muted/30 p-3 sm:p-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <IndianRupee className="h-3.5 w-3.5 text-primary" />
-                      <span className="text-xs font-semibold uppercase tracking-wider text-foreground">
-                        Suppliers &amp; Cost Rates
-                      </span>
+                {/* Suppliers & Rates Section (Hidden for Fixed Assets) */}
+                {!isAssetCategory && (
+                  <div className="rounded-lg bg-muted/30 p-3 sm:p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <IndianRupee className="h-3.5 w-3.5 text-primary" />
+                        <span className="text-xs font-semibold uppercase tracking-wider text-foreground">
+                          Suppliers &amp; Cost Rates
+                        </span>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleAddSupplierRow}
+                        className="h-7 text-xs gap-1 border-dashed text-primary hover:bg-primary/10"
+                      >
+                        <Plus className="h-3 w-3" /> Add Supplier
+                      </Button>
                     </div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={handleAddSupplierRow}
-                      className="h-7 text-xs gap-1 border-dashed text-primary hover:bg-primary/10"
-                    >
-                      <Plus className="h-3 w-3" /> Add Supplier
-                    </Button>
-                  </div>
 
                     <div className="space-y-2.5">
                       {productSuppliers.map((supRow, idx) => (
@@ -397,96 +468,127 @@ export default function NewProductPage() {
                         </div>
                       ))}
                     </div>
-                </div>
+                  </div>
+                )}
 
                 {/* Packaging & Stock Info */}
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                  <div className="space-y-1.5 md:col-span-2">
-                    <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                      Base Measurement
-                    </label>
-                    <div className="flex gap-2">
+                {isAssetCategory ? (
+                  <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/25 text-blue-900 dark:text-blue-200 flex items-start gap-3">
+                    <Laptop className="h-5 w-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+                    <div className="space-y-1 text-xs">
+                      <p className="font-bold text-foreground flex items-center gap-2">
+                        Fixed Asset Category Active ({selectedCategoryObj?.name})
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-700 dark:text-blue-300 font-semibold">
+                          Asset Product
+                        </span>
+                      </p>
+                      <p className="text-muted-foreground leading-relaxed">
+                        This category is designated for physical hardware and fixed assets. Individual units (e.g. laptops, monitors, devices) and their serial numbers are added via{' '}
+                        <Link href="/stock/assets/in" className="text-primary font-semibold underline hover:text-primary/80">
+                          Stock In Assets
+                        </Link>
+                        . Initial opening stock entry is not required and will be initialized to 0.
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                    <div className="space-y-1.5 md:col-span-2">
+                      <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        Base Measurement
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={packaging === 'units' || packaging === 'unit' ? '1' : uomValue}
+                          onChange={(e) => setUomValue(e.target.value)}
+                          disabled={packaging === 'units' || packaging === 'unit'}
+                          placeholder="1"
+                          className="h-9 w-24 rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-center text-sm shadow-sm transition-all hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:cursor-not-allowed disabled:bg-muted/70 disabled:text-muted-foreground dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
+                        />
+                        <select 
+                          value={uom}
+                          onChange={(e) => setUom(e.target.value)}
+                          className="h-9 flex-1 rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22currentColor%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E')] bg-[length:16px] bg-[right_10px_center] bg-no-repeat hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
+                        >
+                          <optgroup label="Count">
+                            <option value="pcs">Pieces (pcs)</option>
+                            <option value="units">Units</option>
+                          </optgroup>
+                          <optgroup label="Length">
+                            <option value="mm">Millimeters (mm)</option>
+                            <option value="cm">Centimeters (cm)</option>
+                            <option value="m">Meters (m)</option>
+                          </optgroup>
+                          <optgroup label="Weight">
+                            <option value="g">Grams (g)</option>
+                            <option value="kg">Kilograms (kg)</option>
+                          </optgroup>
+                          <optgroup label="Volume">
+                            <option value="ml">Milliliters (ml)</option>
+                            <option value="liters">Liters (L)</option>
+                          </optgroup>
+                        </select>
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        Packaging Type
+                      </label>
+                      <select 
+                        value={packaging}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setPackaging(val);
+                          if (val === 'units' || val === 'unit') {
+                            setUomValue('1');
+                            setUom('units');
+                          }
+                        }}
+                        className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22currentColor%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E')] bg-[length:16px] bg-[right_10px_center] bg-no-repeat hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
+                      >
+                        <option value="units">Units</option>
+                        <option value="boxes">Boxes</option>
+                        <option value="cartons">Cartons</option>
+                        <option value="pallets">Pallets</option>
+                        <option value="rolls">Rolls</option>
+                        <option value="bags">Bags</option>
+                        <option value="loose">Loose</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        Initial Quantity (in {packaging}) <span className="text-destructive">*</span>
+                      </label>
                       <input
                         type="number"
-                        step="0.01"
-                        value={uomValue}
-                        onChange={(e) => setUomValue(e.target.value)}
-                        placeholder="1"
-                        className="h-9 w-24 rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-center text-sm shadow-sm transition-all hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
+                        value={stock}
+                        onChange={(e) => setStock(e.target.value)}
+                        placeholder="0"
+                        className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all placeholder:text-muted-foreground/50 hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
+                        required={!isAssetCategory}
                       />
-                      <select 
-                        value={uom}
-                        onChange={(e) => setUom(e.target.value)}
-                        className="h-9 flex-1 rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22currentColor%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E')] bg-[length:16px] bg-[right_10px_center] bg-no-repeat hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
+                    </div>
+                    <div className="space-y-1.5 md:col-span-2 lg:col-span-1">
+                      <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        <Building2 className="h-3 w-3 text-primary" />
+                        Target Branch <span className="text-destructive">*</span>
+                      </label>
+                      <select
+                        value={initialBranch}
+                        onChange={(e) => setInitialBranch(e.target.value)}
+                        className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22currentColor%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E')] bg-[length:16px] bg-[right_10px_center] bg-no-repeat hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500 font-medium cursor-pointer"
                       >
-                        <optgroup label="Count">
-                          <option value="pcs">Pieces (pcs)</option>
-                          <option value="units">Units</option>
-                        </optgroup>
-                        <optgroup label="Length">
-                          <option value="mm">Millimeters (mm)</option>
-                          <option value="cm">Centimeters (cm)</option>
-                          <option value="m">Meters (m)</option>
-                        </optgroup>
-                        <optgroup label="Weight">
-                          <option value="g">Grams (g)</option>
-                          <option value="kg">Kilograms (kg)</option>
-                        </optgroup>
-                        <optgroup label="Volume">
-                          <option value="ml">Milliliters (ml)</option>
-                          <option value="liters">Liters (L)</option>
-                        </optgroup>
+                        {BRANCHES.map((b: string) => (
+                          <option key={b} value={b}>
+                            🏢 {b} Branch
+                          </option>
+                        ))}
                       </select>
                     </div>
                   </div>
-                  <div className="space-y-1.5">
-                    <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                      Packaging Type
-                    </label>
-                    <select 
-                      value={packaging}
-                      onChange={(e) => setPackaging(e.target.value)}
-                      className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22currentColor%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E')] bg-[length:16px] bg-[right_10px_center] bg-no-repeat hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
-                    >
-                      <option value="boxes">Boxes</option>
-                      <option value="cartons">Cartons</option>
-                      <option value="pallets">Pallets</option>
-                      <option value="rolls">Rolls</option>
-                      <option value="bags">Bags</option>
-                      <option value="loose">Loose</option>
-                    </select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                      Initial Quantity (in {packaging}) <span className="text-destructive">*</span>
-                    </label>
-                    <input
-                      type="number"
-                      value={stock}
-                      onChange={(e) => setStock(e.target.value)}
-                      placeholder="0"
-                      className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all placeholder:text-muted-foreground/50 hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-1.5 md:col-span-2 lg:col-span-1">
-                    <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                      <Building2 className="h-3 w-3 text-primary" />
-                      Target Branch <span className="text-destructive">*</span>
-                    </label>
-                    <select
-                      value={initialBranch}
-                      onChange={(e) => setInitialBranch(e.target.value)}
-                      className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22currentColor%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22%3E%3Cpolyline points=%226 9 12 15 18 9%22/%3E%3C/svg%3E')] bg-[length:16px] bg-[right_10px_center] bg-no-repeat hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500 font-medium cursor-pointer"
-                    >
-                      {BRANCHES.map((b: string) => (
-                        <option key={b} value={b}>
-                          🏢 {b} Branch
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
+                )}
 
                 {/* Weight & Dimensions */}
                 <div className="grid gap-4 md:grid-cols-2">
@@ -505,7 +607,7 @@ export default function NewProductPage() {
                   </div>
                   <div className="space-y-1.5">
                     <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                      Dimensions (L x B x H) <span className="text-destructive">*</span>
+                      Dimensions (L x B x H) <span className="text-muted-foreground font-normal">(Optional)</span>
                     </label>
                     <div className="grid grid-cols-3 gap-2">
                       <input
@@ -514,7 +616,6 @@ export default function NewProductPage() {
                         onChange={(e) => setLength(e.target.value)}
                         placeholder="L"
                         className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-2 text-center text-sm shadow-sm transition-all placeholder:text-muted-foreground/50 hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
-                        required
                       />
                       <input
                         type="number"
@@ -522,7 +623,6 @@ export default function NewProductPage() {
                         onChange={(e) => setWidth(e.target.value)}
                         placeholder="B"
                         className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-2 text-center text-sm shadow-sm transition-all placeholder:text-muted-foreground/50 hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
-                        required
                       />
                       <input
                         type="number"
@@ -530,7 +630,6 @@ export default function NewProductPage() {
                         onChange={(e) => setHeight(e.target.value)}
                         placeholder="H"
                         className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-2 text-center text-sm shadow-sm transition-all placeholder:text-muted-foreground/50 hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
-                        required
                       />
                     </div>
                   </div>
@@ -572,6 +671,41 @@ export default function NewProductPage() {
           </span>
         </div>
       </div>
+
+      {/* Confirmation Modal for Product Creation */}
+      <ConfirmModal
+        isOpen={showConfirmModal}
+        onClose={() => setShowConfirmModal(false)}
+        onConfirm={executeAddProduct}
+        title="Confirm Create Product"
+        description="Are you sure you want to add this product to the global inventory catalog?"
+        variant="primary"
+        confirmText="Create Product"
+        confirmLoadingText="Creating..."
+        icon={<Package className="h-5 w-5" />}
+        itemName={
+          <div className="space-y-1.5 text-xs">
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">Product Name:</span>
+              <span className="font-bold text-foreground">{name}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">Category:</span>
+              <span className="font-semibold text-foreground">{category}</span>
+            </div>
+            {sku && (
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">SKU / Model:</span>
+                <span className="font-mono text-foreground font-semibold">{sku}</span>
+              </div>
+            )}
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">Initial Stock ({initialBranch}):</span>
+              <span className="font-bold text-emerald-600 dark:text-emerald-400 font-mono">{stock || 0} {uom}</span>
+            </div>
+          </div>
+        }
+      />
     </div>
   );
 }

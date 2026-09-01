@@ -37,6 +37,7 @@ export interface HistoryEntry {
 }
 
 export type TaxOption = 'IGST' | 'CGST_SGST';
+export type TaxSlab = 0 | 5 | 18 | 40;
 
 export interface BankDetails {
   bankName: string;
@@ -53,6 +54,7 @@ export interface Invoice {
   invoiceNumber: string;
   invoiceDate: string;
   taxableAmount: number;
+  taxSlab?: TaxSlab | number;
   taxOption: TaxOption;
   taxAmount: number;
   amount: number;
@@ -61,6 +63,7 @@ export interface Invoice {
   bankDetails?: BankDetails;
   description: string;
   invoiceImage: string | null;
+  invoiceImages?: string[];
   enteredBy: string;
   enteredAt: number;
   status: InvoiceStatus;

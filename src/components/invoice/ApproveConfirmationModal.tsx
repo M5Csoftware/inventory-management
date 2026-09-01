@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Invoice } from '@/types/invoice';
 import { Button } from '@/components/ui/button';
 import { Modal } from './Modal';
@@ -34,10 +34,13 @@ export const ApproveConfirmationModal: React.FC<ApproveConfirmationModalProps> =
   onReject,
 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const submittingRef = useRef(false);
 
   if (!invoice) return null;
 
   const handleConfirm = async () => {
+    if (submittingRef.current || isSubmitting) return;
+    submittingRef.current = true;
     try {
       setIsSubmitting(true);
       await onConfirm(invoice.id);
@@ -45,6 +48,7 @@ export const ApproveConfirmationModal: React.FC<ApproveConfirmationModalProps> =
     } catch (err) {
       console.error('Failed to approve invoice:', err);
     } finally {
+      submittingRef.current = false;
       setIsSubmitting(false);
     }
   };
@@ -94,7 +98,9 @@ export const ApproveConfirmationModal: React.FC<ApproveConfirmationModalProps> =
               <span className="font-mono font-semibold">₹{invoice.taxableAmount.toLocaleString('en-IN')}</span>
             </div>
             <div className="p-2 rounded-lg bg-muted/40 border border-border/30">
-              <span className="text-[10px] text-muted-foreground block">Tax ({invoice.taxOption})</span>
+              <span className="text-[10px] text-muted-foreground block">
+                Tax ({invoice.taxOption === 'IGST' ? `IGST ${invoice.taxSlab ?? 18}%` : `CGST ${(invoice.taxSlab ?? 18) / 2}% + SGST ${(invoice.taxSlab ?? 18) / 2}%`})
+              </span>
               <span className="font-mono font-semibold text-primary">₹{invoice.taxAmount.toLocaleString('en-IN')}</span>
             </div>
             <div className="p-2 rounded-lg bg-muted/40 border border-border/30">

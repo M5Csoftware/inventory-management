@@ -18,6 +18,7 @@ const ROUTE_LABELS: Record<string, string> = {
   "/stock/out": "Stock Out (Remove)",
   "/stock/transfer": "Transfer Stock",
   "/stock/alerts": "Low Stock Alerts",
+  "/stock/assets/all": "All Assets",
   "/stock/assets/in": "Stock In Assets",
   "/stock/assets": "Assets (Assigned)",
   "/categories": "All Categories",

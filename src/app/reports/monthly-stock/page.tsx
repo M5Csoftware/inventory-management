@@ -94,6 +94,16 @@ export default function MonthlyStockReportPage() {
               (item) => item.category?.toLowerCase() === catLower,
             );
           }
+          list.sort((a, b) => {
+            const timeA = a.lastPurchaseDate && a.lastPurchaseDate !== "-" ? new Date(a.lastPurchaseDate).getTime() : 0;
+            const timeB = b.lastPurchaseDate && b.lastPurchaseDate !== "-" ? new Date(b.lastPurchaseDate).getTime() : 0;
+            const validA = !isNaN(timeA) && timeA > 0;
+            const validB = !isNaN(timeB) && timeB > 0;
+            if (validA && validB) return timeB - timeA;
+            if (validA && !validB) return -1;
+            if (!validA && validB) return 1;
+            return a.productName.localeCompare(b.productName);
+          });
           setMonthlyData(list);
           setLoadingMonthly(false);
           return;
@@ -374,6 +384,17 @@ export default function MonthlyStockReportPage() {
           }
         }
 
+        calculatedReport.sort((a, b) => {
+          const timeA = a.lastPurchaseDate && a.lastPurchaseDate !== "-" ? new Date(a.lastPurchaseDate).getTime() : 0;
+          const timeB = b.lastPurchaseDate && b.lastPurchaseDate !== "-" ? new Date(b.lastPurchaseDate).getTime() : 0;
+          const validA = !isNaN(timeA) && timeA > 0;
+          const validB = !isNaN(timeB) && timeB > 0;
+          if (validA && validB) return timeB - timeA;
+          if (validA && !validB) return -1;
+          if (!validA && validB) return 1;
+          return a.productName.localeCompare(b.productName);
+        });
+
         setMonthlyData(calculatedReport);
       } else {
         toast.error("Failed to load monthly stock calculation");
@@ -591,27 +612,27 @@ export default function MonthlyStockReportPage() {
                           {item.supplier || "-"}
                         </td>
                         <td className="p-3 text-right font-semibold text-muted-foreground">
-                          {item.openingStock.toLocaleString()}
+                          {(item.openingStock ?? 0).toLocaleString()}
                         </td>
                         <td className="p-3 text-right font-mono text-xs">
-                          ₹{(item.purchaseRate || 0).toLocaleString("en-IN")}
+                          ₹{(item.purchaseRate ?? 0).toLocaleString("en-IN")}
                         </td>
                         <td className="p-3 text-right font-mono text-xs font-semibold">
-                          ₹{(item.purchaseValue || 0).toLocaleString("en-IN")}
+                          ₹{(item.purchaseValue ?? 0).toLocaleString("en-IN")}
                         </td>
                         <td className="p-3 text-right font-semibold text-emerald-500">
-                          {item.stockIn > 0
-                            ? `+${item.stockIn.toLocaleString()}`
+                          {(item.stockIn || 0) > 0
+                            ? `+${(item.stockIn || 0).toLocaleString()}`
                             : 0}
                         </td>
                         <td className="p-3 text-right font-semibold text-amber-500">
-                          {item.stockOut > 0
-                            ? `-${item.stockOut.toLocaleString()}`
+                          {(item.stockOut || 0) > 0
+                            ? `-${(item.stockOut || 0).toLocaleString()}`
                             : 0}
                         </td>
                         <td className="p-3 text-right">
                           <span className="inline-flex items-center px-2.5 py-1 rounded-md bg-primary/10 text-primary font-bold">
-                            {item.closingStock.toLocaleString()}
+                            {(item.closingStock ?? 0).toLocaleString()}
                           </span>
                         </td>
                         <td className="p-3 text-center text-xs text-muted-foreground whitespace-nowrap">

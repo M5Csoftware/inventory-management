@@ -3,14 +3,25 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useInventory, Product, ASSET_DEPARTMENTS, ASSET_APPROVED_BY } from '@/context/inventory-context';
+import { useInventory, Product, ASSET_DEPARTMENTS, ASSET_APPROVED_BY, BRANCHES } from '@/context/inventory-context';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Laptop, User, FileText, Package, ShieldCheck, Building2, CheckCircle2 } from 'lucide-react';
+import { ConfirmModal } from '@/components/confirm-modal';
 
 export default function NewAssetAssignmentPage() {
-  const { products, categories, assignAsset, activeBranch } = useInventory();
+  const { products, categories, assignAsset, activeBranch, assetSerials } = useInventory();
   const router = useRouter();
+
+  const [selectedBranch, setSelectedBranch] = useState<string>(() =>
+    activeBranch === 'All' ? 'Ahmedabad' : activeBranch
+  );
+
+  useEffect(() => {
+    if (activeBranch !== 'All') {
+      setSelectedBranch(activeBranch);
+    }
+  }, [activeBranch]);
 
   const [productId, setProductId] = useState('');
   const [assignedTo, setAssignedTo] = useState('');
@@ -22,13 +33,49 @@ export default function NewAssetAssignmentPage() {
   const [warranty, setWarranty] = useState('');
   const [quantity, setQuantity] = useState('1');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
   const submittingRef = useRef(false);
+
+  // Available in-stock serials for selected product & branch
+  const availableSerials = assetSerials.filter((s) => {
+    const matchProd = !productId || s.productId === productId;
+    const matchBranch = selectedBranch === 'All' || s.branch === selectedBranch;
+    const matchStatus = s.status === 'In Stock';
+    return matchProd && matchBranch && matchStatus;
+  });
+
+  const handleSerialChange = (sn: string) => {
+    setSerialNumber(sn);
+    const matched = assetSerials.find(
+      (s) => s.serialNumber.toLowerCase() === sn.trim().toLowerCase()
+    );
+    if (matched) {
+      if (matched.model && !modelNumber) setModelNumber(matched.model);
+      if (matched.warranty && !warranty) setWarranty(matched.warranty);
+      if (matched.notes && !notes) setNotes(matched.notes);
+    }
+  };
 
   // Filter products that belong to an asset category
   const assetProducts = products.filter((prod) => {
-    const category = categories.find((c) => c.name.toLowerCase() === prod.category.toLowerCase());
+    const category = categories.find((c) => c.name.toLowerCase() === (prod.category || '').toLowerCase());
     return category?.isAsset === true;
   });
+
+  const getAvailableStock = (prod: Product, branch: string) => {
+    if (!prod || !prod.stock) return 0;
+    if (typeof prod.stock === 'number') return isNaN(prod.stock) ? 0 : prod.stock;
+    if (typeof prod.stock === 'object') {
+      if (branch === 'All') {
+        return Object.values(prod.stock).reduce(
+          (a, b) => a + (Number(b) || 0),
+          0
+        );
+      }
+      return Number(prod.stock[branch]) || 0;
+    }
+    return 0;
+  };
 
   useEffect(() => {
     if (assetProducts.length > 0 && !productId) {
@@ -36,8 +83,13 @@ export default function NewAssetAssignmentPage() {
     }
   }, [assetProducts, productId]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!productId || !assignedTo || !quantity) return;
+    setShowConfirmModal(true);
+  };
+
+  const executeAssignAsset = async () => {
     if (submittingRef.current || !productId || !assignedTo || !quantity) return;
 
     const selectedProduct = products.find(p => p.id === productId);
@@ -54,12 +106,14 @@ export default function NewAssetAssignmentPage() {
         approvedBy,
         modelNumber: modelNumber || undefined,
         serialNumber: serialNumber || undefined,
-        quantity: parseInt(quantity),
+        quantity: parseInt(quantity, 10) || 1,
         notes: notes || undefined,
         warranty: warranty || undefined,
+        branch: selectedBranch as any,
       });
 
       if (success) {
+        setShowConfirmModal(false);
         router.push('/stock/assets');
       }
     } finally {
@@ -114,23 +168,46 @@ export default function NewAssetAssignmentPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-6">
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="space-y-1.5">
-                  <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    <Package className="h-3 w-3" />
-                    Select Item <span className="text-destructive">*</span>
-                  </label>
-                  <select 
-                    value={productId}
-                    onChange={(e) => setProductId(e.target.value)}
-                    className="h-10 w-full rounded-lg border-2 border-muted bg-background px-3 text-sm shadow-sm transition-all appearance-none focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
-                  >
-                    {assetProducts.map((prod: Product) => (
-                      <option key={prod.id} value={prod.id}>
-                        {prod.name} (Available: {activeBranch === 'All' ? Object.values(prod.stock || {}).reduce((a, b) => a + b, 0) : prod.stock?.[activeBranch] || 0} units)
-                      </option>
-                    ))}
-                  </select>
+              <form onSubmit={handleFormSubmit} className="space-y-6">
+                <div className="grid gap-6 md:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      <Building2 className="h-3 w-3 text-primary" />
+                      Branch Warehouse <span className="text-destructive">*</span>
+                    </label>
+                    <select
+                      value={selectedBranch}
+                      onChange={(e) => setSelectedBranch(e.target.value)}
+                      className="h-10 w-full rounded-lg border-2 border-muted bg-background px-3 text-sm shadow-sm transition-all appearance-none focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 cursor-pointer font-medium"
+                    >
+                      {BRANCHES.map((b: string) => (
+                        <option key={b} value={b}>
+                          🏢 {b} Branch
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      <Package className="h-3 w-3" />
+                      Select Item <span className="text-destructive">*</span>
+                    </label>
+                    <select 
+                      value={productId}
+                      onChange={(e) => setProductId(e.target.value)}
+                      className="h-10 w-full rounded-lg border-2 border-muted bg-background px-3 text-sm shadow-sm transition-all appearance-none focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    >
+                      {assetProducts.map((prod: Product) => {
+                        const avail = getAvailableStock(prod, selectedBranch);
+                        return (
+                          <option key={prod.id} value={prod.id}>
+                            {prod.name} (Available: {avail} units in {selectedBranch})
+                          </option>
+                        );
+                      })}
+                    </select>
+                  </div>
                 </div>
 
                 <div className="grid gap-6 md:grid-cols-2">
@@ -216,16 +293,33 @@ export default function NewAssetAssignmentPage() {
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                      Serial Number (Optional)
-                    </label>
+                    <div className="flex items-center justify-between">
+                      <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        Serial Number (Optional)
+                      </label>
+                      {availableSerials.length > 0 && (
+                        <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
+                          {availableSerials.length} In-Stock available
+                        </span>
+                      )}
+                    </div>
                     <input
                       type="text"
+                      list="available-serials"
                       value={serialNumber}
-                      onChange={(e) => setSerialNumber(e.target.value)}
-                      placeholder="e.g. SN-88392019"
+                      onChange={(e) => handleSerialChange(e.target.value)}
+                      placeholder="e.g. SN-88392019 (or pick from list)"
                       className="h-10 w-full rounded-lg border-2 border-muted bg-background px-3 text-sm shadow-sm transition-all placeholder:text-muted-foreground/50 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 font-mono"
                     />
+                    <datalist id="available-serials">
+                      {availableSerials.map((s) => (
+                        <option
+                          key={s.id}
+                          value={s.serialNumber}
+                          label={`${s.serialNumber} (${s.model || s.productName} - ${s.branch})`}
+                        />
+                      ))}
+                    </datalist>
                   </div>
                 </div>
 
@@ -279,6 +373,50 @@ export default function NewAssetAssignmentPage() {
           </Card>
         )}
       </div>
+
+      {/* Confirmation Modal for Asset Assignment */}
+      <ConfirmModal
+        isOpen={showConfirmModal}
+        onClose={() => setShowConfirmModal(false)}
+        onConfirm={executeAssignAsset}
+        title="Confirm Asset Assignment"
+        description="Are you sure you want to assign this asset to the selected individual or department?"
+        variant="primary"
+        confirmText="Assign Asset"
+        confirmLoadingText="Assigning..."
+        icon={<Laptop className="h-5 w-5" />}
+        itemName={
+          (() => {
+            const selectedProd = products.find((p) => p.id === productId);
+            return (
+              <div className="space-y-1.5 text-xs">
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Asset / Product:</span>
+                  <span className="font-bold text-foreground">{selectedProd?.name || productId}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Assigned To:</span>
+                  <span className="font-bold text-primary">{assignedTo} ({department})</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Approved By:</span>
+                  <span className="font-semibold text-foreground">{approvedBy}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Facility / Branch:</span>
+                  <span className="font-semibold text-foreground">{selectedBranch}</span>
+                </div>
+                {serialNumber && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Serial Number:</span>
+                    <span className="font-mono text-foreground font-semibold">{serialNumber}</span>
+                  </div>
+                )}
+              </div>
+            );
+          })()
+        }
+      />
     </div>
   );
 }

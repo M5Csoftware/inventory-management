@@ -7,9 +7,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { PlusCircle, Trash2, ArrowLeft } from 'lucide-react';
+import { PlusCircle, Trash2, ArrowLeft, Save } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'react-toastify';
+import { ConfirmModal } from '@/components/confirm-modal';
 
 export default function EditOrderPage() {
   const router = useRouter();
@@ -18,10 +19,12 @@ export default function EditOrderPage() {
   const { orders, suppliers, products, updateOrder, activeBranch } = useInventory();
   
   const [supplier, setSupplier] = useState('');
-  const [status, setStatus] = useState<'Pending' | 'Processing' | 'Completed' | 'Cancelled'>('Pending');
+  const [branch, setBranch] = useState('Delhi');
+  const [status, setStatus] = useState<'Pending' | 'Processing' | 'Completed' | 'Cancelled' | 'Partial'>('Pending');
   const [items, setItems] = useState([{ productId: '', name: '', quantity: 1, price: 0 }]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
   const submittingRef = useRef(false);
 
   useEffect(() => {
@@ -29,6 +32,7 @@ export default function EditOrderPage() {
       const orderToEdit = orders.find(o => o.id === id);
       if (orderToEdit) {
         setSupplier(orderToEdit.supplier);
+        setBranch(orderToEdit.branch || 'Delhi');
         setStatus(orderToEdit.status);
         setItems(orderToEdit.items.map(item => ({ ...item })));
         setIsLoaded(true);
@@ -67,15 +71,35 @@ export default function EditOrderPage() {
   const gstAmount = subtotal * 0.18;
   const totalAmount = subtotal + gstAmount;
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (submittingRef.current) return;
     if (!supplier) {
-      alert('Please select a supplier.');
+      toast.error('Please select a supplier.');
+      return;
+    }
+    if (!branch) {
+      toast.error('Please select a destination facility branch.');
       return;
     }
     if (items.some(item => !item.productId || item.quantity <= 0)) {
-      alert('Please fill out all product details with valid quantities.');
+      toast.error('Please fill out all product details with valid quantities.');
+      return;
+    }
+    setShowConfirmModal(true);
+  };
+
+  const executeUpdateOrder = async () => {
+    if (submittingRef.current) return;
+    if (!supplier) {
+      toast.error('Please select a supplier.');
+      return;
+    }
+    if (!branch) {
+      toast.error('Please select a destination facility branch.');
+      return;
+    }
+    if (items.some(item => !item.productId || item.quantity <= 0)) {
+      toast.error('Please fill out all product details with valid quantities.');
       return;
     }
 
@@ -84,11 +108,16 @@ export default function EditOrderPage() {
     try {
       await updateOrder(id, {
         supplier,
+        branch,
         items,
         totalAmount,
         status
       });
+      toast.success('Order updated successfully!');
+      setShowConfirmModal(false);
       router.push('/orders');
+    } catch (err) {
+      toast.error('Failed to update purchase order.');
     } finally {
       submittingRef.current = false;
       setIsSubmitting(false);
@@ -107,19 +136,19 @@ export default function EditOrderPage() {
         </Link>
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Edit Order {id}</h1>
-          <p className="text-muted-foreground mt-1">Modify supplier, items, or status for this purchase order.</p>
+          <p className="text-muted-foreground mt-1">Modify supplier, branch, items, or status for this purchase order.</p>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleFormSubmit}>
         <Card className="border-border/50 shadow-sm">
           <CardHeader className="border-b border-border/50 pb-4">
             <CardTitle>Order Details</CardTitle>
-            <CardDescription>Update the supplier and list the products required.</CardDescription>
+            <CardDescription>Update the supplier, destination facility, and list the products required.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6 pt-6">
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label>Supplier</Label>
                 <select 
@@ -136,6 +165,21 @@ export default function EditOrderPage() {
               </div>
 
               <div className="space-y-2">
+                <Label>Destination Branch</Label>
+                <select 
+                  className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm outline-none focus:border-primary"
+                  value={branch}
+                  onChange={(e) => setBranch(e.target.value)}
+                  required
+                >
+                  <option value="Delhi">🏭 Delhi (HO)</option>
+                  <option value="Ahmedabad">🏭 Ahmedabad</option>
+                  <option value="Ludhiana">🏭 Ludhiana</option>
+                  <option value="Mumbai">🏭 Mumbai</option>
+                </select>
+              </div>
+
+              <div className="space-y-2">
                 <Label>Status</Label>
                 <select 
                   className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm outline-none focus:border-primary"
@@ -145,6 +189,7 @@ export default function EditOrderPage() {
                 >
                   <option value="Pending">Pending</option>
                   <option value="Processing">Processing</option>
+                  <option value="Partial">Partial</option>
                   <option value="Completed">Completed</option>
                   <option value="Cancelled">Cancelled</option>
                 </select>
@@ -247,6 +292,41 @@ export default function EditOrderPage() {
           </CardFooter>
         </Card>
       </form>
+
+      {/* Confirmation Modal for Updating Purchase Order */}
+      <ConfirmModal
+        isOpen={showConfirmModal}
+        onClose={() => setShowConfirmModal(false)}
+        onConfirm={executeUpdateOrder}
+        title="Save Purchase Order Changes"
+        description="Are you sure you want to update this purchase order details?"
+        variant="primary"
+        confirmText="Save Order Changes"
+        confirmLoadingText="Saving..."
+        icon={<Save className="h-5 w-5" />}
+        itemName={
+          <div className="space-y-1.5 text-xs">
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">Order ID:</span>
+              <span className="font-bold text-foreground">#{id}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">Supplier:</span>
+              <span className="font-bold text-foreground">{supplier}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">Status:</span>
+              <span className="font-semibold text-primary">{status}</span>
+            </div>
+            <div className="flex justify-between items-center pt-1 border-t border-border/40">
+              <span className="text-muted-foreground">Grand Total:</span>
+              <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                ₹{totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+            </div>
+          </div>
+        }
+      />
     </div>
   );
 }

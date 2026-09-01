@@ -1,9 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
+import Link from 'next/link';
 import { Invoice } from '@/types/invoice';
 import { Button } from '@/components/ui/button';
 import { Modal } from './Modal';
+import { useInventory } from '@/context/inventory-context';
 import {
   CheckCircle2,
   AlertTriangle,
@@ -11,6 +13,8 @@ import {
   Loader2,
   FileText,
   XCircle,
+  ClipboardCheck,
+  Info,
 } from 'lucide-react';
 
 interface VerifyConfirmationModalProps {
@@ -28,12 +32,27 @@ export const VerifyConfirmationModal: React.FC<VerifyConfirmationModalProps> = (
   onConfirm,
   onReject,
 }) => {
+  const { physicalVerifications } = useInventory();
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const submittingRef = useRef(false);
 
   if (!invoice) return null;
 
+  const linkedPv = physicalVerifications.find(
+    (pv) =>
+      (pv.invoiceNumber &&
+        invoice.invoiceNumber &&
+        pv.invoiceNumber.trim().toLowerCase() ===
+          invoice.invoiceNumber.trim().toLowerCase()) ||
+      (pv.poNumber &&
+        invoice.poNumber &&
+        pv.poNumber.trim().toLowerCase() === invoice.poNumber.trim().toLowerCase())
+  );
+
   const handleConfirm = async () => {
+    if (submittingRef.current || isSubmitting) return;
+    submittingRef.current = true;
     try {
       setIsSubmitting(true);
       await onConfirm(invoice.id, notes.trim());
@@ -41,6 +60,7 @@ export const VerifyConfirmationModal: React.FC<VerifyConfirmationModalProps> = (
     } catch (err) {
       console.error('Failed to verify invoice:', err);
     } finally {
+      submittingRef.current = false;
       setIsSubmitting(false);
     }
   };
@@ -90,7 +110,9 @@ export const VerifyConfirmationModal: React.FC<VerifyConfirmationModalProps> = (
               <span className="font-mono font-semibold">₹{invoice.taxableAmount.toLocaleString('en-IN')}</span>
             </div>
             <div className="p-2 rounded-lg bg-muted/40 border border-border/30">
-              <span className="text-[10px] text-muted-foreground block">Tax ({invoice.taxOption})</span>
+              <span className="text-[10px] text-muted-foreground block">
+                Tax ({invoice.taxOption === 'IGST' ? `IGST ${invoice.taxSlab ?? 18}%` : `CGST ${(invoice.taxSlab ?? 18) / 2}% + SGST ${(invoice.taxSlab ?? 18) / 2}%`})
+              </span>
               <span className="font-mono font-semibold text-primary">₹{invoice.taxAmount.toLocaleString('en-IN')}</span>
             </div>
             <div className="p-2 rounded-lg bg-muted/40 border border-border/30">
@@ -103,6 +125,55 @@ export const VerifyConfirmationModal: React.FC<VerifyConfirmationModalProps> = (
             </div>
           </div>
         </div>
+
+        {/* 2-Step Inward Physical Verification Status */}
+        {linkedPv ? (
+          <div
+            className={`p-3.5 rounded-xl border text-xs flex flex-col gap-1.5 shadow-xs ${
+              linkedPv.overallStatus === 'Matched'
+                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-800 dark:text-emerald-300'
+                : 'bg-amber-500/10 border-amber-500/30 text-amber-800 dark:text-amber-300'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 font-bold">
+                <ClipboardCheck className="h-4 w-4 shrink-0 text-primary" />
+                <span>Physical Inward Verification:</span>
+                <span
+                  className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
+                    linkedPv.overallStatus === 'Matched'
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-amber-600 text-white'
+                  }`}
+                >
+                  {linkedPv.overallStatus === 'Matched' ? '✓ 100% Matched' : '⚠️ Discrepancy Found'}
+                </span>
+              </div>
+              <span className="text-[10px] text-muted-foreground font-mono">
+                {linkedPv.id}
+              </span>
+            </div>
+            <p className="text-[11px] opacity-90">
+              Verified by <strong>{linkedPv.verifiedBy}</strong> on{' '}
+              {new Date(linkedPv.verifiedAt).toLocaleDateString('en-IN')} ({linkedPv.items.length} line items checked).
+              {linkedPv.overallStatus !== 'Matched' &&
+                ` Shortage/Excess noted in ${linkedPv.items.filter((i) => i.variance !== 0).length} item(s).`}
+            </p>
+          </div>
+        ) : (
+          <div className="p-3 rounded-xl bg-muted/30 border border-border/50 text-xs text-muted-foreground flex items-center justify-between">
+            <span className="flex items-center gap-1.5">
+              <Info className="h-3.5 w-3.5 text-primary" /> Physical Verification: Not recorded yet for this invoice.
+            </span>
+            <Link
+              href="/stock/physical-verification"
+              target="_blank"
+              className="text-primary hover:underline text-[11px] font-semibold"
+            >
+              Verify Physically &rarr;
+            </Link>
+          </div>
+        )}
 
         {/* Verification Notes Input */}
         <div className="space-y-1.5">

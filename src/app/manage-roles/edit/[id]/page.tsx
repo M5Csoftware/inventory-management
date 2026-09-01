@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import {
@@ -16,6 +16,7 @@ import {
 import { toast } from "react-toastify";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { ConfirmModal } from "@/components/confirm-modal";
 import { SIDEBAR_TABS_STRUCTURE, SidebarFolderGroup } from "../../new/page";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/inventory";
@@ -28,6 +29,8 @@ export default function EditUserPage() {
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const submittingRef = useRef(false);
 
   // User credentials
   const [name, setName] = useState("");
@@ -143,7 +146,7 @@ export default function EditUserPage() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !email.trim()) {
       toast.error("Please fill in required fields");
@@ -155,6 +158,23 @@ export default function EditUserPage() {
       return;
     }
 
+    setShowConfirmModal(true);
+  };
+
+  const executeUpdateUser = async () => {
+    if (submittingRef.current || submitting) return;
+
+    if (!name.trim() || !email.trim()) {
+      toast.error("Please fill in required fields");
+      return;
+    }
+
+    if (password.trim() && password !== confirmPassword) {
+      toast.error("New Password and Confirm Password do not match");
+      return;
+    }
+
+    submittingRef.current = true;
     setSubmitting(true);
     try {
       const token = localStorage.getItem("token");
@@ -182,6 +202,7 @@ export default function EditUserPage() {
       const data = await res.json();
       if (data.success) {
         toast.success("User account & tab permissions updated successfully!");
+        setShowConfirmModal(false);
         router.push("/manage-roles");
       } else {
         toast.error(data.message || "Failed to update user");
@@ -189,6 +210,7 @@ export default function EditUserPage() {
     } catch (err) {
       toast.error("Network error. Please try again.");
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   };
@@ -204,6 +226,43 @@ export default function EditUserPage() {
 
   return (
     <div className="p-4 sm:p-8 w-full space-y-6">
+      {/* Confirmation Modal for Updating User */}
+      <ConfirmModal
+        isOpen={showConfirmModal}
+        onClose={() => setShowConfirmModal(false)}
+        onConfirm={executeUpdateUser}
+        title="Save User Profile & Permissions"
+        description="Are you sure you want to update this user's profile and module access permissions?"
+        variant="primary"
+        confirmText="Save Changes"
+        confirmLoadingText="Saving Changes..."
+        icon={<Save className="h-5 w-5" />}
+        itemName={
+          <div className="space-y-1.5 text-xs">
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">User ID:</span>
+              <span className="font-mono text-foreground">{userId}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">Name:</span>
+              <span className="font-bold text-foreground">{name}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">Email:</span>
+              <span className="font-mono text-foreground">{email}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">Role:</span>
+              <span className="font-semibold text-primary capitalize">{role.replace('_', ' ')}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">Branch:</span>
+              <span className="text-foreground">{branch}</span>
+            </div>
+          </div>
+        }
+      />
+
       {/* Header Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-5">
         <div className="flex items-center gap-3">
@@ -246,7 +305,7 @@ export default function EditUserPage() {
         </div>
       </div>
 
-      <form id="edit-user-form" onSubmit={handleSubmit} className="space-y-6">
+      <form id="edit-user-form" onSubmit={handleFormSubmit} className="space-y-6">
         {/* ROW 1: Profile Credentials (Left) & Account Access Role (Right) */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Card 1: Profile Credentials */}

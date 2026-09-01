@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useInventory } from '@/context/inventory-context';
+import { ConfirmModal } from '@/components/confirm-modal';
 
 export default function EditSupplierPage() {
   const { suppliers, updateSupplier } = useInventory();
@@ -39,6 +40,7 @@ export default function EditSupplierPage() {
   const [taxId, setTaxId] = useState('');
   const [website, setWebsite] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
   const submittingRef = useRef(false);
 
   useEffect(() => {
@@ -57,8 +59,13 @@ export default function EditSupplierPage() {
     }
   }, [decodedName, suppliers]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!name || !contact || !email || !phone || !location) return;
+    setShowConfirmModal(true);
+  };
+
+  const executeUpdateSupplier = async () => {
     if (submittingRef.current || !name || !contact || !email || !phone || !location) return;
 
     submittingRef.current = true;
@@ -66,6 +73,7 @@ export default function EditSupplierPage() {
 
     try {
       await updateSupplier(decodedName, { name, contact, email, phone, location, branch, taxId, website });
+      setShowConfirmModal(false);
       router.push('/suppliers');
     } finally {
       submittingRef.current = false;
@@ -120,7 +128,7 @@ export default function EditSupplierPage() {
           </CardHeader>
 
           <CardContent className="pt-4">
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleFormSubmit} className="space-y-4">
               {/* Company & Contact Names */}
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-1.5">
@@ -227,7 +235,7 @@ export default function EditSupplierPage() {
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-1.5">
                     <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                      Tax ID / VAT Number
+                      Tax ID / VAT Number <span className="text-muted-foreground/60 lowercase text-[9px] font-normal">(optional)</span>
                     </label>
                     <input
                       type="text"
@@ -239,10 +247,10 @@ export default function EditSupplierPage() {
                   </div>
                   <div className="space-y-1.5">
                     <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                      Website
+                      Website <span className="text-muted-foreground/60 lowercase text-[9px] font-normal">(optional)</span>
                     </label>
                     <input
-                      type="url"
+                      type="text"
                       value={website}
                       onChange={(e) => setWebsite(e.target.value)}
                       placeholder="e.g. https://apexsupplies.com"
@@ -276,6 +284,35 @@ export default function EditSupplierPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Confirmation Modal for Supplier Update */}
+      <ConfirmModal
+        isOpen={showConfirmModal}
+        onClose={() => setShowConfirmModal(false)}
+        onConfirm={executeUpdateSupplier}
+        title="Save Supplier Changes"
+        description="Are you sure you want to update this supplier profile and contact details?"
+        variant="primary"
+        confirmText="Save Changes"
+        confirmLoadingText="Saving..."
+        icon={<Save className="h-5 w-5" />}
+        itemName={
+          <div className="space-y-1.5 text-xs">
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">Supplier Name:</span>
+              <span className="font-bold text-foreground">{name}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">Contact Person:</span>
+              <span className="font-semibold text-foreground">{contact}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">Location & Branch:</span>
+              <span className="text-foreground">{location} ({branch})</span>
+            </div>
+          </div>
+        }
+      />
     </div>
   );
 }

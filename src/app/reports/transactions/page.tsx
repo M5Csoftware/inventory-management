@@ -118,6 +118,12 @@ export default function TransactionsReportPage() {
           });
         }
 
+        list.sort((a, b) => {
+          const timeA = new Date(a.date || 0).getTime();
+          const timeB = new Date(b.date || 0).getTime();
+          return timeB - timeA;
+        });
+
         setTransactions(list);
       } else {
         toast.error(data.message || "Failed to load transaction report");

@@ -31,6 +31,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useInventory, Product, BRANCHES } from "@/context/inventory-context";
+import { ConfirmModal } from "@/components/confirm-modal";
 import { toast } from "react-toastify";
 
 export interface AssetModelGroup {
@@ -62,6 +63,7 @@ export default function StockInAssetsPage() {
   const [location, setLocation] = useState("Warehouse A (Zone 1)");
   const [notes, setNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
   const submittingRef = useRef(false);
 
   useEffect(() => {
@@ -231,8 +233,13 @@ export default function StockInAssetsPage() {
     0,
   );
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!productId || totalUnits <= 0) return;
+    setShowConfirmModal(true);
+  };
+
+  const executeStockInAssets = async () => {
     if (submittingRef.current || !productId || totalUnits <= 0) return;
 
     submittingRef.current = true;
@@ -365,6 +372,7 @@ export default function StockInAssetsPage() {
             `Successfully registered ${totalUnits} asset units into inventory!`,
           );
         }
+        setShowConfirmModal(false);
         router.push("/stock/assets");
       } else {
         toast.error("Failed to complete asset intake. Please try again.");
@@ -412,7 +420,7 @@ export default function StockInAssetsPage() {
           </Link>
         </Card>
       ) : (
-        <form onSubmit={handleSubmit} className="w-full space-y-6">
+        <form onSubmit={handleFormSubmit} className="w-full space-y-6">
           {/* 1. General Shipment Setup Card */}
           <Card className="w-full border-0 shadow-lg shadow-primary/5 bg-gradient-to-br from-card to-card/80 backdrop-blur-sm relative z-20 overflow-visible">
             <CardHeader className="border-b border-border/50 pb-3">
@@ -889,6 +897,45 @@ export default function StockInAssetsPage() {
           </div>
         </form>
       )}
+
+      {/* Confirmation Modal for Asset Stock In */}
+      <ConfirmModal
+        isOpen={showConfirmModal}
+        onClose={() => setShowConfirmModal(false)}
+        onConfirm={executeStockInAssets}
+        title="Confirm Asset Acquisition Intake"
+        description="Are you sure you want to register this asset batch and record serial tracking numbers into inventory?"
+        variant="success"
+        confirmText="Confirm & Stock In"
+        confirmLoadingText="Processing Intake..."
+        icon={<Laptop className="h-5 w-5" />}
+        itemName={
+          <div className="space-y-1.5 text-xs">
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">Asset Product:</span>
+              <span className="font-bold text-foreground">{selectedProduct?.name || productId}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">Total Units:</span>
+              <span className="font-bold text-emerald-600 dark:text-emerald-400 font-mono">+{totalUnits} asset unit(s)</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">Facility / Branch:</span>
+              <span className="font-semibold text-foreground">{targetBranch}</span>
+            </div>
+            {supplier && (
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">Supplier:</span>
+                <span className="text-foreground">{supplier === "CUSTOM_SUPPLIER" ? customSupplier : supplier}</span>
+              </div>
+            )}
+            <div className="flex justify-between items-center pt-1 border-t border-border/40 font-semibold">
+              <span className="text-muted-foreground">Total Batch Valuation:</span>
+              <span className="font-mono text-foreground">₹{totalValuation.toLocaleString("en-IN")}</span>
+            </div>
+          </div>
+        }
+      />
     </div>
   );
 }

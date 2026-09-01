@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Plus, Search, Edit2, Trash2 } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, ClipboardCheck } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useInventory, Product } from '@/context/inventory-context';
@@ -13,10 +13,23 @@ export default function ProductsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
 
+  const getProductStock = (p: Product) => {
+    if (!p || !p.stock) return 0;
+    if (typeof p.stock === 'number') return p.stock;
+    if (typeof p.stock === 'object') {
+      if (activeBranch === 'All') {
+        return Object.values(p.stock).reduce((a, b) => a + (Number(b) || 0), 0);
+      }
+      return Number(p.stock[activeBranch]) || 0;
+    }
+    return 0;
+  };
+
   const filteredProducts = products.filter((product: Product) =>
-    product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.category.toLowerCase().includes(searchTerm.toLowerCase())
+    (product.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (product.id || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (product.category || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (product.uom || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -26,11 +39,13 @@ export default function ProductsPage() {
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Products</h1>
           <p className="text-sm text-muted-foreground mt-1">Manage and edit your product directory.</p>
         </div>
-        <Link href="/products/new">
-          <Button size="sm" className="shadow-lg shadow-primary/20 transition-all hover:shadow-primary/40 hover:-translate-y-0.5 w-full sm:w-auto">
-            <Plus className="mr-2 h-4 w-4" /> Add Product
-          </Button>
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link href="/products/new">
+            <Button size="sm" className="shadow-lg shadow-primary/20 transition-all hover:shadow-primary/40 hover:-translate-y-0.5 w-full sm:w-auto">
+              <Plus className="mr-2 h-4 w-4" /> Add Product
+            </Button>
+          </Link>
+        </div>
       </div>
 
       <Card className="bg-background/60 backdrop-blur-sm shadow-sm border-border/50">
@@ -63,6 +78,7 @@ export default function ProductsPage() {
                     <th className="h-10 px-4 text-left align-middle font-medium text-muted-foreground">ID</th>
                     <th className="h-10 px-4 text-left align-middle font-medium text-muted-foreground">Name</th>
                     <th className="h-10 px-4 text-left align-middle font-medium text-muted-foreground">Category</th>
+                    <th className="h-10 px-4 text-left align-middle font-medium text-muted-foreground">UOM</th>
                     <th className="h-10 px-4 text-left align-middle font-medium text-muted-foreground">Price</th>
                     <th className="h-10 px-4 text-left align-middle font-medium text-muted-foreground">Branch</th>
                     <th className="h-10 px-4 text-left align-middle font-medium text-muted-foreground">Stock</th>
@@ -71,11 +87,18 @@ export default function ProductsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredProducts.map((product: Product, index: number) => (
+                  {filteredProducts.map((product: Product, index: number) => {
+                    const currentStock = getProductStock(product);
+                    return (
                     <tr key={`${product.id}-${index}`} className="border-b transition-colors hover:bg-muted/50">
                       <td className="p-4 align-middle font-medium font-mono text-xs">{product.id}</td>
                       <td className="p-4 align-middle font-medium">{product.name}</td>
                       <td className="p-4 align-middle text-muted-foreground">{product.category}</td>
+                      <td className="p-4 align-middle text-muted-foreground text-sm">
+                        {product.uomValue && product.uom
+                          ? `${product.uomValue} ${product.uom}`
+                          : (product.uom || '-')}
+                      </td>
                       <td className="p-4 align-middle font-mono">₹{product.price.toLocaleString('en-IN')}</td>
                       <td className="p-4 align-middle text-muted-foreground text-sm">
                         {activeBranch === 'All'
@@ -84,15 +107,11 @@ export default function ProductsPage() {
                       </td>
                       <td className="p-4 align-middle">
                         <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-semibold ${
-                          (activeBranch === 'All' 
-                            ? Object.values(product.stock).reduce((a, b) => a + b, 0) 
-                            : product.stock[activeBranch] || 0) <= product.threshold 
+                          currentStock <= (product.threshold ?? 10)
                             ? 'bg-destructive/10 text-destructive animate-pulse' 
                             : 'bg-emerald-500/10 text-emerald-500'
                         }`}>
-                          {activeBranch === 'All' 
-                            ? Object.values(product.stock).reduce((a, b) => a + b, 0) 
-                            : product.stock[activeBranch] || 0} units
+                          {currentStock} units
                         </span>
                       </td>
                       <td className="p-4 align-middle text-muted-foreground">
@@ -118,7 +137,8 @@ export default function ProductsPage() {
                         </Button>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             )}

@@ -74,6 +74,7 @@ function MasterInvoiceContent() {
     invoiceNumber: string;
     invoiceDate: string;
     taxableAmount: number;
+    taxSlab?: number;
     taxOption: import('@/types/invoice').TaxOption;
     taxAmount: number;
     amount: number;
@@ -81,6 +82,7 @@ function MasterInvoiceContent() {
     bankLast4: string;
     description: string;
     invoiceImage: string | null;
+    invoiceImages?: string[];
   }) => {
     const success = await createInvoice(formData);
     if (success) {
