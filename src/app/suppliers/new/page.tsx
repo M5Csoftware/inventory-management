@@ -35,6 +35,8 @@ export default function NewSupplierPage() {
   const [phone, setPhone] = useState('');
   const [location, setLocation] = useState('');
   const [branch, setBranch] = useState(activeBranch && activeBranch !== 'All' ? activeBranch : 'Delhi');
+  const [taxId, setTaxId] = useState('');
+  const [website, setWebsite] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const submittingRef = useRef(false);
@@ -52,7 +54,7 @@ export default function NewSupplierPage() {
     setIsSubmitting(true);
 
     try {
-      await addSupplier({ name, contact, email, phone, location, branch });
+      await addSupplier({ name, contact, email, phone, location, branch, taxId, website });
       setShowConfirmModal(false);
       router.push('/suppliers');
     } finally {
@@ -220,20 +222,24 @@ export default function NewSupplierPage() {
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-1.5">
                     <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                      Tax ID / VAT Number
+                      Tax ID / VAT Number <span className="text-muted-foreground/60 lowercase text-[9px] font-normal">(optional)</span>
                     </label>
                     <input
                       type="text"
+                      value={taxId}
+                      onChange={(e) => setTaxId(e.target.value)}
                       placeholder="e.g. 12-3456789"
                       className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all placeholder:text-muted-foreground/50 hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
                     />
                   </div>
                   <div className="space-y-1.5">
                     <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                      Website
+                      Website <span className="text-muted-foreground/60 lowercase text-[9px] font-normal">(optional)</span>
                     </label>
                     <input
-                      type="url"
+                      type="text"
+                      value={website}
+                      onChange={(e) => setWebsite(e.target.value)}
                       placeholder="e.g. https://apexsupplies.com"
                       className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all placeholder:text-muted-foreground/50 hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
                     />
