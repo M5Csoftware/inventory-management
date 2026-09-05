@@ -42,6 +42,7 @@ interface InvoiceStockInModalProps {
     invoiceDate: string;
     totalAmount: number;
     poNumber: string;
+    branch?: string;
     linkedOrder?: Order | null;
   };
   onSubmitInvoiceOnly: () => Promise<void>;
@@ -61,7 +62,13 @@ export const InvoiceStockInModal: React.FC<InvoiceStockInModalProps> = ({
   const { products, activeBranch } = useInventory();
   const submittingRef = useRef(false);
 
-  const defaultBranch = activeBranch === 'All' ? 'Ahmedabad' : activeBranch;
+  const defaultBranch =
+    invoiceSummary.branch ||
+    (invoiceSummary.linkedOrder?.branch && invoiceSummary.linkedOrder.branch !== 'All'
+      ? invoiceSummary.linkedOrder.branch
+      : activeBranch === 'All'
+      ? 'Delhi'
+      : activeBranch);
   const [stockItems, setStockItems] = useState<StockInItemEntry[]>([]);
 
   useEffect(() => {

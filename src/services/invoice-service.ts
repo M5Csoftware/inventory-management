@@ -27,9 +27,10 @@ export const invoiceService = {
   },
 
   // Invoices
-  getInvoices: async (): Promise<Invoice[]> => {
+  getInvoices: async (branch?: string): Promise<Invoice[]> => {
     try {
-      const res = await fetch(`${API_BASE}/invoices`);
+      const query = branch && branch !== 'All' ? `?branch=${encodeURIComponent(branch)}` : '';
+      const res = await fetch(`${API_BASE}/invoices${query}`);
       if (!res.ok) return [];
       const { data } = await res.json();
       return data || [];

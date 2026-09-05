@@ -31,6 +31,7 @@ interface InvoiceContextType {
     description: string;
     invoiceImage: string | null;
     invoiceImages?: string[];
+    branch?: string;
   }) => Promise<boolean>;
   verifyInvoice: (id: string, notes?: string) => Promise<boolean>;
   approveInvoice: (id: string) => Promise<boolean>;
@@ -42,6 +43,7 @@ interface InvoiceContextType {
     accountNumber: string;
     ifscCode: string;
   }) => Promise<boolean>;
+  updateInvoiceBranch: (id: string, branch: string) => Promise<boolean>;
   addTeamMember: (name: string, username: string, password: string, role: Role) => Promise<void>;
   removeTeamMember: (id: string) => Promise<void>;
   editTeamMember: (id: string, name: string, username: string, password: string, role: Role) => Promise<void>;
@@ -193,6 +195,7 @@ export function InvoiceProvider({ children }: { children: React.ReactNode }) {
     description: string;
     invoiceImage: string | null;
     invoiceImages?: string[];
+    branch?: string;
   }): Promise<boolean> => {
     const lockKey = `create-inv-${formData.vendor}-${formData.invoiceNumber}`;
     return withLock(
@@ -201,6 +204,8 @@ export function InvoiceProvider({ children }: { children: React.ReactNode }) {
         const imagesList = formData.invoiceImages && formData.invoiceImages.length > 0
           ? formData.invoiceImages
           : (formData.invoiceImage ? [formData.invoiceImage] : []);
+
+        const invoiceBranch = formData.branch || (user?.branch && user.branch !== 'All' ? user.branch : 'Delhi');
 
         const partialInv = {
           id: uid('inv'),
@@ -222,7 +227,7 @@ export function InvoiceProvider({ children }: { children: React.ReactNode }) {
           status: 'pending_verification' as const,
           approvals: [],
           history: [],
-          branch: user?.branch || 'Ahmedabad',
+          branch: invoiceBranch,
         };
 
         const calculatedFlags = computeFlags(partialInv as Omit<Invoice, 'flags'>, invoices);
@@ -448,6 +453,39 @@ export function InvoiceProvider({ children }: { children: React.ReactNode }) {
     );
   };
 
+  const updateInvoiceBranch = async (id: string, branch: string): Promise<boolean> => {
+    return withLock(
+      `update-branch-${id}`,
+      async () => {
+        const inv = invoices.find((i) => i.id === id);
+        if (!inv) return false;
+
+        const updatedHistory = [...(inv.history || [])];
+        updatedHistory.push({
+          at: Date.now(),
+          actorId: currentSessionUser.id,
+          actorName: currentSessionUser.name,
+          actorRole: currentSessionUser.role,
+          action: 'Branch updated',
+          note: `Branch updated to ${branch}`,
+        });
+
+        const updated = await invoiceService.updateInvoice(id, {
+          branch,
+          history: updatedHistory,
+        });
+
+        if (updated) {
+          toast.success(`Branch updated to ${branch}!`);
+          await refreshInvoices();
+          return true;
+        }
+        return false;
+      },
+      false,
+    );
+  };
+
   const addTeamMember = async (name: string, username: string, password: string, role: Role) => {
     const newMember = {
       id: uid('mem'),
@@ -484,6 +522,7 @@ export function InvoiceProvider({ children }: { children: React.ReactNode }) {
         rejectInvoice,
         payInvoice,
         updateBankDetails,
+        updateInvoiceBranch,
         addTeamMember,
         removeTeamMember,
         editTeamMember,
