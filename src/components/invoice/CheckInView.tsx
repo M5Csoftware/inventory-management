@@ -2,9 +2,9 @@ import React, { useState, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Upload, X, FileText, CheckCircle2, Building2, Receipt, Calendar, IndianRupee, Image as ImageIcon, AlertCircle, ArrowUpRight, Landmark, Plus } from 'lucide-react';
+import { Upload, X, FileText, CheckCircle2, Building2, Receipt, Calendar, IndianRupee, Image as ImageIcon, AlertCircle, ArrowUpRight, Landmark, Plus, MapPin } from 'lucide-react';
 import { TeamMember, AppConfig, TaxOption } from '@/types/invoice';
-import { useInventory, Order } from '@/context/inventory-context';
+import { useInventory, Order, BRANCHES } from '@/context/inventory-context';
 import { toast } from 'react-toastify';
 import { InvoiceStockInModal, StockInItemEntry } from '@/components/invoice/InvoiceStockInModal';
 
@@ -32,6 +32,7 @@ interface CheckInViewProps {
     description: string;
     invoiceImage: string | null;
     invoiceImages?: string[];
+    branch?: string;
   }) => void;
 }
 
@@ -40,10 +41,13 @@ export const CheckInView: React.FC<CheckInViewProps> = ({
   config,
   onSubmit,
 }) => {
-  const { suppliers, orders, recordTransaction, updateOrder } = useInventory();
+  const { suppliers, orders, recordTransaction, updateOrder, activeBranch } = useInventory();
   const [vendor, setVendor] = useState('');
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [invoiceDate, setInvoiceDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [branch, setBranch] = useState<string>(() =>
+    activeBranch && activeBranch !== 'All' ? activeBranch : 'Delhi'
+  );
   const [taxableAmount, setTaxableAmount] = useState('');
   const [taxSlab, setTaxSlab] = useState<string>('');
   const [taxOption, setTaxOption] = useState<TaxOption>('IGST');
@@ -56,6 +60,12 @@ export const CheckInView: React.FC<CheckInViewProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const submittingRef = useRef(false);
   const [linkedOrder, setLinkedOrder] = useState<Order | null>(null);
+
+  React.useEffect(() => {
+    if (activeBranch && activeBranch !== 'All') {
+      setBranch(activeBranch);
+    }
+  }, [activeBranch]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -82,6 +92,10 @@ export const CheckInView: React.FC<CheckInViewProps> = ({
     if (matched) {
       setLinkedOrder(matched);
       if (matched.supplier) setVendor(matched.supplier);
+
+      if (matched.branch && matched.branch !== 'All') {
+        setBranch(matched.branch);
+      }
 
       // Calculate pre-tax subtotal based on leftover/remaining unfulfilled quantities
       const subtotal =
@@ -194,6 +208,7 @@ export const CheckInView: React.FC<CheckInViewProps> = ({
     setVendor('');
     setInvoiceNumber('');
     setInvoiceDate('');
+    setBranch(activeBranch && activeBranch !== 'All' ? activeBranch : 'Delhi');
     setTaxableAmount('');
     setTaxSlab('');
     setTaxOption('IGST');
@@ -222,6 +237,7 @@ export const CheckInView: React.FC<CheckInViewProps> = ({
         taxAmount: calculatedTax,
         amount: calculatedTotal,
         poNumber,
+        branch,
         bankLast4,
         description,
         invoiceImage: imageUrls[0] || null,
@@ -253,6 +269,7 @@ export const CheckInView: React.FC<CheckInViewProps> = ({
         taxAmount: calculatedTax,
         amount: calculatedTotal,
         poNumber,
+        branch,
         bankLast4,
         description,
         invoiceImage: imageUrls[0] || null,
@@ -275,7 +292,7 @@ export const CheckInView: React.FC<CheckInViewProps> = ({
               amount: item.price,
               supplier: vendor,
               invoiceNumber,
-              branch: item.branch,
+              branch: item.branch || branch,
             }
           );
         }
@@ -355,7 +372,8 @@ export const CheckInView: React.FC<CheckInViewProps> = ({
 
         <CardContent className="pt-6">
           <form onSubmit={handleFormSubmit} className="space-y-5">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            {/* Row 1: Vendor, Invoice Number, Invoice Date, Branch */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -413,6 +431,25 @@ export const CheckInView: React.FC<CheckInViewProps> = ({
                   onChange={(e) => setInvoiceDate(e.target.value)}
                   className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 dark:border-gray-600 dark:bg-gray-900/90 cursor-pointer"
                 />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  <MapPin className="h-3.5 w-3.5 text-primary" /> Branch / Location <span className="text-destructive">*</span>
+                </label>
+                <select
+                  required
+                  disabled={disabled}
+                  value={branch}
+                  onChange={(e) => setBranch(e.target.value)}
+                  className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 dark:border-gray-600 dark:bg-gray-900/90 font-bold text-foreground cursor-pointer"
+                >
+                  {BRANCHES.map((b) => (
+                    <option key={b} value={b}>
+                      🏢 {b} Branch
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
 
@@ -727,6 +764,7 @@ export const CheckInView: React.FC<CheckInViewProps> = ({
           invoiceDate,
           totalAmount: calculatedTotal,
           poNumber,
+          branch,
           linkedOrder,
         }}
         onSubmitInvoiceOnly={handleCreateInvoiceOnly}
