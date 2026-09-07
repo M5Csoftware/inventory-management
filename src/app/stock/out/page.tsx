@@ -24,6 +24,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { toast } from "react-toastify";
 import { useInventory, Product } from "@/context/inventory-context";
 import { ConfirmModal } from "@/components/confirm-modal";
 
@@ -116,7 +117,10 @@ export default function StockOutPage() {
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!productId || !quantity || !reason) return;
+    if (!productId || !quantity || !reason) {
+      toast.error('Please fill in all required fields (Product, Quantity, Reason/Department).');
+      return;
+    }
     setShowConfirmModal(true);
   };
 
