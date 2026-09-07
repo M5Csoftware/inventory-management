@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { toast } from "react-toastify";
 import { saveAs } from "file-saver";
 import * as XLSX from "xlsx";
@@ -412,6 +412,20 @@ export default function MonthlyStockReportPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const totals = useMemo(() => {
+    return monthlyData.reduce(
+      (acc, curr) => {
+        acc.openingStock += curr.openingStock || 0;
+        acc.purchaseValue += curr.purchaseValue || 0;
+        acc.stockIn += curr.stockIn || 0;
+        acc.stockOut += curr.stockOut || 0;
+        acc.closingStock += curr.closingStock || 0;
+        return acc;
+      },
+      { openingStock: 0, purchaseValue: 0, stockIn: 0, stockOut: 0, closingStock: 0 }
+    );
+  }, [monthlyData]);
+
   const exportMonthlyToExcel = () => {
     if (!monthlyData.length) {
       toast.info("No monthly stock data to export");
@@ -441,6 +455,7 @@ export default function MonthlyStockReportPage() {
     const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" });
     const blob = new Blob([wbout], { type: "application/octet-stream" });
     saveAs(blob, `monthly_stock_report_${monthLabel}_${selectedYear}.xlsx`);
+    toast.success("Monthly stock report exported to Excel successfully!");
   };
 
   return (
@@ -659,42 +674,20 @@ export default function MonthlyStockReportPage() {
                     <td className="p-3">-</td>
                     <td className="p-3">-</td>
                     <td className="p-3 text-right text-foreground font-bold">
-                      {monthlyData
-                        .reduce(
-                          (acc, curr) => acc + (curr.openingStock || 0),
-                          0,
-                        )
-                        .toLocaleString()}
+                      {totals.openingStock.toLocaleString()}
                     </td>
                     <td className="p-3 text-right">-</td>
                     <td className="p-3 text-right font-mono text-foreground font-bold">
-                      ₹
-                      {monthlyData
-                        .reduce(
-                          (acc, curr) => acc + (curr.purchaseValue || 0),
-                          0,
-                        )
-                        .toLocaleString("en-IN")}
+                      ₹{totals.purchaseValue.toLocaleString("en-IN")}
                     </td>
                     <td className="p-3 text-right text-emerald-500 font-bold">
-                      +
-                      {monthlyData
-                        .reduce((acc, curr) => acc + (curr.stockIn || 0), 0)
-                        .toLocaleString()}
+                      +{totals.stockIn.toLocaleString()}
                     </td>
                     <td className="p-3 text-right text-amber-500 font-bold">
-                      -
-                      {monthlyData
-                        .reduce((acc, curr) => acc + (curr.stockOut || 0), 0)
-                        .toLocaleString()}
+                      -{totals.stockOut.toLocaleString()}
                     </td>
                     <td className="p-3 text-right text-primary font-bold">
-                      {monthlyData
-                        .reduce(
-                          (acc, curr) => acc + (curr.closingStock || 0),
-                          0,
-                        )
-                        .toLocaleString()}
+                      {totals.closingStock.toLocaleString()}
                     </td>
                     <td className="p-3 text-center">-</td>
                   </tr>
