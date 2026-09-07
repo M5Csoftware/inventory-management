@@ -113,7 +113,6 @@ export default function EditOrderPage() {
         totalAmount,
         status
       });
-      toast.success('Order updated successfully!');
       setShowConfirmModal(false);
       router.push('/orders');
     } catch (err) {
