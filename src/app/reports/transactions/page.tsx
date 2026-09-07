@@ -173,6 +173,7 @@ export default function TransactionsReportPage() {
       blob,
       `transaction_report_${new Date().toISOString().slice(0, 10)}.xlsx`
     );
+    toast.success("Transaction history exported to Excel successfully!");
   };
 
   return (
