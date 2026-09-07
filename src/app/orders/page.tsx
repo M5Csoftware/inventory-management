@@ -264,6 +264,7 @@ export default function OrdersPage() {
     doc.text("Thank you for your business.", 105, 280, { align: "center" });
 
     doc.save(`PO_${order.id}.pdf`);
+    toast.success(`Purchase order PDF for ${order.id} downloaded successfully!`);
   };
 
   return (
