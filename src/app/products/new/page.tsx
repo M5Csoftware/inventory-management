@@ -388,8 +388,8 @@ export default function NewProductPage() {
                   />
                 </div>
 
-                {/* Suppliers & Rates Section (Hidden for Fixed Assets) */}
-                {!isAssetCategory && (
+                {/* Suppliers & Rates Section */}
+                <>
                   <div className="rounded-lg bg-muted/30 p-3 sm:p-4 space-y-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
@@ -476,7 +476,7 @@ export default function NewProductPage() {
                       ))}
                     </div>
                   </div>
-                )}
+                </>
 
                 {/* Packaging & Stock Info */}
                 {isAssetCategory ? (

@@ -48,7 +48,7 @@ export interface AssetModelGroup {
 }
 
 export default function StockInAssetsPage() {
-  const { products, categories, suppliers, recordTransaction, activeBranch } =
+  const { products, categories, recordTransaction, activeBranch } =
     useInventory();
   const router = useRouter();
 
@@ -57,8 +57,6 @@ export default function StockInAssetsPage() {
   const [targetBranch, setTargetBranch] = useState(() =>
     activeBranch === "All" ? "Ahmedabad" : activeBranch,
   );
-  const [supplier, setSupplier] = useState("");
-  const [customSupplier, setCustomSupplier] = useState("");
   const [invoiceNumber, setInvoiceNumber] = useState("");
   const [location, setLocation] = useState("Warehouse A (Zone 1)");
   const [notes, setNotes] = useState("");
@@ -115,13 +113,6 @@ export default function StockInAssetsPage() {
       setProductId(assetProducts[0].id);
     }
   }, [assetProducts, productId]);
-
-  // Set default supplier selection
-  useEffect(() => {
-    if (suppliers.length > 0 && !supplier) {
-      setSupplier(suppliers[0].name);
-    }
-  }, [suppliers, supplier]);
 
   // Auto-fill price in model group 1 if selectedProduct price exists
   useEffect(() => {
@@ -245,9 +236,6 @@ export default function StockInAssetsPage() {
     submittingRef.current = true;
     setIsSubmitting(true);
 
-    const finalSupplier =
-      supplier === "CUSTOM_SUPPLIER" ? customSupplier : supplier;
-
     // Use targetBranch for the transaction
     const branchToUse = targetBranch || activeBranch || "Delhi";
 
@@ -288,7 +276,6 @@ export default function StockInAssetsPage() {
             ? `S/Ns (${serialsList.length}): ${serialsList.join(", ")}`
             : "",
           invoiceNumber ? `Invoice: ${invoiceNumber}` : "",
-          finalSupplier ? `Supplier: ${finalSupplier}` : "",
           notes ? `Notes: ${notes}` : "",
         ].filter(Boolean);
 
@@ -303,7 +290,6 @@ export default function StockInAssetsPage() {
           fullNotes,
           {
             amount: parseFloat(group.amount) || 0,
-            supplier: finalSupplier,
             invoiceNumber,
             model: group.model,
             serialNumber: serialsList.join(", "),
@@ -340,7 +326,6 @@ export default function StockInAssetsPage() {
                   warranty: warrantyString,
                   purchaseDate: new Date().toISOString().slice(0, 10),
                   invoiceNumber: invoiceNumber || "",
-                  supplier: finalSupplier || "",
                   branch: branchToUse,
                   amount: parseFloat(group.amount) || 0,
                   status: "In Stock",
@@ -434,7 +419,7 @@ export default function StockInAssetsPage() {
                       General Shipment & Vendor Setup
                     </CardTitle>
                     <CardDescription className="text-xs mt-0.5">
-                      Select item type, supplier, invoice reference, and
+                      Select item type, invoice reference, and
                       warehouse storage location
                     </CardDescription>
                   </div>
@@ -923,12 +908,6 @@ export default function StockInAssetsPage() {
               <span className="text-muted-foreground">Facility / Branch:</span>
               <span className="font-semibold text-foreground">{targetBranch}</span>
             </div>
-            {supplier && (
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">Supplier:</span>
-                <span className="text-foreground">{supplier === "CUSTOM_SUPPLIER" ? customSupplier : supplier}</span>
-              </div>
-            )}
             <div className="flex justify-between items-center pt-1 border-t border-border/40 font-semibold">
               <span className="text-muted-foreground">Total Batch Valuation:</span>
               <span className="font-mono text-foreground">₹{totalValuation.toLocaleString("en-IN")}</span>
