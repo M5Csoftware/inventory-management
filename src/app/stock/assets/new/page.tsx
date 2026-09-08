@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useInventory, Product, ASSET_DEPARTMENTS, ASSET_APPROVED_BY, BRANCHES } from '@/context/inventory-context';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { toast } from 'react-toastify';
 import { ArrowLeft, Laptop, User, FileText, Package, ShieldCheck, Building2, CheckCircle2 } from 'lucide-react';
 import { ConfirmModal } from '@/components/confirm-modal';
 
@@ -85,7 +86,10 @@ export default function NewAssetAssignmentPage() {
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!productId || !assignedTo || !quantity) return;
+    if (!productId || !assignedTo.trim() || !quantity) {
+      toast.error('Please fill in all required fields (Asset Product, Employee Name, Quantity).');
+      return;
+    }
     setShowConfirmModal(true);
   };
 

@@ -52,7 +52,15 @@ export default function RootLayout({
                       </main>
                     </div>
                   </div>
-                  <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} theme="dark" />
+                  <ToastContainer
+                    position="top-right"
+                    autoClose={3000}
+                    hideProgressBar={false}
+                    newestOnTop
+                    closeOnClick
+                    pauseOnHover
+                    theme="colored"
+                  />
                 </TabProvider>
               </InvoiceProvider>
             </InventoryProvider>

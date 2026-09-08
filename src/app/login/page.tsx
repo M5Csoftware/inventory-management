@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/inventory";
 
+import { toast } from "react-toastify";
 import { useAuth } from "@/context/auth-context";
 
 export default function LoginPage() {
@@ -47,13 +48,18 @@ export default function LoginPage() {
       const result = await res.json();
 
       if (!result.success) {
-        setError(result.message || "Login failed");
+        const msg = result.message || "Login failed";
+        setError(msg);
+        toast.error(msg);
         return;
       }
 
+      toast.success(`Welcome back, ${result.data.user?.name || "User"}!`);
       login(result.data.token, result.data.user);
     } catch (err) {
-      setError("Something went wrong. Please try again.");
+      const msg = "Something went wrong. Please try again.";
+      setError(msg);
+      toast.error(msg);
     } finally {
       submittingRef.current = false;
       setLoading(false);

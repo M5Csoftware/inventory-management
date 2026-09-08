@@ -58,7 +58,10 @@ export default function StockTransferPage() {
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!productId || !quantity || !destinationBranch) return;
+    if (!productId || !quantity || !destinationBranch) {
+      toast.error('Please fill in all required fields (Product, Transfer Quantity, Destination Branch).');
+      return;
+    }
 
     if (activeBranch === 'All') {
       toast.error('Please select a specific branch from the sidebar before transferring stock.');

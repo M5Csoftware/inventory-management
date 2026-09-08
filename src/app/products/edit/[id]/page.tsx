@@ -27,6 +27,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { toast } from "react-toastify";
 import { useInventory, Category, Supplier, Product, ProductSupplierEntry, BRANCHES } from '@/context/inventory-context';
 import { ConfirmModal } from '@/components/confirm-modal';
 
@@ -159,8 +160,14 @@ export default function EditProductPage() {
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!product || !name || !category) return;
-    if (!isAssetCategory && !stock) return;
+    if (!product || !name.trim() || !category) {
+      toast.error('Please enter a product name and select a category.');
+      return;
+    }
+    if (!isAssetCategory && !stock) {
+      toast.error('Please specify the product stock quantity.');
+      return;
+    }
     setShowConfirmModal(true);
   };
 

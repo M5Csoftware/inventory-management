@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Invoice, AppConfig, BankDetails, TaxOption, TeamMember, Flag, Role } from '@/types/invoice';
 import { invoiceService } from '@/services/invoice-service';
 import { useAuth } from '@/context/auth-context';
@@ -15,7 +15,7 @@ interface InvoiceContextType {
   config: AppConfig;
   team: TeamMember[];
   loading: boolean;
-  refreshInvoices: () => Promise<void>;
+  refreshInvoices: (forceRefresh?: boolean | unknown) => Promise<void>;
   saveConfig: (newConfig: AppConfig) => Promise<void>;
   createInvoice: (data: {
     vendor: string;
@@ -58,20 +58,21 @@ export function InvoiceProvider({ children }: { children: React.ReactNode }) {
   const [team, setTeam] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const currentSessionUser: TeamMember = {
+  const currentSessionUser: TeamMember = useMemo(() => ({
     id: user?.id || 'mem_admin',
     name: user?.name || 'Admin',
     username: user?.email ? user.email.split('@')[0] : 'admin',
     password: '',
     role: user?.role === 'master' ? 'Master Admin' : user?.role === 'admin' ? 'Admin' : 'User',
-  };
+  }), [user]);
 
-  const refreshInvoices = async () => {
+  const refreshInvoices = useCallback(async (forceRefresh?: boolean | unknown) => {
+    const isForce = typeof forceRefresh === 'boolean' ? forceRefresh : false;
     setLoading(true);
     try {
       const [fetchedInvoices, fetchedConfig] = await Promise.all([
-        invoiceService.getInvoices(),
-        invoiceService.getConfig(),
+        invoiceService.getInvoices(undefined, isForce),
+        invoiceService.getConfig(isForce),
       ]);
       setInvoices(fetchedInvoices);
       setConfig(fetchedConfig);
@@ -81,78 +82,80 @@ export function InvoiceProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentSessionUser]);
 
   useEffect(() => {
     refreshInvoices();
-  }, []);
+  }, [refreshInvoices]);
 
   const saveConfig = async (newConfig: AppConfig) => {
     setConfig(newConfig);
     await invoiceService.saveConfig(newConfig);
+    toast.success('System settings saved successfully.');
   };
 
-  // Exact Fraud-flag computation logic from App.tsx
+  // Exact Fraud-flag computation logic
   const computeFlags = (inv: Omit<Invoice, 'flags'>, allInvoices: Invoice[]): Flag[] => {
     const flags: Flag[] = [];
     const sameVendor = allInvoices.filter(
       (i) => i.vendor.trim().toLowerCase() === inv.vendor.trim().toLowerCase()
     );
 
-    const exactDup = sameVendor.find(
-      (i) => i.invoiceNumber.trim().toLowerCase() === inv.invoiceNumber.trim().toLowerCase()
+    // Flag: Exact Duplicate Invoice Number from the same Vendor
+    const exactDuplicate = sameVendor.some(
+      (i) =>
+        i.invoiceNumber.trim().toLowerCase() === inv.invoiceNumber.trim().toLowerCase() &&
+        i.id !== inv.id
     );
-    if (exactDup) {
+    if (exactDuplicate) {
       flags.push({
         level: 'high',
-        text: 'Same invoice number already exists for this vendor — possible resubmission',
+        text: `Invoice number "${inv.invoiceNumber}" was previously submitted for vendor "${inv.vendor}".`,
       });
     }
 
-    if (!exactDup) {
-      const closeDup = sameVendor.find((i) => {
-        return (
-          Math.abs(i.amount - inv.amount) < 0.01 &&
-          Math.abs(new Date(i.invoiceDate).getTime() - new Date(inv.invoiceDate).getTime()) < 3 * 86400000
-        );
+    // Flag: Duplicate Amount within 7 days from same Vendor
+    const invTime = new Date(inv.invoiceDate).getTime();
+    if (!isNaN(invTime)) {
+      const sameAmountRecent = sameVendor.some((i) => {
+        if (i.id === inv.id) return false;
+        if (Math.abs(i.amount - inv.amount) < 0.01) {
+          const pastTime = new Date(i.invoiceDate).getTime();
+          if (!isNaN(pastTime)) {
+            const diffDays = Math.abs(invTime - pastTime) / (1000 * 60 * 60 * 24);
+            return diffDays <= 7;
+          }
+        }
+        return false;
       });
-      if (closeDup) {
+      if (sameAmountRecent) {
         flags.push({
           level: 'medium',
-          text: 'Same vendor billed the same amount within 3 days — check for duplicate payment',
+          text: `Identical amount ₹${inv.amount.toLocaleString('en-IN')} billed by ${inv.vendor} within 7 days.`,
         });
       }
     }
 
-    if (config.threshold > 0 && inv.amount < config.threshold && inv.amount >= config.threshold * 0.9) {
-      flags.push({
-        level: 'medium',
-        text: 'Amount sits just under the second-approval threshold — verify it is not split to dodge review',
-      });
-    }
-
-    if (inv.amount > 0 && inv.amount % 1000 === 0) {
+    // Flag: High Value Threshold
+    if (inv.amount > config.threshold) {
       flags.push({
         level: 'low',
-        text: 'Round-number amount — flagged for awareness only',
+        text: `Amount exceeds the ₹${config.threshold.toLocaleString('en-IN')} second-approval threshold.`,
       });
     }
 
-    if (sameVendor.length === 0) {
-      flags.push({
-        level: 'low',
-        text: 'First invoice on record from this vendor — confirm vendor details before paying',
-      });
-    }
-
+    // Flag: New Bank Account
     if (inv.bankLast4) {
-      const priorWithBank = sameVendor
-        .filter((i) => i.bankLast4)
-        .sort((a, b) => new Date(b.invoiceDate).getTime() - new Date(a.invoiceDate).getTime())[0];
-      if (priorWithBank && priorWithBank.bankLast4 !== inv.bankLast4) {
+      const pastAccounts = new Set(
+        sameVendor
+          .map((i) => i.bankLast4)
+          .filter((acc): acc is string => Boolean(acc) && acc.trim().length > 0)
+      );
+
+      if (pastAccounts.size > 0 && !pastAccounts.has(inv.bankLast4)) {
         flags.push({
           level: 'high',
-          text: "Bank account details differ from this vendor's last invoice — verify directly with the vendor before paying",
+          text: `Bank account ending in ${inv.bankLast4} is different from previously recorded account(s) for ${inv.vendor}.`,
         });
       }
     }
@@ -168,7 +171,7 @@ export function InvoiceProvider({ children }: { children: React.ReactNode }) {
     fallback: T,
   ): Promise<T> => {
     if (inFlightLocks.current.has(key)) {
-      console.warn(`[Invoice Lock] Blocked duplicate concurrent action: ${key}`);
+      console.warn(`[Double-Click Prevention] Blocked duplicate action: ${key}`);
       return fallback;
     }
     inFlightLocks.current.add(key);
@@ -197,46 +200,63 @@ export function InvoiceProvider({ children }: { children: React.ReactNode }) {
     invoiceImages?: string[];
     branch?: string;
   }): Promise<boolean> => {
-    const lockKey = `create-inv-${formData.vendor}-${formData.invoiceNumber}`;
+    const lockKey = `create-inv-${formData.vendor}-${formData.invoiceNumber}-${formData.amount}`;
+
     return withLock(
       lockKey,
       async () => {
-        const imagesList = formData.invoiceImages && formData.invoiceImages.length > 0
-          ? formData.invoiceImages
-          : (formData.invoiceImage ? [formData.invoiceImage] : []);
+        const id = uid('inv');
+        const calculatedFlags = computeFlags(
+          {
+            id,
+            vendor: formData.vendor,
+            invoiceNumber: formData.invoiceNumber,
+            invoiceDate: formData.invoiceDate,
+            taxableAmount: formData.taxableAmount,
+            taxSlab: formData.taxSlab,
+            taxOption: formData.taxOption,
+            taxAmount: formData.taxAmount,
+            amount: formData.amount,
+            status: 'pending_verification',
+            poNumber: formData.poNumber,
+            bankLast4: formData.bankLast4,
+            description: formData.description,
+            invoiceImage: formData.invoiceImage,
+            invoiceImages: formData.invoiceImages || (formData.invoiceImage ? [formData.invoiceImage] : []),
+            branch: formData.branch || 'Delhi',
+            enteredAt: Date.now(),
+            enteredBy: currentSessionUser.name,
+            approvals: [],
+            history: [],
+          },
+          invoices
+        );
 
-        const invoiceBranch = formData.branch || (user?.branch && user.branch !== 'All' ? user.branch : 'Delhi');
+        let flagsNote = 'Invoice intake registered.';
+        if (calculatedFlags.length > 0) {
+          flagsNote = `Flags noted on check-in: ${calculatedFlags.map((f) => f.text).join('; ')}`;
+        }
 
-        const partialInv = {
-          id: uid('inv'),
-          vendor: formData.vendor.trim(),
-          invoiceNumber: formData.invoiceNumber.trim(),
+        const newInvoice: Invoice = {
+          id,
+          vendor: formData.vendor,
+          invoiceNumber: formData.invoiceNumber,
           invoiceDate: formData.invoiceDate,
           taxableAmount: formData.taxableAmount,
-          taxSlab: formData.taxSlab !== undefined ? formData.taxSlab : (formData.taxAmount > 0 && formData.taxableAmount > 0 ? Math.round((formData.taxAmount / formData.taxableAmount) * 100) : 0),
+          taxSlab: formData.taxSlab,
           taxOption: formData.taxOption,
           taxAmount: formData.taxAmount,
           amount: formData.amount,
-          poNumber: formData.poNumber.trim(),
-          bankLast4: formData.bankLast4.trim(),
-          description: formData.description.trim(),
-          invoiceImage: imagesList.length > 0 ? imagesList[0] : (formData.invoiceImage || null),
-          invoiceImages: imagesList,
-          enteredBy: currentSessionUser.id,
+          status: 'pending_verification',
+          poNumber: formData.poNumber,
+          bankLast4: formData.bankLast4,
+          description: formData.description,
+          invoiceImage: formData.invoiceImage,
+          invoiceImages: formData.invoiceImages || (formData.invoiceImage ? [formData.invoiceImage] : []),
+          branch: formData.branch || 'Delhi',
           enteredAt: Date.now(),
-          status: 'pending_verification' as const,
+          enteredBy: currentSessionUser.name,
           approvals: [],
-          history: [],
-          branch: invoiceBranch,
-        };
-
-        const calculatedFlags = computeFlags(partialInv as Omit<Invoice, 'flags'>, invoices);
-        const flagsNote = calculatedFlags.length
-          ? `Flags at entry: ${calculatedFlags.map((f) => f.text).join('; ')}`
-          : '';
-
-        const newInvoice: Invoice = {
-          ...partialInv,
           flags: calculatedFlags,
           history: [
             {
@@ -253,7 +273,7 @@ export function InvoiceProvider({ children }: { children: React.ReactNode }) {
         const saved = await invoiceService.addInvoice(newInvoice);
         if (saved) {
           toast.success(`Invoice ${formData.invoiceNumber} checked in successfully!`);
-          await refreshInvoices();
+          await refreshInvoices(true);
           return true;
         }
         toast.error('Failed to check in invoice.');
@@ -288,7 +308,7 @@ export function InvoiceProvider({ children }: { children: React.ReactNode }) {
 
         if (updated) {
           toast.success(`Invoice verified successfully!`);
-          await refreshInvoices();
+          await refreshInvoices(true);
           return true;
         }
         return false;
@@ -326,7 +346,7 @@ export function InvoiceProvider({ children }: { children: React.ReactNode }) {
 
         if (updated) {
           toast.success(`Invoice approved!`);
-          await refreshInvoices();
+          await refreshInvoices(true);
           return true;
         }
         return false;
@@ -358,8 +378,8 @@ export function InvoiceProvider({ children }: { children: React.ReactNode }) {
         });
 
         if (updated) {
-          toast.error(`Invoice rejected.`);
-          await refreshInvoices();
+          toast.warn(`Invoice rejected and status updated.`);
+          await refreshInvoices(true);
           return true;
         }
         return false;
@@ -392,7 +412,7 @@ export function InvoiceProvider({ children }: { children: React.ReactNode }) {
 
         if (updated) {
           toast.success(`Invoice marked as paid!`);
-          await refreshInvoices();
+          await refreshInvoices(true);
           return true;
         }
         return false;
@@ -444,7 +464,7 @@ export function InvoiceProvider({ children }: { children: React.ReactNode }) {
 
         if (updated) {
           toast.success(`Bank details updated!`);
-          await refreshInvoices();
+          await refreshInvoices(true);
           return true;
         }
         return false;
@@ -477,7 +497,7 @@ export function InvoiceProvider({ children }: { children: React.ReactNode }) {
 
         if (updated) {
           toast.success(`Branch updated to ${branch}!`);
-          await refreshInvoices();
+          await refreshInvoices(true);
           return true;
         }
         return false;
@@ -495,39 +515,42 @@ export function InvoiceProvider({ children }: { children: React.ReactNode }) {
       role,
     };
     setTeam((prev) => [...prev, newMember]);
+    toast.success(`Team member ${name} added successfully!`);
   };
 
   const removeTeamMember = async (id: string) => {
     setTeam((prev) => prev.filter((m) => m.id !== id));
+    toast.success('Team member removed.');
   };
 
   const editTeamMember = async (id: string, name: string, username: string, password: string, role: Role) => {
     setTeam((prev) =>
       prev.map((m) => (m.id === id ? { ...m, name, username, password, role } : m))
     );
+    toast.success(`Team member ${name} updated successfully!`);
   };
 
+  const contextValue = useMemo(() => ({
+    invoices,
+    config,
+    team,
+    loading,
+    refreshInvoices,
+    saveConfig,
+    createInvoice,
+    verifyInvoice,
+    approveInvoice,
+    rejectInvoice,
+    payInvoice,
+    updateBankDetails,
+    updateInvoiceBranch,
+    addTeamMember,
+    removeTeamMember,
+    editTeamMember,
+  }), [invoices, config, team, loading]);
+
   return (
-    <InvoiceContext.Provider
-      value={{
-        invoices,
-        config,
-        team,
-        loading,
-        refreshInvoices,
-        saveConfig,
-        createInvoice,
-        verifyInvoice,
-        approveInvoice,
-        rejectInvoice,
-        payInvoice,
-        updateBankDetails,
-        updateInvoiceBranch,
-        addTeamMember,
-        removeTeamMember,
-        editTeamMember,
-      }}
-    >
+    <InvoiceContext.Provider value={contextValue}>
       {children}
     </InvoiceContext.Provider>
   );

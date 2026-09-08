@@ -319,9 +319,9 @@ export default function StockInAssetsPage() {
         // Save each serial number to AssetSerial collection
         if (serialsList.length > 0) {
           const API_BASE =
-            process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+            process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/inventory";
           const token = localStorage.getItem("token");
-          const dbName = localStorage.getItem("dbName");
+          const dbName = localStorage.getItem("dbName") || "m5c-inventory";
 
           for (const serial of serialsList) {
             try {
@@ -329,8 +329,8 @@ export default function StockInAssetsPage() {
                 method: "POST",
                 headers: {
                   "Content-Type": "application/json",
+                  "x-database": dbName,
                   ...(token ? { Authorization: `Bearer ${token}` } : {}),
-                  ...(dbName ? { "x-database": dbName } : {}),
                 },
                 body: JSON.stringify({
                   productId: productId,

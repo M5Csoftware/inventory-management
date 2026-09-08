@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Package, Truck, AlertCircle, IndianRupee, ShoppingCart } from 'lucide-react';
@@ -27,59 +27,65 @@ export default function Dashboard() {
   const [monthlyTimeframe, setMonthlyTimeframe] = useState<'current_month' | 'last_month' | 'last_6_months'>('last_6_months');
   const [selectedMonthlyProductId, setSelectedMonthlyProductId] = useState<string>('All');
 
-  const getStock = (p: any) => {
+  const getStock = useCallback((p: any) => {
     if (!p.stock) return 0;
     if (typeof p.stock === 'number') return p.stock;
     if (activeBranch === 'All') {
       return Object.values(p.stock as Record<string, number>).reduce((acc, curr) => acc + (curr || 0), 0);
     }
     return (p.stock as Record<string, number>)[activeBranch] || 0;
-  };
+  }, [activeBranch]);
 
   // Metrics
-  const totalProducts = products.length;
-  const totalStockUnits = products.reduce((acc, curr) => acc + getStock(curr), 0);
-  const lowStockAlerts = products.filter((p) => getStock(p) <= p.threshold).length;
-  const totalInventoryValue = products.reduce((acc, curr) => acc + (getStock(curr) * curr.price), 0);
-  const activeOrdersCount = orders ? orders.filter(o => o.status === 'Pending' || o.status === 'Processing').length : 0;
+  const { totalProducts, totalStockUnits, lowStockAlerts, totalInventoryValue, activeOrdersCount } = useMemo(() => {
+    const totalProducts = products.length;
+    const totalStockUnits = products.reduce((acc, curr) => acc + getStock(curr), 0);
+    const lowStockAlerts = products.filter((p) => getStock(p) <= p.threshold).length;
+    const totalInventoryValue = products.reduce((acc, curr) => acc + (getStock(curr) * curr.price), 0);
+    const activeOrdersCount = orders ? orders.filter(o => o.status === 'Pending' || o.status === 'Processing').length : 0;
+    return { totalProducts, totalStockUnits, lowStockAlerts, totalInventoryValue, activeOrdersCount };
+  }, [products, orders, getStock]);
 
   // Category Distribution (Value)
-  const categoryData = categories.map((cat) => {
-    const value = products
-      .filter((p) => (p.category || '').toLowerCase() === (cat.name || '').toLowerCase())
-      .reduce((acc, p) => acc + (getStock(p) * (p.price || 0)), 0);
-    return { name: cat.name || 'Unknown', value };
-  }).filter(c => c.value > 0);
+  const categoryData = useMemo(() => {
+    return categories.map((cat) => {
+      const value = products
+        .filter((p) => (p.category || '').toLowerCase() === (cat.name || '').toLowerCase())
+        .reduce((acc, p) => acc + (getStock(p) * (p.price || 0)), 0);
+      return { name: cat.name || 'Unknown', value };
+    }).filter(c => c.value > 0);
+  }, [categories, products, getStock]);
 
   const COLORS = ['#8b5cf6', '#3b82f6', '#10b981', '#f59e0b', '#ec4899', '#6366f1'];
 
   // Stock Movement Data (Grouped by Date)
-  const transactionsByDate = transactions.reduce((acc: any, curr) => {
-    const date = curr.date.split(' ')[0]; // yyyy-mm-dd
-    if (!acc[date]) {
-      acc[date] = { date, 'Stock In': 0, 'Stock Out': 0 };
-    }
-    if (curr.type === 'Stock In') {
-      acc[date]['Stock In'] += curr.quantity;
-    } else {
-      acc[date]['Stock Out'] += curr.quantity;
-    }
-    return acc;
-  }, {});
-  
-  // Generate last N days array
-  const lastNDays = Array.from({ length: stockFlowDays }).map((_, i) => {
-    const d = new Date();
-    d.setDate(d.getDate() - ((stockFlowDays - 1) - i));
-    return d.toISOString().split('T')[0];
-  });
+  const movementData = useMemo(() => {
+    const transactionsByDate = transactions.reduce((acc: any, curr) => {
+      const date = curr.date.split(' ')[0]; // yyyy-mm-dd
+      if (!acc[date]) {
+        acc[date] = { date, 'Stock In': 0, 'Stock Out': 0 };
+      }
+      if (curr.type === 'Stock In') {
+        acc[date]['Stock In'] += curr.quantity;
+      } else {
+        acc[date]['Stock Out'] += curr.quantity;
+      }
+      return acc;
+    }, {});
 
-  const movementData = lastNDays.map(date => {
-    return transactionsByDate[date] || { date, 'Stock In': 0, 'Stock Out': 0 };
-  });
+    const lastNDays = Array.from({ length: stockFlowDays }).map((_, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() - ((stockFlowDays - 1) - i));
+      return d.toISOString().split('T')[0];
+    });
+
+    return lastNDays.map(date => {
+      return transactionsByDate[date] || { date, 'Stock In': 0, 'Stock Out': 0 };
+    });
+  }, [transactions, stockFlowDays]);
 
   // Calculate Monthly Opening & Closing Stock Data (Start of month vs End of month)
-  const monthlyStockChartData = (() => {
+  const monthlyStockChartData = useMemo(() => {
     const data: { label: string; 'Opening Stock': number; 'Closing Stock': number; 'Stock In': number; 'Stock Out': number }[] = [];
     const now = new Date();
 
@@ -177,9 +183,9 @@ export default function Dashboard() {
     }
 
     return data;
-  })();
+  }, [selectedMonthlyProductId, products, transactions, monthlyTimeframe, getStock]);
 
-  const recentTransactions = transactions.slice(0, 5);
+  const recentTransactions = useMemo(() => transactions.slice(0, 5), [transactions]);
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8 animate-in fade-in duration-500">

@@ -293,7 +293,6 @@ export default function SupplierRatesPage() {
       }
 
       await updateProduct(targetProduct.id, updates);
-      toast.success(`Updated rate for ${editingRateItem.supplierName} to ₹${parsedRate.toLocaleString("en-IN")}`);
       setEditingRateItem(null);
       setShowRateConfirm(false);
     } catch (err) {

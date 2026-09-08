@@ -263,6 +263,10 @@ export function FolderAuditLogPage({
 
   // Export CSV
   const handleExportCSV = () => {
+    if (filteredLogs.length === 0) {
+      toast.warn('No audit logs available to export.');
+      return;
+    }
     const headers = [
       'Log ID',
       'Date & Time',
@@ -300,6 +304,7 @@ export function FolderAuditLogPage({
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    toast.success(`${category} audit log exported successfully!`);
   };
 
   return (

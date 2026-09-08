@@ -1,7 +1,11 @@
+import { toast } from 'react-toastify';
 import type { Invoice } from '@/types/invoice';
 
 export const exportInvoicesToCSV = (invoices: Invoice[], filename: string) => {
-  if (invoices.length === 0) return;
+  if (invoices.length === 0) {
+    toast.warn('No invoices available to export.');
+    return;
+  }
 
   const headers = [
     'Invoice Number',
@@ -36,4 +40,5 @@ export const exportInvoicesToCSV = (invoices: Invoice[], filename: string) => {
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
+  toast.success('Invoices exported to CSV successfully!');
 };

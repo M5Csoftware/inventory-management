@@ -30,6 +30,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { toast } from "react-toastify";
 import { useInventory, Product, Supplier, BRANCHES } from "@/context/inventory-context";
 import { ConfirmModal } from "@/components/confirm-modal";
 
@@ -160,7 +161,10 @@ export default function StockInPage() {
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!productId || !quantity || !location) return;
+    if (!productId || !quantity || !location) {
+      toast.error('Please fill in all required fields (Product, Quantity, Location/Storage Rack).');
+      return;
+    }
     setShowConfirmModal(true);
   };
 
