@@ -1,6 +1,13 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useRef, useMemo } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useRef,
+  useMemo,
+} from "react";
 import { toast } from "react-toastify";
 import { useAuth } from "./auth-context";
 import { getCachedAsync, invalidateCache } from "@/lib/cache";
@@ -64,6 +71,12 @@ export interface Supplier {
   branch?: string;
   taxId?: string;
   website?: string;
+  // Add bank details fields
+  bankName?: string;
+  bankAccountNo?: string;
+  bankIFSC?: string;
+  accountHolder?: string;
+  state?: string;
 }
 
 export interface OrderItem {
@@ -82,14 +95,10 @@ export interface Order {
   totalAmount: number;
   branch?: string;
   createdAt?: string;
+  termsAndConditions?: string;
+  description?: string; // Already added
 }
-
-export const BRANCHES = [
-  "Ahmedabad",
-  "Ludhiana",
-  "Delhi",
-  "Mumbai",
-] as const;
+export const BRANCHES = ["Ahmedabad", "Ludhiana", "Delhi", "Mumbai"] as const;
 
 export const ASSET_DEPARTMENTS = [
   "Operations",
@@ -197,8 +206,13 @@ export interface PhysicalVerificationItem {
   invoicedQuantity: number;
   physicalQuantity: number;
   variance: number;
-  status: 'Matched' | 'Shortage' | 'Excess';
-  condition: 'Good Condition' | 'Damaged' | 'Packaging Defect' | 'Seal Broken' | 'Other';
+  status: "Matched" | "Shortage" | "Excess";
+  condition:
+    | "Good Condition"
+    | "Damaged"
+    | "Packaging Defect"
+    | "Seal Broken"
+    | "Other";
   notes?: string;
 }
 
@@ -211,7 +225,7 @@ export interface PhysicalVerificationRecord {
   verifiedBy: string;
   verifiedAt: string;
   items: PhysicalVerificationItem[];
-  overallStatus: 'Matched' | 'Discrepancy';
+  overallStatus: "Matched" | "Discrepancy";
   generalNotes?: string;
   createdAt: string;
 }
@@ -226,7 +240,9 @@ interface InventoryContextType {
   orders: Order[];
   assets: AssetAssignment[];
   physicalVerifications: PhysicalVerificationRecord[];
-  addPhysicalVerification: (record: Omit<PhysicalVerificationRecord, 'id' | 'createdAt'>) => Promise<void>;
+  addPhysicalVerification: (
+    record: Omit<PhysicalVerificationRecord, "id" | "createdAt">,
+  ) => Promise<void>;
   deletePhysicalVerification: (id: string) => Promise<void>;
   addOrder: (order: Omit<Order, "id" | "createdAt">) => Promise<void>;
   updateOrder: (id: string, orderData: Partial<Order>) => Promise<void>;
@@ -270,14 +286,26 @@ interface InventoryContextType {
     >,
   ) => Promise<boolean>;
   returnAsset: (id: string) => Promise<boolean>;
-  updateAssetAssignment: (id: string, updates: Partial<AssetAssignment>) => Promise<boolean>;
+  updateAssetAssignment: (
+    id: string,
+    updates: Partial<AssetAssignment>,
+  ) => Promise<boolean>;
   deleteAssetAssignment: (id: string) => Promise<boolean>;
   assetSerials: AssetSerialItem[];
   fetchAssetSerials: (forceRefresh?: boolean) => Promise<void>;
-  addAssetSerial: (item: Omit<AssetSerialItem, "id" | "createdAt" | "updatedAt">) => Promise<boolean>;
-  updateAssetSerial: (id: string, updates: Partial<AssetSerialItem>) => Promise<boolean>;
+  addAssetSerial: (
+    item: Omit<AssetSerialItem, "id" | "createdAt" | "updatedAt">,
+  ) => Promise<boolean>;
+  updateAssetSerial: (
+    id: string,
+    updates: Partial<AssetSerialItem>,
+  ) => Promise<boolean>;
   deleteAssetSerial: (id: string) => Promise<boolean>;
-  revertAuditLog: (id: string, reason?: string, password?: string) => Promise<boolean>;
+  revertAuditLog: (
+    id: string,
+    reason?: string,
+    password?: string,
+  ) => Promise<boolean>;
 }
 
 const InventoryContext = createContext<InventoryContextType | undefined>(
@@ -288,7 +316,8 @@ const API_BASE =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/inventory";
 
 const getDbHeader = () => {
-  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+  const token =
+    typeof window !== "undefined" ? localStorage.getItem("token") : null;
   return {
     "x-database": "m5c-inventory",
     "Content-Type": "application/json",
@@ -297,36 +326,43 @@ const getDbHeader = () => {
 };
 
 const getNoBodyHeader = () => {
-  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+  const token =
+    typeof window !== "undefined" ? localStorage.getItem("token") : null;
   return {
     "x-database": "m5c-inventory",
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
 };
 
-const DB_HEADER = new Proxy({}, {
-  get(_, prop) {
-    return (getDbHeader() as any)[prop];
+const DB_HEADER = new Proxy(
+  {},
+  {
+    get(_, prop) {
+      return (getDbHeader() as any)[prop];
+    },
+    ownKeys() {
+      return Reflect.ownKeys(getDbHeader());
+    },
+    getOwnPropertyDescriptor(_, prop) {
+      return Reflect.getOwnPropertyDescriptor(getDbHeader(), prop);
+    },
   },
-  ownKeys() {
-    return Reflect.ownKeys(getDbHeader());
-  },
-  getOwnPropertyDescriptor(_, prop) {
-    return Reflect.getOwnPropertyDescriptor(getDbHeader(), prop);
-  },
-}) as Record<string, string>;
+) as Record<string, string>;
 
-const NO_BODY_HEADER = new Proxy({}, {
-  get(_, prop) {
-    return (getNoBodyHeader() as any)[prop];
+const NO_BODY_HEADER = new Proxy(
+  {},
+  {
+    get(_, prop) {
+      return (getNoBodyHeader() as any)[prop];
+    },
+    ownKeys() {
+      return Reflect.ownKeys(getNoBodyHeader());
+    },
+    getOwnPropertyDescriptor(_, prop) {
+      return Reflect.getOwnPropertyDescriptor(getNoBodyHeader(), prop);
+    },
   },
-  ownKeys() {
-    return Reflect.ownKeys(getNoBodyHeader());
-  },
-  getOwnPropertyDescriptor(_, prop) {
-    return Reflect.getOwnPropertyDescriptor(getNoBodyHeader(), prop);
-  },
-}) as Record<string, string>;
+) as Record<string, string>;
 
 export function InventoryProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
@@ -362,7 +398,9 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
       }
     } else {
       const savedBranch =
-        typeof window !== "undefined" ? localStorage.getItem("activeBranch") : null;
+        typeof window !== "undefined"
+          ? localStorage.getItem("activeBranch")
+          : null;
       if (savedBranch) {
         setActiveBranchState(savedBranch);
       } else if (user.branch) {
@@ -381,7 +419,9 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [assets, setAssets] = useState<AssetAssignment[]>([]);
   const [assetSerials, setAssetSerials] = useState<AssetSerialItem[]>([]);
-  const [physicalVerifications, setPhysicalVerifications] = useState<PhysicalVerificationRecord[]>([]);
+  const [physicalVerifications, setPhysicalVerifications] = useState<
+    PhysicalVerificationRecord[]
+  >([]);
 
   // Load physical verifications from localStorage on mount
   useEffect(() => {
@@ -418,7 +458,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
               if (!res.ok) return { success: false, data: [] };
               return await res.json();
             },
-            45000 // 45 seconds TTL
+            45000, // 45 seconds TTL
           );
         } catch {
           return { success: false, data: [] };
@@ -466,8 +506,12 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
       }
       if (asts?.success) {
         const sortedAsts = [...asts.data].sort((a, b) => {
-          const timeA = new Date(a.assignedDate || (a as any).createdAt || 0).getTime();
-          const timeB = new Date(b.assignedDate || (b as any).createdAt || 0).getTime();
+          const timeA = new Date(
+            a.assignedDate || (a as any).createdAt || 0,
+          ).getTime();
+          const timeB = new Date(
+            b.assignedDate || (b as any).createdAt || 0,
+          ).getTime();
           return timeB - timeA;
         });
         setAssets(sortedAsts);
@@ -1073,7 +1117,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
   };
 
   const addPhysicalVerification = async (
-    record: Omit<PhysicalVerificationRecord, "id" | "createdAt">
+    record: Omit<PhysicalVerificationRecord, "id" | "createdAt">,
   ) => {
     const newRecord: PhysicalVerificationRecord = {
       ...record,
@@ -1085,7 +1129,10 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
     setPhysicalVerifications(updated);
     if (typeof window !== "undefined") {
       try {
-        localStorage.setItem("physical_verifications_data", JSON.stringify(updated));
+        localStorage.setItem(
+          "physical_verifications_data",
+          JSON.stringify(updated),
+        );
       } catch (e) {
         console.error("Failed to save physical verification to storage:", e);
       }
@@ -1098,7 +1145,10 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
     setPhysicalVerifications(updated);
     if (typeof window !== "undefined") {
       try {
-        localStorage.setItem("physical_verifications_data", JSON.stringify(updated));
+        localStorage.setItem(
+          "physical_verifications_data",
+          JSON.stringify(updated),
+        );
       } catch (e) {
         console.error("Failed to update physical verification storage:", e);
       }
@@ -1106,7 +1156,10 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
     toast.success("Physical verification record removed.");
   };
 
-  const updateAssetAssignment = async (id: string, updates: Partial<AssetAssignment>): Promise<boolean> => {
+  const updateAssetAssignment = async (
+    id: string,
+    updates: Partial<AssetAssignment>,
+  ): Promise<boolean> => {
     try {
       const res = await fetch(`${API_BASE}/assets/${id}`, {
         method: "PUT",
@@ -1153,7 +1206,8 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
 
   const fetchAssetSerials = async (forceRefresh = false) => {
     try {
-      const branchQuery = activeBranch !== "All" ? `?branch=${activeBranch}` : "";
+      const branchQuery =
+        activeBranch !== "All" ? `?branch=${activeBranch}` : "";
       const url = `${API_BASE}/asset-serials${branchQuery}`;
       if (forceRefresh) invalidateCache(url);
       const data = await getCachedAsync(
@@ -1162,7 +1216,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
           const res = await fetch(url, { headers: getDbHeader() });
           return await res.json();
         },
-        45000
+        45000,
       );
       if (data?.success) {
         setAssetSerials(data.data || []);
@@ -1173,7 +1227,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
   };
 
   const addAssetSerial = async (
-    item: Omit<AssetSerialItem, "id" | "createdAt" | "updatedAt">
+    item: Omit<AssetSerialItem, "id" | "createdAt" | "updatedAt">,
   ): Promise<boolean> => {
     try {
       const res = await fetch(`${API_BASE}/asset-serials`, {
@@ -1199,7 +1253,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
 
   const updateAssetSerial = async (
     id: string,
-    updates: Partial<AssetSerialItem>
+    updates: Partial<AssetSerialItem>,
   ): Promise<boolean> => {
     try {
       const res = await fetch(`${API_BASE}/asset-serials/${id}`, {
@@ -1245,7 +1299,11 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const revertAuditLog = async (id: string, reason?: string, password?: string): Promise<boolean> => {
+  const revertAuditLog = async (
+    id: string,
+    reason?: string,
+    password?: string,
+  ): Promise<boolean> => {
     try {
       const res = await fetch(`${API_BASE}/audit-logs/${id}/revert`, {
         method: "POST",
@@ -1268,54 +1326,57 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const contextValue = useMemo(() => ({
-    activeBranch,
-    setActiveBranch,
-    products,
-    transactions,
-    categories,
-    suppliers,
-    orders,
-    physicalVerifications,
-    addPhysicalVerification,
-    deletePhysicalVerification,
-    addProduct,
-    addCategory,
-    addSupplier,
-    addOrder,
-    recordTransaction,
-    transferStock,
-    deleteProduct,
-    updateProduct,
-    updateCategory,
-    deleteCategory,
-    updateSupplier,
-    deleteSupplier,
-    updateOrder,
-    updateOrderStatus,
-    deleteOrder,
-    assets,
-    assignAsset,
-    returnAsset,
-    updateAssetAssignment,
-    deleteAssetAssignment,
-    assetSerials,
-    fetchAssetSerials,
-    addAssetSerial,
-    updateAssetSerial,
-    deleteAssetSerial,
-    revertAuditLog,
-  }), [
-    activeBranch,
-    products,
-    transactions,
-    categories,
-    suppliers,
-    orders,
-    physicalVerifications,
-    assets,
-    assetSerials,
-  ]);
+  const contextValue = useMemo(
+    () => ({
+      activeBranch,
+      setActiveBranch,
+      products,
+      transactions,
+      categories,
+      suppliers,
+      orders,
+      physicalVerifications,
+      addPhysicalVerification,
+      deletePhysicalVerification,
+      addProduct,
+      addCategory,
+      addSupplier,
+      addOrder,
+      recordTransaction,
+      transferStock,
+      deleteProduct,
+      updateProduct,
+      updateCategory,
+      deleteCategory,
+      updateSupplier,
+      deleteSupplier,
+      updateOrder,
+      updateOrderStatus,
+      deleteOrder,
+      assets,
+      assignAsset,
+      returnAsset,
+      updateAssetAssignment,
+      deleteAssetAssignment,
+      assetSerials,
+      fetchAssetSerials,
+      addAssetSerial,
+      updateAssetSerial,
+      deleteAssetSerial,
+      revertAuditLog,
+    }),
+    [
+      activeBranch,
+      products,
+      transactions,
+      categories,
+      suppliers,
+      orders,
+      physicalVerifications,
+      assets,
+      assetSerials,
+    ],
+  );
 
   return (
     <InventoryContext.Provider value={contextValue}>

@@ -15,7 +15,6 @@ import Link from "next/link";
 import {
   PlusCircle,
   Search,
-  MoreHorizontal,
   ShoppingCart,
   Download,
   MoreVertical,
@@ -31,7 +30,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -40,23 +38,46 @@ import { useAutoAnimate } from "@formkit/auto-animate/react";
 
 import { ConfirmDeleteModal, ConfirmModal } from "@/components/confirm-modal";
 
+// M5C Company details (Buyer)
+const M5C_DETAILS = {
+  name: "M5 CONTINENT LOGISTICS SOLUTION PRIVATE LIMITED",
+  address:
+    "Ground Floor Khasa No 91 Plot No. NJF PC 40 Bamnoli Village New Delhi New Delhi, Delhi- 110077 India",
+  contact: "8448688766",
+  gstin: "07AAQCM6359K1ZP",
+  state: "07- Delhi",
+};
+
 export default function OrdersPage() {
   const router = useRouter();
   const [animationParent] = useAutoAnimate();
-  const { orders, updateOrder, updateOrderStatus, deleteOrder, recordTransaction, activeBranch } =
-    useInventory();
+  const {
+    orders,
+    suppliers,
+    updateOrder,
+    deleteOrder,
+    recordTransaction,
+    activeBranch,
+  } = useInventory();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState<"all" | "active" | "past">(
     "all",
   );
   const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
   const [orderToComplete, setOrderToComplete] = useState<Order | null>(null);
-  const [completingOrderId, setCompletingOrderId] = useState<string | null>(null);
+  const [completingOrderId, setCompletingOrderId] = useState<string | null>(
+    null,
+  );
   const completingRef = useRef<Set<string>>(new Set());
 
   const handleCompleteOrder = async (order: Order) => {
-    if (order.status === "Completed" || order.status === "Cancelled" || completingRef.current.has(order.id)) return;
-    
+    if (
+      order.status === "Completed" ||
+      order.status === "Cancelled" ||
+      completingRef.current.has(order.id)
+    )
+      return;
+
     completingRef.current.add(order.id);
     setCompletingOrderId(order.id);
 
@@ -80,7 +101,9 @@ export default function OrdersPage() {
             "Purchase Order Received",
             `Order ID: ${order.id} (Manual Completion)`,
             {
-              branch: order.branch || (activeBranch !== "All" ? activeBranch : "Delhi"),
+              branch:
+                order.branch ||
+                (activeBranch !== "All" ? activeBranch : "Delhi"),
               supplier: order.supplier,
             },
           );
@@ -108,7 +131,10 @@ export default function OrdersPage() {
 
     let matchesType = true;
     if (filterType === "active") {
-      matchesType = o.status === "Pending" || o.status === "Processing" || o.status === "Partial";
+      matchesType =
+        o.status === "Pending" ||
+        o.status === "Processing" ||
+        o.status === "Partial";
     } else if (filterType === "past") {
       matchesType = o.status === "Completed" || o.status === "Cancelled";
     }
@@ -127,145 +153,451 @@ export default function OrdersPage() {
       case "Cancelled":
         return "text-destructive bg-destructive/10 border-destructive/20";
       default:
-        return "text-amber-500 bg-amber-500/10 border-amber-500/20"; // Pending
+        return "text-amber-500 bg-amber-500/10 border-amber-500/20";
     }
   };
 
   const generatePDF = (order: Order) => {
     const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
 
-    // Theme Colors
-    const brandPrimary = [153, 0, 0]; // Darker red (#990000)
-    const textDark = [30, 41, 59]; // Slate 800
-    const textMuted = [100, 116, 139]; // Slate 500
+    // Get supplier details dynamically
+    const supplierDetails = suppliers.find(
+      (s) => s.name.toLowerCase() === order.supplier.toLowerCase(),
+    );
 
-    // Header banner
-    doc.setFillColor(brandPrimary[0], brandPrimary[1], brandPrimary[2]);
-    doc.rect(0, 0, 210, 40, "F"); // Top banner full width
+    // Supplier company details (Seller)
+    const COMPANY_DETAILS = {
+      name: supplierDetails?.name || order.supplier || "Supplier",
+      address: supplierDetails?.location || "Address not available",
+      phone: supplierDetails?.phone || "",
+      email: supplierDetails?.email || "",
+      gstin: supplierDetails?.taxId || "N/A",
+      state: supplierDetails?.state || "07- Delhi",
+    };
 
+    // --- HEADER SECTION ---
+    // Clean dark header
+    doc.setFillColor(139, 0, 0);
+    doc.rect(0, 0, pageWidth, 38, "F");
+
+    // Company Name - White, bold
     doc.setTextColor(255, 255, 255);
+    doc.setFontSize(20);
+    doc.setFont("helvetica", "bold");
+    doc.text(COMPANY_DETAILS.name, 14, 18);
+
+    // Company Address - Light gray
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(230, 230, 230);
+    const addressLines = doc.splitTextToSize(
+      COMPANY_DETAILS.address,
+      pageWidth - 28,
+    );
+    doc.text(addressLines, 14, 26);
+
+    // Contact & GST - Light gray
+    let contactY = 26 + addressLines.length * 4;
+    let contactLine = "";
+    if (COMPANY_DETAILS.phone) contactLine += `Phone: ${COMPANY_DETAILS.phone}`;
+    if (COMPANY_DETAILS.email) {
+      if (contactLine) contactLine += ` | `;
+      contactLine += `Email: ${COMPANY_DETAILS.email}`;
+    }
+    if (contactLine) {
+      doc.text(contactLine, 14, contactY + 2);
+      contactY += 5;
+    }
+
+    const gstLine = `GSTIN: ${COMPANY_DETAILS.gstin} | State: ${COMPANY_DETAILS.state}`;
+    doc.text(gstLine, 14, contactY + 2);
+
+    // --- PURCHASE ORDER TITLE ---
+    let currentY = contactY + 12;
+
+    // Decorative line above title
+    doc.setDrawColor(139, 0, 0);
+    doc.setLineWidth(0.5);
+    doc.line(14, currentY, pageWidth - 14, currentY);
+    currentY += 6;
+
     doc.setFontSize(24);
     doc.setFont("helvetica", "bold");
-    doc.text("M5C Logistics", 14, 24);
+    doc.setTextColor(139, 0, 0);
+    doc.text("PURCHASE ORDER", pageWidth / 2, currentY, { align: "center" });
+    currentY += 10;
 
+    // Decorative line below title
+    doc.setDrawColor(200, 200, 200);
+    doc.setLineWidth(0.3);
+    doc.line(14, currentY, pageWidth - 14, currentY);
+    currentY += 10;
+
+    // --- BILL TO SECTION (Left) ---
     doc.setFontSize(10);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(255, 220, 220);
-    doc.text("PURCHASE ORDER", 14, 32);
-
-    // Order Info Rounded Box
-    doc.setDrawColor(220, 220, 220);
-    doc.setFillColor(252, 252, 252);
-    doc.roundedRect(14, 50, 182, 32, 3, 3, "FD"); // Fill & Stroke
-
-    doc.setTextColor(textDark[0], textDark[1], textDark[2]);
-    doc.setFontSize(11);
     doc.setFont("helvetica", "bold");
-    doc.text("Order Details", 20, 60);
+    doc.setTextColor(60, 60, 60);
+    doc.text("Purchase Order For", 14, currentY);
+    currentY += 6;
 
-    doc.setFontSize(10);
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(40, 40, 40);
+    doc.text(M5C_DETAILS.name, 14, currentY);
+    currentY += 5;
+
+    doc.setFontSize(8);
     doc.setFont("helvetica", "normal");
-    doc.setTextColor(textMuted[0], textMuted[1], textMuted[2]);
-    doc.text(`Order ID: ${order.id}`, 20, 68);
-    doc.text(`Supplier: ${order.supplier}`, 20, 75);
+    doc.setTextColor(80, 80, 80);
+    const m5cAddressLines = doc.splitTextToSize(
+      M5C_DETAILS.address,
+      pageWidth - 28,
+    );
+    doc.text(m5cAddressLines, 14, currentY);
+    currentY += m5cAddressLines.length * 4.5;
 
+    doc.text(`Contact No.: ${M5C_DETAILS.contact}`, 14, currentY);
+    currentY += 4.5;
+    doc.text(
+      `GSTIN: ${M5C_DETAILS.gstin} | State: ${M5C_DETAILS.state}`,
+      14,
+      currentY,
+    );
+    currentY += 12;
+
+    // --- ORDER INFO LINE (Supplier & Branch) ---
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(80, 80, 80);
+    doc.text(`Supplier: ${order.supplier}`, 14, currentY);
+    doc.text(`Branch: ${order.branch || "Delhi"}`, pageWidth - 14, currentY, {
+      align: "right",
+    });
+    currentY += 6;
+
+    doc.text(`Order ID: ${order.id}`, 14, currentY);
     doc.text(
       `Date: ${order.createdAt ? new Date(order.createdAt).toLocaleDateString() : new Date().toLocaleDateString()}`,
-      110,
-      68,
+      pageWidth - 14,
+      currentY,
+      { align: "right" },
     );
-    doc.text(`Branch: ${order.branch || "Delhi"}`, 110, 75);
+    currentY += 8;
 
-    // Table
+    // --- ITEMS TABLE ---
     const tableColumn = [
-      "Product Name",
+      "#",
+      "Item Name",
+      "HSN/SAC",
       "Qty",
-      "Unit Price (Rs)",
-      "Subtotal (Rs)",
+      "Unit Price",
+      "Taxable Amount",
+      "GST",
+      "Amount",
     ];
     const tableRows: any[] = [];
 
-    order.items.forEach((item) => {
+    order.items.forEach((item, index) => {
+      const taxableAmount = item.quantity * item.price;
+      const gst = taxableAmount * 0.18;
+      const total = taxableAmount + gst;
       tableRows.push([
+        index + 1,
         item.name,
+        "3926",
         item.quantity,
-        item.price.toFixed(2),
-        (item.quantity * item.price).toFixed(2),
+        `₹${item.price.toFixed(2)}`,
+        `₹${taxableAmount.toFixed(2)}`,
+        `${gst.toFixed(2)} (18%)`,
+        `₹${total.toFixed(2)}`,
       ]);
     });
 
     autoTable(doc, {
-      startY: 90,
+      startY: currentY,
       head: [tableColumn],
       body: tableRows,
       theme: "grid",
       headStyles: {
-        fillColor: brandPrimary as [number, number, number],
+        fillColor: [139, 0, 0],
         textColor: 255,
         fontStyle: "bold",
+        fontSize: 7,
+        halign: "center",
       },
       styles: {
         font: "helvetica",
-        fontSize: 10,
-        cellPadding: 6,
-        textColor: textDark as [number, number, number],
-        lineColor: [220, 220, 220],
+        fontSize: 7,
+        cellPadding: 2.5,
+        textColor: [50, 50, 50],
+        lineColor: [200, 200, 200],
         lineWidth: 0.1,
       },
-      alternateRowStyles: { fillColor: [252, 252, 252] },
+      alternateRowStyles: { fillColor: [248, 248, 248] },
+      columnStyles: {
+        0: { halign: "center", cellWidth: 10 },
+        1: { halign: "left", cellWidth: 50 },
+        2: { halign: "center", cellWidth: 20 },
+        3: { halign: "center", cellWidth: 12 },
+        4: { halign: "right", cellWidth: 22 },
+        5: { halign: "right", cellWidth: 28 },
+        6: { halign: "center", cellWidth: 28 },
+        7: { halign: "right", cellWidth: 28 },
+      },
     });
 
-    // Totals Rounded Box
-    const finalY = (doc as any).lastAutoTable.finalY || 90;
+    const finalY = (doc as any).lastAutoTable.finalY || currentY + 20;
+
+    // --- TOTALS SECTION ---
     const subtotal = order.items.reduce(
       (acc, item) => acc + item.quantity * item.price,
       0,
     );
-    const gst = subtotal * 0.18;
-    const total = subtotal + gst;
+    const cgst = subtotal * 0.09;
+    const sgst = subtotal * 0.09;
+    const total = subtotal + cgst + sgst;
 
-    doc.setDrawColor(220, 220, 220);
-    doc.setFillColor(252, 252, 252);
-    doc.roundedRect(120, finalY + 10, 76, 35, 3, 3, "FD");
+    // Totals box on the right
+    const totalsX = pageWidth - 95;
+    const totalsWidth = 85;
+    const totalsRightX = totalsX + totalsWidth - 5;
+    const totalsY = finalY + 6;
 
-    doc.setTextColor(textMuted[0], textMuted[1], textMuted[2]);
-    doc.setFontSize(10);
-    doc.text(`Subtotal:`, 125, finalY + 20);
-    doc.text(
-      `Rs ${subtotal.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-      190,
-      finalY + 20,
-      { align: "right" },
-    );
+    doc.setFillColor(245, 245, 245);
+    doc.setDrawColor(180, 180, 180);
+    doc.roundedRect(totalsX, totalsY, totalsWidth, 42, 3, 3, "FD");
 
-    doc.text(`GST (18%):`, 125, finalY + 27);
-    doc.text(
-      `Rs ${gst.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-      190,
-      finalY + 27,
-      { align: "right" },
-    );
-
-    doc.setFontSize(12);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(brandPrimary[0], brandPrimary[1], brandPrimary[2]);
-    doc.text(`Grand Total:`, 125, finalY + 37);
-    doc.text(
-      `Rs ${total.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-      190,
-      finalY + 37,
-      { align: "right" },
-    );
-
-    // Footer
     doc.setFontSize(8);
     doc.setFont("helvetica", "normal");
-    doc.setTextColor(150, 150, 150);
-    doc.text("Thank you for your business.", 105, 280, { align: "center" });
+    doc.setTextColor(80, 80, 80);
 
+    const totalLines = [
+      [`Sub Total`, `₹${subtotal.toFixed(2)}`],
+      [`CGST @ 9%`, `₹${cgst.toFixed(2)}`],
+      [`SGST @ 9%`, `₹${sgst.toFixed(2)}`],
+    ];
+
+    let totalY = totalsY + 7;
+    totalLines.forEach(([label, value]) => {
+      doc.text(label, totalsX + 5, totalY);
+      doc.text(value, totalsRightX, totalY, { align: "right" });
+      totalY += 7;
+    });
+
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(139, 0, 0);
+    doc.setFontSize(9);
+    doc.text("Total", totalsX + 5, totalY + 2);
+    doc.text(`₹${total.toFixed(2)}`, totalsRightX, totalY + 2, {
+      align: "right",
+    });
+
+    // --- AMOUNT IN WORDS ---
+    const amountInWords = `Amount In Words: ${numberToWords(total)} Rupees only`;
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(50, 50, 50);
+    doc.text(amountInWords, 14, finalY + 45);
+
+    // --- TERMS & CONDITIONS AND DESCRIPTION (Dynamic) ---
+    const tAndCY = finalY + 55;
+    const colWidth = (pageWidth - 28) / 2 - 5;
+
+    // Divider line
+    doc.setDrawColor(200, 200, 200);
+    doc.setLineWidth(0.3);
+    doc.line(14, tAndCY - 4, pageWidth - 14, tAndCY - 4);
+
+    // Left Column: Terms & Conditions (Dynamic from order)
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(60, 60, 60);
+    doc.text("Terms and Conditions", 14, tAndCY);
+
+    doc.setFontSize(7.5);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(80, 80, 80);
+
+    // Use dynamic terms from order or fallback to defaults
+    let termsY = tAndCY + 6;
+    if (order.termsAndConditions && order.termsAndConditions.trim()) {
+      const terms = order.termsAndConditions
+        .split("\n")
+        .filter((t) => t.trim());
+      if (terms.length > 0) {
+        terms.forEach((term: string) => {
+          const wrapped = doc.splitTextToSize(term.trim(), colWidth - 5);
+          doc.text(wrapped, 14, termsY);
+          termsY += wrapped.length * 4;
+        });
+      } else {
+        doc.text("No terms and conditions specified.", 14, termsY);
+        termsY += 4;
+      }
+    } else {
+      // Default fallback terms
+      const defaultTerms = [
+        "1. Goods once sold will not be taken back.",
+        "2. Payment terms: 15 days from invoice date.",
+        "3. Delivery within 7 working days.",
+        "4. All disputes subject to Delhi jurisdiction.",
+      ];
+      defaultTerms.forEach((term: string) => {
+        const wrapped = doc.splitTextToSize(term, colWidth - 5);
+        doc.text(wrapped, 14, termsY);
+        termsY += wrapped.length * 4;
+      });
+    }
+
+    // Right Column: Description (Dynamic from order)
+    const descX = pageWidth - colWidth - 14;
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(60, 60, 60);
+    doc.text("Description", descX, tAndCY);
+
+    doc.setFontSize(7.5);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(80, 80, 80);
+
+    let descY = tAndCY + 6;
+    if (order.description && order.description.trim()) {
+      const descLines = doc.splitTextToSize(order.description, colWidth - 5);
+      descLines.forEach((line: string) => {
+        doc.text(line, descX, descY);
+        descY += 4;
+      });
+    } else {
+      doc.text("No additional description provided.", descX, descY);
+      descY += 4;
+    }
+
+    // --- FOOTER ---
+    const footerY = Math.max(termsY, descY) + 15;
+
+    // Signatory section with box
+    doc.setDrawColor(200, 200, 200);
+    doc.setLineWidth(0.5);
+    doc.rect(14, footerY, 80, 20, "S");
+
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(50, 50, 50);
+    doc.text(`For : ${COMPANY_DETAILS.name}`, 20, footerY + 7);
+
+    doc.setFontSize(7);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(150, 150, 150);
+    doc.text("Authorized Signatory", 20, footerY + 15);
+
+    // Footer text - System Generated
+    doc.setFontSize(6);
+    doc.setFont("helvetica", "italic");
+    doc.setTextColor(180, 180, 180);
+    doc.text(
+      "This is a system generated purchase order.",
+      pageWidth / 2,
+      pageHeight - 10,
+      { align: "center" },
+    );
+
+    // Save PDF
     doc.save(`PO_${order.id}.pdf`);
-    toast.success(`Purchase order PDF for ${order.id} downloaded successfully!`);
+    toast.success(
+      `Purchase order PDF for ${order.id} downloaded successfully!`,
+    );
   };
+
+  // Helper function to convert numbers to words
+  function numberToWords(num: number): string {
+    if (num === 0) return "Zero";
+
+    const ones = [
+      "",
+      "One",
+      "Two",
+      "Three",
+      "Four",
+      "Five",
+      "Six",
+      "Seven",
+      "Eight",
+      "Nine",
+    ];
+    const tens = [
+      "",
+      "",
+      "Twenty",
+      "Thirty",
+      "Forty",
+      "Fifty",
+      "Sixty",
+      "Seventy",
+      "Eighty",
+      "Ninety",
+    ];
+    const teens = [
+      "Ten",
+      "Eleven",
+      "Twelve",
+      "Thirteen",
+      "Fourteen",
+      "Fifteen",
+      "Sixteen",
+      "Seventeen",
+      "Eighteen",
+      "Nineteen",
+    ];
+
+    function convertLessThanThousand(n: number): string {
+      if (n < 10) return ones[n];
+      if (n < 20) return teens[n - 10];
+      if (n < 100) {
+        const t = Math.floor(n / 10);
+        const o = n % 10;
+        return tens[t] + (o ? " " + ones[o] : "");
+      }
+      const h = Math.floor(n / 100);
+      const rest = n % 100;
+      return (
+        ones[h] +
+        " Hundred" +
+        (rest ? " and " + convertLessThanThousand(rest) : "")
+      );
+    }
+
+    const rounded = Math.round(num);
+    if (rounded >= 10000000) {
+      const crores = Math.floor(rounded / 10000000);
+      const rest = rounded % 10000000;
+      return (
+        convertLessThanThousand(crores) +
+        " Crore" +
+        (rest ? " " + numberToWords(rest) : "")
+      );
+    }
+    if (rounded >= 100000) {
+      const lakhs = Math.floor(rounded / 100000);
+      const rest = rounded % 100000;
+      return (
+        convertLessThanThousand(lakhs) +
+        " Lakh" +
+        (rest ? " " + numberToWords(rest) : "")
+      );
+    }
+    if (rounded >= 1000) {
+      const thousands = Math.floor(rounded / 1000);
+      const rest = rounded % 1000;
+      return (
+        convertLessThanThousand(thousands) +
+        " Thousand" +
+        (rest ? " " + convertLessThanThousand(rest) : "")
+      );
+    }
+    return convertLessThanThousand(rounded);
+  }
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8 animate-in fade-in duration-500">
@@ -378,23 +710,38 @@ export default function OrdersPage() {
                         {order.id}
                       </td>
                       <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
-                        <div className="font-medium text-foreground">{order.supplier}</div>
-                        <div className="text-[11px] text-muted-foreground mt-0.5">🏭 {order.branch || "Delhi"}</div>
+                        <div className="font-medium text-foreground">
+                          {order.supplier}
+                        </div>
+                        <div className="text-[11px] text-muted-foreground mt-0.5">
+                          🏭 {order.branch || "Delhi"}
+                        </div>
                       </td>
                       <td className="px-4 sm:px-6 py-4">
                         {(() => {
-                          const totalUnits = order.items.reduce((acc, it) => acc + it.quantity, 0);
-                          const receivedUnits = order.items.reduce((acc, it) => acc + (it.receivedQuantity || 0), 0);
-                          const remainingUnits = Math.max(0, totalUnits - receivedUnits);
+                          const totalUnits = order.items.reduce(
+                            (acc, it) => acc + it.quantity,
+                            0,
+                          );
+                          const receivedUnits = order.items.reduce(
+                            (acc, it) => acc + (it.receivedQuantity || 0),
+                            0,
+                          );
+                          const remainingUnits = Math.max(
+                            0,
+                            totalUnits - receivedUnits,
+                          );
 
                           return (
                             <div className="space-y-1">
                               <span className="text-xs text-muted-foreground whitespace-nowrap block">
-                                {order.items.length} product(s) · {totalUnits} units total
+                                {order.items.length} product(s) · {totalUnits}{" "}
+                                units total
                               </span>
                               {receivedUnits > 0 && (
                                 <span className="text-[11px] font-semibold text-amber-600 dark:text-amber-400 block whitespace-nowrap">
-                                  Fulfilled: {receivedUnits}/{totalUnits} ({remainingUnits} left)
+                                  Fulfilled: {receivedUnits}/{totalUnits} (
+                                  {remainingUnits} left)
                                 </span>
                               )}
                             </div>
@@ -417,18 +764,25 @@ export default function OrdersPage() {
                             <MoreVertical className="h-4 w-4" />
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            {order.status !== "Completed" && order.status !== "Cancelled" && (
-                              <DropdownMenuItem
-                                onClick={() => setOrderToComplete(order)}
-                                className="text-emerald-600 focus:text-emerald-600 cursor-pointer font-medium"
-                              >
-                                <CheckCircle className="mr-2 h-4 w-4 text-emerald-600" />
-                                <span>{completingOrderId === order.id ? "Completing..." : "Complete & Stock"}</span>
-                              </DropdownMenuItem>
-                            )}
+                            {order.status !== "Completed" &&
+                              order.status !== "Cancelled" && (
+                                <DropdownMenuItem
+                                  onClick={() => setOrderToComplete(order)}
+                                  className="text-emerald-600 focus:text-emerald-600 cursor-pointer font-medium"
+                                >
+                                  <CheckCircle className="mr-2 h-4 w-4 text-emerald-600" />
+                                  <span>
+                                    {completingOrderId === order.id
+                                      ? "Completing..."
+                                      : "Complete & Stock"}
+                                  </span>
+                                </DropdownMenuItem>
+                              )}
                             <DropdownMenuItem
                               onClick={() =>
-                                router.push(`/invoice/new?po=${encodeURIComponent(order.id)}`)
+                                router.push(
+                                  `/invoice/new?po=${encodeURIComponent(order.id)}`,
+                                )
                               }
                               className="text-primary font-semibold focus:text-primary cursor-pointer"
                             >
@@ -469,7 +823,6 @@ export default function OrdersPage() {
         </CardContent>
       </Card>
 
-      {/* Confirmation Modal for Complete & Stock */}
       <ConfirmModal
         isOpen={orderToComplete !== null}
         onClose={() => setOrderToComplete(null)}
@@ -492,7 +845,8 @@ export default function OrdersPage() {
                 Order #{orderToComplete.id} ({orderToComplete.supplier})
               </div>
               <div className="text-[11px] text-muted-foreground">
-                {orderToComplete.items?.length || 0} product(s) · Total: ₹{orderToComplete.totalAmount.toLocaleString('en-IN')}
+                {orderToComplete.items?.length || 0} product(s) · Total: ₹
+                {orderToComplete.totalAmount.toLocaleString("en-IN")}
               </div>
             </div>
           ) : undefined
