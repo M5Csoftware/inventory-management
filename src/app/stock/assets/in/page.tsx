@@ -507,6 +507,37 @@ export default function StockInAssetsPage() {
                   </div>
                 </div>
 
+                {/* Supplier */}
+                <div className="space-y-1.5">
+                  <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    <Building2 className="h-3.5 w-3.5 text-primary" />
+                    Supplier / Vendor
+                  </label>
+                  <select
+                    value={supplier}
+                    onChange={(e) => setSupplier(e.target.value)}
+                    className="h-10 w-full rounded-xl border-2 border-gray-300 bg-white/90 px-3 text-xs font-medium shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 dark:border-gray-600 dark:bg-gray-900/90 cursor-pointer"
+                  >
+                    {suppliers.map((s, idx) => (
+                      <option key={`${s.name}-${idx}`} value={s.name}>
+                        {s.name}
+                      </option>
+                    ))}
+                    <option value="CUSTOM_SUPPLIER">
+                      + Custom Supplier...
+                    </option>
+                  </select>
+
+                  {supplier === "CUSTOM_SUPPLIER" && (
+                    <Input
+                      placeholder="Custom supplier name"
+                      value={customSupplier}
+                      onChange={(e) => setCustomSupplier(e.target.value)}
+                      className="h-9 text-xs mt-1.5 bg-background rounded-lg"
+                    />
+                  )}
+                </div>
+
                 {/* Invoice / Reference */}
                 <div className="space-y-1.5">
                   <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">

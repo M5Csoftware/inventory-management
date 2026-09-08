@@ -522,8 +522,8 @@ export default function MonthlyStockReportPage() {
             className="w-full h-10 px-3 py-2 bg-background border border-border rounded text-sm focus:outline-none focus:ring-1 focus:ring-primary"
           >
             <option value="All">All Categories</option>
-            {categories.map((cat: Category) => (
-              <option key={cat.name} value={cat.name}>
+            {categories.map((cat: Category, idx: number) => (
+              <option key={`${cat.name}-${idx}`} value={cat.name}>
                 {cat.name}
               </option>
             ))}

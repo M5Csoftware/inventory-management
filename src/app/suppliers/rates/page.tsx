@@ -409,8 +409,8 @@ export default function SupplierRatesPage() {
                 className="h-8 bg-transparent text-xs font-medium outline-none cursor-pointer pr-2"
               >
                 <option value="ALL">All Suppliers</option>
-                {suppliers.map((s) => (
-                  <option key={s.name} value={s.name}>
+                {suppliers.map((s, idx) => (
+                  <option key={`${s.name}-${idx}`} value={s.name}>
                     {s.name}
                   </option>
                 ))}
