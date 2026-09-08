@@ -161,14 +161,20 @@ export default function OrdersPage() {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 14;
+    const printableWidth = pageWidth - margin * 2; // 182mm
+
+    // Primary Red Theme Palette
+    const PRIMARY_RED: [number, number, number] = [139, 0, 0]; // Deep Crimson Red
+    const LIGHT_BG: [number, number, number] = [252, 252, 252];
+    const BORDER_COLOR: [number, number, number] = [220, 220, 220];
 
     // Get supplier details dynamically
     const supplierDetails = suppliers.find(
       (s) => s.name.toLowerCase() === order.supplier.toLowerCase(),
     );
 
-    // Supplier company details (Seller)
-    const COMPANY_DETAILS = {
+    const VENDOR_DETAILS = {
       name: supplierDetails?.name || order.supplier || "Supplier",
       address: supplierDetails?.location || "Address not available",
       phone: supplierDetails?.phone || "",
@@ -177,126 +183,199 @@ export default function OrdersPage() {
       state: supplierDetails?.state || "07- Delhi",
     };
 
-    // --- HEADER SECTION ---
-    // Clean dark header
-    doc.setFillColor(139, 0, 0);
-    doc.rect(0, 0, pageWidth, 38, "F");
+    // --- 1. HEADER SECTION (Branding & PO Info) ---
+    // Primary Red Top Stripe
+    doc.setFillColor(...PRIMARY_RED);
+    doc.rect(0, 0, pageWidth, 5, "F");
 
-    // Company Name - White, bold
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(20);
+    // Header Right PO Box dimensions
+    const headerBoxWidth = 66;
+    const headerBoxX = pageWidth - margin - headerBoxWidth;
+    const headerBoxY = 12;
+
+    // Left Side: Company Name & Sub-details (Max width strictly left of PO Box)
+    const companyMaxLineWidth = printableWidth - headerBoxWidth - 8; // ~108mm
+    
     doc.setFont("helvetica", "bold");
-    doc.text(COMPANY_DETAILS.name, 14, 18);
+    doc.setFontSize(11);
+    doc.setTextColor(30, 30, 30);
+    const titleLines = doc.splitTextToSize(M5C_DETAILS.name, companyMaxLineWidth);
+    doc.text(titleLines, margin, 16);
 
-    // Company Address - Light gray
-    doc.setFontSize(8);
+    let compY = 16 + titleLines.length * 4.5;
+
     doc.setFont("helvetica", "normal");
-    doc.setTextColor(230, 230, 230);
-    const addressLines = doc.splitTextToSize(
-      COMPANY_DETAILS.address,
-      pageWidth - 28,
-    );
-    doc.text(addressLines, 14, 26);
-
-    // Contact & GST - Light gray
-    let contactY = 26 + addressLines.length * 4;
-    let contactLine = "";
-    if (COMPANY_DETAILS.phone) contactLine += `Phone: ${COMPANY_DETAILS.phone}`;
-    if (COMPANY_DETAILS.email) {
-      if (contactLine) contactLine += ` | `;
-      contactLine += `Email: ${COMPANY_DETAILS.email}`;
-    }
-    if (contactLine) {
-      doc.text(contactLine, 14, contactY + 2);
-      contactY += 5;
-    }
-
-    const gstLine = `GSTIN: ${COMPANY_DETAILS.gstin} | State: ${COMPANY_DETAILS.state}`;
-    doc.text(gstLine, 14, contactY + 2);
-
-    // --- PURCHASE ORDER TITLE ---
-    let currentY = contactY + 12;
-
-    // Decorative line above title
-    doc.setDrawColor(139, 0, 0);
-    doc.setLineWidth(0.5);
-    doc.line(14, currentY, pageWidth - 14, currentY);
-    currentY += 6;
-
-    doc.setFontSize(24);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(139, 0, 0);
-    doc.text("PURCHASE ORDER", pageWidth / 2, currentY, { align: "center" });
-    currentY += 10;
-
-    // Decorative line below title
-    doc.setDrawColor(200, 200, 200);
-    doc.setLineWidth(0.3);
-    doc.line(14, currentY, pageWidth - 14, currentY);
-    currentY += 10;
-
-    // --- BILL TO SECTION (Left) ---
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(60, 60, 60);
-    doc.text("Purchase Order For", 14, currentY);
-    currentY += 6;
-
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(40, 40, 40);
-    doc.text(M5C_DETAILS.name, 14, currentY);
-    currentY += 5;
-
-    doc.setFontSize(8);
-    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7.5);
     doc.setTextColor(80, 80, 80);
-    const m5cAddressLines = doc.splitTextToSize(
+
+    const companyAddrLines = doc.splitTextToSize(
       M5C_DETAILS.address,
-      pageWidth - 28,
+      companyMaxLineWidth,
     );
-    doc.text(m5cAddressLines, 14, currentY);
-    currentY += m5cAddressLines.length * 4.5;
+    doc.text(companyAddrLines, margin, compY);
+    compY += companyAddrLines.length * 3.5;
 
-    doc.text(`Contact No.: ${M5C_DETAILS.contact}`, 14, currentY);
-    currentY += 4.5;
     doc.text(
-      `GSTIN: ${M5C_DETAILS.gstin} | State: ${M5C_DETAILS.state}`,
-      14,
-      currentY,
+      `GSTIN: ${M5C_DETAILS.gstin} | State: ${M5C_DETAILS.state} | Phone: ${M5C_DETAILS.contact}`,
+      margin,
+      compY,
     );
-    currentY += 12;
+    compY += 4;
 
-    // --- ORDER INFO LINE (Supplier & Branch) ---
-    doc.setFontSize(8);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(80, 80, 80);
-    doc.text(`Supplier: ${order.supplier}`, 14, currentY);
-    doc.text(`Branch: ${order.branch || "Delhi"}`, pageWidth - 14, currentY, {
-      align: "right",
+    // Right Side: PO Box (Red Theme Border & Header)
+    doc.setFillColor(...LIGHT_BG);
+    doc.setDrawColor(...BORDER_COLOR);
+    doc.setLineWidth(0.3);
+    doc.roundedRect(headerBoxX, headerBoxY, headerBoxWidth, 26, 2, 2, "FD");
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.setTextColor(...PRIMARY_RED);
+    doc.text("PURCHASE ORDER", headerBoxX + headerBoxWidth / 2, headerBoxY + 7, {
+      align: "center",
     });
-    currentY += 6;
 
-    doc.text(`Order ID: ${order.id}`, 14, currentY);
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(50, 50, 50);
+    doc.text(`PO No: ${order.id}`, headerBoxX + 6, headerBoxY + 13);
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7.5);
+    const orderDateFormatted = order.createdAt
+      ? new Date(order.createdAt).toLocaleDateString("en-IN", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+        })
+      : new Date().toLocaleDateString("en-IN", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+        });
+    doc.text(`Date: ${orderDateFormatted}`, headerBoxX + 6, headerBoxY + 18);
     doc.text(
-      `Date: ${order.createdAt ? new Date(order.createdAt).toLocaleDateString() : new Date().toLocaleDateString()}`,
-      pageWidth - 14,
-      currentY,
-      { align: "right" },
+      `Branch: ${order.branch || "Delhi"}`,
+      headerBoxX + 6,
+      headerBoxY + 22,
     );
-    currentY += 8;
 
-    // --- ITEMS TABLE ---
+    // --- 2. VENDOR & SHIP TO CARDS (Two-Column Dynamic Layout) ---
+    let currentY = Math.max(compY + 4, headerBoxY + 30);
+
+    const cardGap = 6;
+    const cardWidth = (printableWidth - cardGap) / 2; // 88mm each
+    const rightCardX = margin + cardWidth + cardGap;
+
+    // Pre-calculate heights for Vendor Card (Card 1)
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8.5);
+    const vendorNameLines = doc.splitTextToSize(VENDOR_DETAILS.name, cardWidth - 8);
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7);
+    const vendorAddrLines = doc.splitTextToSize(VENDOR_DETAILS.address, cardWidth - 8);
+
+    let vCalculatedHeight = 11 + vendorNameLines.length * 3.5 + vendorAddrLines.length * 3.2 + 8;
+    if (VENDOR_DETAILS.phone || VENDOR_DETAILS.email) vCalculatedHeight += 3.5;
+
+    // Pre-calculate heights for Ship To Card (Card 2)
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8.5);
+    const shipNameLines = doc.splitTextToSize(M5C_DETAILS.name, cardWidth - 8);
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7);
+    const shipAddrLines = doc.splitTextToSize(M5C_DETAILS.address, cardWidth - 8);
+
+    const sCalculatedHeight = 11 + shipNameLines.length * 3.5 + shipAddrLines.length * 3.2 + 11.5;
+
+    // Dynamic Card Height (Max of content heights, min 38mm)
+    const cardHeight = Math.max(vCalculatedHeight, sCalculatedHeight, 38);
+
+    // --- DRAW CARD 1 (Vendor / Supplier) ---
+    doc.setFillColor(...LIGHT_BG);
+    doc.setDrawColor(...BORDER_COLOR);
+    doc.roundedRect(margin, currentY, cardWidth, cardHeight, 2, 2, "FD");
+
+    // Header strip for Card 1
+    doc.setFillColor(...PRIMARY_RED);
+    doc.roundedRect(margin, currentY, cardWidth, 6, 2, 2, "F");
+    doc.rect(margin, currentY + 4, cardWidth, 2, "F");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(7.5);
+    doc.setTextColor(255, 255, 255);
+    doc.text("VENDOR / SUPPLIER DETAILS", margin + 4, currentY + 4.5);
+
+    // Card 1 Content (Name, Address, Contact, GSTIN)
+    let card1Y = currentY + 11;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8.5);
+    doc.setTextColor(30, 30, 30);
+    doc.text(vendorNameLines, margin + 4, card1Y);
+    card1Y += vendorNameLines.length * 3.5;
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7);
+    doc.setTextColor(80, 80, 80);
+    doc.text(vendorAddrLines, margin + 4, card1Y);
+    card1Y += vendorAddrLines.length * 3.2 + 1.5;
+
+    if (VENDOR_DETAILS.phone || VENDOR_DETAILS.email) {
+      const contactInfo = [VENDOR_DETAILS.phone, VENDOR_DETAILS.email]
+        .filter(Boolean)
+        .join(" | ");
+      doc.text(`Contact: ${contactInfo}`, margin + 4, card1Y);
+      card1Y += 3.5;
+    }
+    doc.text(`GSTIN: ${VENDOR_DETAILS.gstin}`, margin + 4, card1Y);
+
+    // --- DRAW CARD 2 (Ship To / Deliver To) ---
+    doc.setFillColor(...LIGHT_BG);
+    doc.setDrawColor(...BORDER_COLOR);
+    doc.roundedRect(rightCardX, currentY, cardWidth, cardHeight, 2, 2, "FD");
+
+    // Header strip for Card 2
+    doc.setFillColor(...PRIMARY_RED);
+    doc.roundedRect(rightCardX, currentY, cardWidth, 6, 2, 2, "F");
+    doc.rect(rightCardX, currentY + 4, cardWidth, 2, "F");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(7.5);
+    doc.setTextColor(255, 255, 255);
+    doc.text("SHIP TO / DELIVER TO", rightCardX + 4, currentY + 4.5);
+
+    // Card 2 Content (Name, Address, Contact, GSTIN)
+    let card2Y = currentY + 11;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8.5);
+    doc.setTextColor(30, 30, 30);
+    doc.text(shipNameLines, rightCardX + 4, card2Y);
+    card2Y += shipNameLines.length * 3.5;
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7);
+    doc.setTextColor(80, 80, 80);
+    doc.text(shipAddrLines, rightCardX + 4, card2Y);
+    card2Y += shipAddrLines.length * 3.2 + 1.5;
+
+    doc.text(`Contact: ${M5C_DETAILS.contact}`, rightCardX + 4, card2Y);
+    card2Y += 3.5;
+    doc.text(`GSTIN: ${M5C_DETAILS.gstin}`, rightCardX + 4, card2Y);
+
+    currentY += cardHeight + 6;
+
+    // --- 3. ITEMS TABLE ---
     const tableColumn = [
       "#",
-      "Item Name",
+      "Item Description",
       "HSN/SAC",
       "Qty",
       "Unit Price",
-      "Taxable Amount",
+      "Taxable Amt",
       "GST",
-      "Amount",
+      "Total Amount",
     ];
+
     const tableRows: any[] = [];
 
     order.items.forEach((item, index) => {
@@ -308,10 +387,10 @@ export default function OrdersPage() {
         item.name,
         "3926",
         item.quantity,
-        `₹${item.price.toFixed(2)}`,
-        `₹${taxableAmount.toFixed(2)}`,
-        `${gst.toFixed(2)} (18%)`,
-        `₹${total.toFixed(2)}`,
+        `Rs. ${item.price.toFixed(2)}`,
+        `Rs. ${taxableAmount.toFixed(2)}`,
+        `18%`,
+        `Rs. ${total.toFixed(2)}`,
       ]);
     });
 
@@ -319,125 +398,148 @@ export default function OrdersPage() {
       startY: currentY,
       head: [tableColumn],
       body: tableRows,
+      margin: { left: margin, right: margin },
       theme: "grid",
       headStyles: {
-        fillColor: [139, 0, 0],
-        textColor: 255,
+        fillColor: PRIMARY_RED,
+        textColor: [255, 255, 255],
         fontStyle: "bold",
-        fontSize: 7,
+        fontSize: 7.5,
         halign: "center",
+        cellPadding: 2.5,
       },
       styles: {
         font: "helvetica",
-        fontSize: 7,
-        cellPadding: 2.5,
+        fontSize: 7.5,
+        cellPadding: 2,
         textColor: [50, 50, 50],
-        lineColor: [200, 200, 200],
+        lineColor: BORDER_COLOR,
         lineWidth: 0.1,
       },
-      alternateRowStyles: { fillColor: [248, 248, 248] },
+      alternateRowStyles: { fillColor: [250, 250, 250] },
       columnStyles: {
-        0: { halign: "center", cellWidth: 10 },
-        1: { halign: "left", cellWidth: 50 },
-        2: { halign: "center", cellWidth: 20 },
+        0: { halign: "center", cellWidth: 8 },
+        1: { halign: "left", cellWidth: 48 },
+        2: { halign: "center", cellWidth: 16 },
         3: { halign: "center", cellWidth: 12 },
-        4: { halign: "right", cellWidth: 22 },
-        5: { halign: "right", cellWidth: 28 },
-        6: { halign: "center", cellWidth: 28 },
-        7: { halign: "right", cellWidth: 28 },
+        4: { halign: "right", cellWidth: 24 },
+        5: { halign: "right", cellWidth: 25 },
+        6: { halign: "center", cellWidth: 15 },
+        7: { halign: "right", cellWidth: 34 },
       },
     });
 
-    const finalY = (doc as any).lastAutoTable.finalY || currentY + 20;
+    let finalY = (doc as any).lastAutoTable.finalY || currentY + 20;
 
-    // --- TOTALS SECTION ---
+    // Check if remaining elements will fit on current page; if not, add page
+    if (finalY + 75 > pageHeight - 15) {
+      doc.addPage();
+      finalY = 15;
+    }
+
+    // --- 4. FINANCIAL SUMMARY & AMOUNT IN WORDS ---
     const subtotal = order.items.reduce(
       (acc, item) => acc + item.quantity * item.price,
       0,
     );
     const cgst = subtotal * 0.09;
     const sgst = subtotal * 0.09;
-    const total = subtotal + cgst + sgst;
+    const grandTotal = subtotal + cgst + sgst;
 
-    // Totals box on the right
-    const totalsX = pageWidth - 95;
-    const totalsWidth = 85;
-    const totalsRightX = totalsX + totalsWidth - 5;
+    const totalsWidth = 84;
+    const totalsX = pageWidth - margin - totalsWidth;
     const totalsY = finalY + 6;
 
-    doc.setFillColor(245, 245, 245);
-    doc.setDrawColor(180, 180, 180);
-    doc.roundedRect(totalsX, totalsY, totalsWidth, 42, 3, 3, "FD");
+    // Totals Box
+    doc.setFillColor(...LIGHT_BG);
+    doc.setDrawColor(...BORDER_COLOR);
+    doc.roundedRect(totalsX, totalsY, totalsWidth, 36, 2, 2, "FD");
 
     doc.setFontSize(8);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(80, 80, 80);
 
-    const totalLines = [
-      [`Sub Total`, `₹${subtotal.toFixed(2)}`],
-      [`CGST @ 9%`, `₹${cgst.toFixed(2)}`],
-      [`SGST @ 9%`, `₹${sgst.toFixed(2)}`],
-    ];
-
-    let totalY = totalsY + 7;
-    totalLines.forEach(([label, value]) => {
-      doc.text(label, totalsX + 5, totalY);
-      doc.text(value, totalsRightX, totalY, { align: "right" });
-      totalY += 7;
-    });
-
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(139, 0, 0);
-    doc.setFontSize(9);
-    doc.text("Total", totalsX + 5, totalY + 2);
-    doc.text(`₹${total.toFixed(2)}`, totalsRightX, totalY + 2, {
+    let tRowY = totalsY + 6;
+    doc.text("Taxable Subtotal", totalsX + 5, tRowY);
+    doc.text(`Rs. ${subtotal.toFixed(2)}`, totalsX + totalsWidth - 5, tRowY, {
       align: "right",
     });
 
-    // --- AMOUNT IN WORDS ---
-    const amountInWords = `Amount In Words: ${numberToWords(total)} Rupees only`;
-    doc.setFontSize(8);
+    tRowY += 5.5;
+    doc.text("CGST @ 9%", totalsX + 5, tRowY);
+    doc.text(`Rs. ${cgst.toFixed(2)}`, totalsX + totalsWidth - 5, tRowY, {
+      align: "right",
+    });
+
+    tRowY += 5.5;
+    doc.text("SGST @ 9%", totalsX + 5, tRowY);
+    doc.text(`Rs. ${sgst.toFixed(2)}`, totalsX + totalsWidth - 5, tRowY, {
+      align: "right",
+    });
+
+    // Grand Total Banner inside Box (Red Theme)
+    tRowY += 5;
+    doc.setFillColor(...PRIMARY_RED);
+    doc.roundedRect(totalsX + 2, tRowY, totalsWidth - 4, 10, 1.5, 1.5, "F");
+
     doc.setFont("helvetica", "bold");
-    doc.setTextColor(50, 50, 50);
-    doc.text(amountInWords, 14, finalY + 45);
+    doc.setFontSize(8.5);
+    doc.setTextColor(255, 255, 255);
+    doc.text("Grand Total", totalsX + 6, tRowY + 6.5);
+    doc.text(`Rs. ${grandTotal.toFixed(2)}`, totalsX + totalsWidth - 6, tRowY + 6.5, {
+      align: "right",
+    });
 
-    // --- TERMS & CONDITIONS AND DESCRIPTION (Dynamic) ---
-    const tAndCY = finalY + 55;
-    const colWidth = (pageWidth - 28) / 2 - 5;
+    // Amount in Words Box (Left of Totals Box)
+    const wordsWidth = printableWidth - totalsWidth - 6;
+    const wordsX = margin;
+    const wordsY = totalsY;
 
-    // Divider line
-    doc.setDrawColor(200, 200, 200);
-    doc.setLineWidth(0.3);
-    doc.line(14, tAndCY - 4, pageWidth - 14, tAndCY - 4);
-
-    // Left Column: Terms & Conditions (Dynamic from order)
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(60, 60, 60);
-    doc.text("Terms and Conditions", 14, tAndCY);
+    doc.setFillColor(...LIGHT_BG);
+    doc.setDrawColor(...BORDER_COLOR);
+    doc.roundedRect(wordsX, wordsY, wordsWidth, 36, 2, 2, "FD");
 
     doc.setFontSize(7.5);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...PRIMARY_RED);
+    doc.text("AMOUNT IN WORDS", wordsX + 4, wordsY + 7);
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(50, 50, 50);
+    const wordsText = `${numberToWords(grandTotal)} Rupees Only`;
+    const wrappedWords = doc.splitTextToSize(wordsText, wordsWidth - 8);
+    doc.text(wrappedWords, wordsX + 4, wordsY + 14);
+
+    currentY = totalsY + 40;
+
+    // --- 5. TERMS & CONDITIONS AND DESCRIPTION ---
+    const colWidth = (printableWidth - cardGap) / 2;
+
+    // Divider Line
+    doc.setDrawColor(...BORDER_COLOR);
+    doc.setLineWidth(0.3);
+    doc.line(margin, currentY - 2, pageWidth - margin, currentY - 2);
+
+    // Terms Column
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...PRIMARY_RED);
+    doc.text("Terms & Conditions", margin, currentY + 3);
+
+    doc.setFontSize(7);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(80, 80, 80);
 
-    // Use dynamic terms from order or fallback to defaults
-    let termsY = tAndCY + 6;
+    let termsY = currentY + 7;
     if (order.termsAndConditions && order.termsAndConditions.trim()) {
-      const terms = order.termsAndConditions
-        .split("\n")
-        .filter((t) => t.trim());
-      if (terms.length > 0) {
-        terms.forEach((term: string) => {
-          const wrapped = doc.splitTextToSize(term.trim(), colWidth - 5);
-          doc.text(wrapped, 14, termsY);
-          termsY += wrapped.length * 4;
-        });
-      } else {
-        doc.text("No terms and conditions specified.", 14, termsY);
-        termsY += 4;
-      }
+      const terms = order.termsAndConditions.split("\n").filter((t) => t.trim());
+      terms.forEach((term: string) => {
+        const wrapped = doc.splitTextToSize(term.trim(), colWidth - 4);
+        doc.text(wrapped, margin, termsY);
+        termsY += wrapped.length * 3.2;
+      });
     } else {
-      // Default fallback terms
       const defaultTerms = [
         "1. Goods once sold will not be taken back.",
         "2. Payment terms: 15 days from invoice date.",
@@ -445,63 +547,83 @@ export default function OrdersPage() {
         "4. All disputes subject to Delhi jurisdiction.",
       ];
       defaultTerms.forEach((term: string) => {
-        const wrapped = doc.splitTextToSize(term, colWidth - 5);
-        doc.text(wrapped, 14, termsY);
-        termsY += wrapped.length * 4;
+        const wrapped = doc.splitTextToSize(term, colWidth - 4);
+        doc.text(wrapped, margin, termsY);
+        termsY += wrapped.length * 3.2;
       });
     }
 
-    // Right Column: Description (Dynamic from order)
-    const descX = pageWidth - colWidth - 14;
-    doc.setFontSize(9);
+    // Description Column
+    const descX = margin + colWidth + cardGap;
+    doc.setFontSize(8);
     doc.setFont("helvetica", "bold");
-    doc.setTextColor(60, 60, 60);
-    doc.text("Description", descX, tAndCY);
-
-    doc.setFontSize(7.5);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(80, 80, 80);
-
-    let descY = tAndCY + 6;
-    if (order.description && order.description.trim()) {
-      const descLines = doc.splitTextToSize(order.description, colWidth - 5);
-      descLines.forEach((line: string) => {
-        doc.text(line, descX, descY);
-        descY += 4;
-      });
-    } else {
-      doc.text("No additional description provided.", descX, descY);
-      descY += 4;
-    }
-
-    // --- FOOTER ---
-    const footerY = Math.max(termsY, descY) + 15;
-
-    // Signatory section with box
-    doc.setDrawColor(200, 200, 200);
-    doc.setLineWidth(0.5);
-    doc.rect(14, footerY, 80, 20, "S");
-
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(50, 50, 50);
-    doc.text(`For : ${COMPANY_DETAILS.name}`, 20, footerY + 7);
+    doc.setTextColor(...PRIMARY_RED);
+    doc.text("Order Description / Notes", descX, currentY + 3);
 
     doc.setFontSize(7);
     doc.setFont("helvetica", "normal");
-    doc.setTextColor(150, 150, 150);
-    doc.text("Authorized Signatory", 20, footerY + 15);
+    doc.setTextColor(80, 80, 80);
 
-    // Footer text - System Generated
-    doc.setFontSize(6);
-    doc.setFont("helvetica", "italic");
-    doc.setTextColor(180, 180, 180);
-    doc.text(
-      "This is a system generated purchase order.",
-      pageWidth / 2,
-      pageHeight - 10,
-      { align: "center" },
-    );
+    let descY = currentY + 7;
+    if (order.description && order.description.trim()) {
+      const descLines = doc.splitTextToSize(order.description, colWidth - 4);
+      doc.text(descLines, descX, descY);
+      descY += descLines.length * 3.2;
+    } else {
+      doc.text("No additional notes provided.", descX, descY);
+      descY += 3.2;
+    }
+
+    // --- 6. AUTHORIZED SIGNATORY & FOOTER ---
+    let signatureY = Math.max(termsY, descY) + 6;
+
+    // Ensure signature block fits on page
+    if (signatureY + 25 > pageHeight - 12) {
+      doc.addPage();
+      signatureY = 15;
+    }
+
+    // Signature Box Right Aligned
+    const sigWidth = 65;
+    const sigX = pageWidth - margin - sigWidth;
+    doc.setDrawColor(...BORDER_COLOR);
+    doc.roundedRect(sigX, signatureY, sigWidth, 20, 1.5, 1.5, "S");
+
+    doc.setFontSize(7.5);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(30, 30, 30);
+    doc.text(`For ${M5C_DETAILS.name}`, sigX + 3, signatureY + 5, {
+      maxWidth: sigWidth - 6,
+    });
+
+    doc.setFontSize(6.5);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(140, 140, 140);
+    doc.text("Authorized Signatory", sigX + 3, signatureY + 16);
+
+    // Global Footer on Every Page
+    const pageCount = (doc as any).internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setDrawColor(...BORDER_COLOR);
+      doc.setLineWidth(0.3);
+      doc.line(margin, pageHeight - 10, pageWidth - margin, pageHeight - 10);
+
+      doc.setFontSize(6.5);
+      doc.setFont("helvetica", "italic");
+      doc.setTextColor(140, 140, 140);
+      doc.text(
+        "This is a system generated Purchase Order.",
+        margin,
+        pageHeight - 6,
+      );
+      doc.text(
+        `Page ${i} of ${pageCount}`,
+        pageWidth - margin,
+        pageHeight - 6,
+        { align: "right" },
+      );
+    }
 
     // Save PDF
     doc.save(`PO_${order.id}.pdf`);
