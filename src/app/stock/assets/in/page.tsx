@@ -533,8 +533,8 @@ export default function StockInAssetsPage() {
                     onChange={(e) => setSupplier(e.target.value)}
                     className="h-10 w-full rounded-xl border-2 border-gray-300 bg-white/90 px-3 text-xs font-medium shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 dark:border-gray-600 dark:bg-gray-900/90 cursor-pointer"
                   >
-                    {suppliers.map((s) => (
-                      <option key={s.name} value={s.name}>
+                    {suppliers.map((s, idx) => (
+                      <option key={`${s.name}-${idx}`} value={s.name}>
                         {s.name}
                       </option>
                     ))}
