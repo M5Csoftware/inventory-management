@@ -214,8 +214,8 @@ export default function LowStockAlertsPage() {
             className="h-9 bg-background border border-input rounded-md px-3 text-xs focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
           >
             <option value="All">All Categories ({categories.length})</option>
-            {categories.map((c) => (
-              <option key={c.name} value={c.name}>
+            {categories.map((c, idx) => (
+              <option key={`${c.name}-${idx}`} value={c.name}>
                 {c.name}
               </option>
             ))}
