@@ -58,13 +58,21 @@ export default function CategoriesPage() {
     return map;
   }, [categories]);
 
-  // Filtered list based on filter tab
+  // Filtered & sorted list based on filter tab
   const displayedCategories = useMemo(() => {
-    return (categories || []).filter((c) => {
-      if (filterMode === "major") return !c.parentCategory;
-      if (filterMode === "sub") return !!c.parentCategory;
-      return true;
-    });
+    return (categories || [])
+      .filter((c) => {
+        if (filterMode === "major") return !c.parentCategory;
+        if (filterMode === "sub") return !!c.parentCategory;
+        return true;
+      })
+      .sort((a, b) => {
+        const aIsMajor = !a.parentCategory;
+        const bIsMajor = !b.parentCategory;
+        if (aIsMajor && !bIsMajor) return -1;
+        if (!aIsMajor && bIsMajor) return 1;
+        return a.name.localeCompare(b.name);
+      });
   }, [categories, filterMode]);
 
   return (
@@ -102,17 +110,6 @@ export default function CategoriesPage() {
         <div className="flex items-center gap-1.5 p-1 bg-muted/40 rounded-xl border border-border/50 w-fit">
           <button
             type="button"
-            onClick={() => setFilterMode("all")}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-              filterMode === "all"
-                ? "bg-background text-foreground shadow-sm font-bold"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            All Categories ({categories.length})
-          </button>
-          <button
-            type="button"
             onClick={() => setFilterMode("major")}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
               filterMode === "major"
@@ -131,7 +128,18 @@ export default function CategoriesPage() {
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            Subcategories ({categories.filter((c) => !!c.parentCategory).length})
+            Sub Categories ({categories.filter((c) => !!c.parentCategory).length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setFilterMode("all")}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              filterMode === "all"
+                ? "bg-background text-foreground shadow-sm font-bold"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            All Categories ({categories.length})
           </button>
         </div>
       </div>

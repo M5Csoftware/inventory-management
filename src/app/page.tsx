@@ -414,7 +414,7 @@ export default function Dashboard() {
             <CardTitle className="text-lg">Recent Activity</CardTitle>
             <CardDescription>Latest movements in your inventory.</CardDescription>
           </div>
-          <Link href="/stock">
+          <Link href="/reports/audit-log">
             <Button variant="secondary" size="sm" className="text-xs rounded-lg hover:shadow-md transition-shadow">View All</Button>
           </Link>
         </CardHeader>
