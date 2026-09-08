@@ -53,10 +53,12 @@ export const AuditView: React.FC<AuditViewProps> = ({ invoices, config }) => {
 
   // Filter invoices for table view
   const filteredInvoices = invoices.filter((inv) => {
+    const invBranch = inv.branch || 'Ahmedabad';
     const matchesSearch =
       inv.vendor.toLowerCase().includes(searchTerm.toLowerCase()) ||
       inv.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (inv.poNumber && inv.poNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      invBranch.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (inv.history &&
         inv.history.some(
           (h) =>
@@ -259,6 +261,7 @@ export const AuditView: React.FC<AuditViewProps> = ({ invoices, config }) => {
                 <th className="px-4 py-3">Vendor</th>
                 <th className="px-4 py-3">Invoice No.</th>
                 <th className="px-4 py-3">Date</th>
+                <th className="px-4 py-3">Branch</th>
                 <th className="px-4 py-3 text-right">Amount</th>
                 <th className="px-4 py-3 text-center">Status</th>
                 <th className="px-4 py-3">Latest Audit Action</th>
@@ -268,12 +271,13 @@ export const AuditView: React.FC<AuditViewProps> = ({ invoices, config }) => {
             <tbody className="divide-y divide-border/40 text-xs">
               {filteredInvoices.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-muted-foreground">
+                  <td colSpan={8} className="py-12 text-center text-muted-foreground">
                     No invoice audit records found matching your filters.
                   </td>
                 </tr>
               ) : (
                 filteredInvoices.map((inv) => {
+                  const invBranch = inv.branch || 'Ahmedabad';
                   const lastHistory = inv.history && inv.history.length > 0
                     ? inv.history[inv.history.length - 1]
                     : null;
@@ -288,6 +292,19 @@ export const AuditView: React.FC<AuditViewProps> = ({ invoices, config }) => {
                       </td>
                       <td className="px-4 py-3 text-muted-foreground">
                         {inv.invoiceDate}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold border whitespace-nowrap ${
+                          invBranch === 'Delhi'
+                            ? 'bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/25'
+                            : invBranch === 'Mumbai'
+                            ? 'bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/25'
+                            : invBranch === 'Ludhiana'
+                            ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/25'
+                            : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/25'
+                        }`}>
+                          🏢 {invBranch}
+                        </span>
                       </td>
                       <td className="px-4 py-3 font-mono font-extrabold text-right text-foreground">
                         {formatAmount(inv.amount, config.currency)}

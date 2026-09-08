@@ -5,7 +5,8 @@ import { Invoice } from '@/types/invoice';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { useInventory } from '@/context/inventory-context';
+import { useInventory, BRANCHES } from '@/context/inventory-context';
+import { useInvoice } from '@/context/invoice-context';
 import {
   FileSpreadsheet,
   X,
@@ -23,6 +24,7 @@ import {
   History,
   Info,
   ClipboardCheck,
+  MapPin,
 } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { canApproveInvoice } from '@/utils/invoice-permissions';
@@ -60,6 +62,7 @@ export function InvoiceDetailModal({
   config,
 }: InvoiceDetailModalProps) {
   const { user } = useAuth();
+  const { updateInvoiceBranch } = useInvoice();
   const { physicalVerifications } = useInventory();
   const [mounted, setMounted] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
@@ -67,6 +70,14 @@ export function InvoiceDetailModal({
   const [verifyNotes, setVerifyNotes] = useState('');
   const [showVerifyForm, setShowVerifyForm] = useState(false);
   const [selectedImgIdx, setSelectedImgIdx] = useState(0);
+  const [isEditingBranch, setIsEditingBranch] = useState(false);
+  const [selectedBranch, setSelectedBranch] = useState(invoice.branch || 'Delhi');
+  const [isSavingBranch, setIsSavingBranch] = useState(false);
+
+  useEffect(() => {
+    setSelectedBranch(invoice.branch || 'Delhi');
+    setIsEditingBranch(false);
+  }, [invoice]);
 
   const linkedPv = physicalVerifications.find(
     (pv) =>
@@ -187,9 +198,76 @@ export function InvoiceDetailModal({
                   <span className="text-muted-foreground">Entered By:</span>
                   <span className="font-semibold">{invoice.enteredBy} ({new Date(invoice.enteredAt).toLocaleDateString()})</span>
                 </div>
-                <div className="flex justify-between py-1 border-b border-border/30">
-                  <span className="text-muted-foreground">Branch:</span>
-                  <span className="font-semibold">{invoice.branch || 'Ahmedabad'}</span>
+                <div className="flex justify-between items-center py-1.5 border-b border-border/30">
+                  <span className="text-muted-foreground flex items-center gap-1">
+                    <MapPin className="h-3 w-3 text-primary" /> Branch:
+                  </span>
+                  <div className="flex items-center gap-2">
+                    {!isEditingBranch ? (
+                      <>
+                        <span className={`font-bold px-2.5 py-0.5 rounded-full text-xs border ${
+                          (invoice.branch || 'Ahmedabad') === 'Delhi'
+                            ? 'bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/25'
+                            : (invoice.branch || 'Ahmedabad') === 'Mumbai'
+                            ? 'bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/25'
+                            : (invoice.branch || 'Ahmedabad') === 'Ludhiana'
+                            ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/25'
+                            : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/25'
+                        }`}>
+                          🏢 {invoice.branch || 'Ahmedabad'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedBranch(invoice.branch || 'Ahmedabad');
+                            setIsEditingBranch(true);
+                          }}
+                          className="text-[10px] text-primary hover:underline font-bold cursor-pointer"
+                        >
+                          Change
+                        </button>
+                      </>
+                    ) : (
+                      <div className="flex items-center gap-1">
+                        <select
+                          value={selectedBranch}
+                          onChange={(e) => setSelectedBranch(e.target.value)}
+                          className="h-7 text-xs border rounded-md px-1.5 bg-background font-semibold"
+                        >
+                          {BRANCHES.map((b) => (
+                            <option key={b} value={b}>
+                              {b}
+                            </option>
+                          ))}
+                        </select>
+                        <Button
+                          size="sm"
+                          disabled={isSavingBranch}
+                          className="h-7 px-2 text-[10px] font-bold"
+                          onClick={async () => {
+                            setIsSavingBranch(true);
+                            try {
+                              await updateInvoiceBranch(invoice.id, selectedBranch);
+                              setIsEditingBranch(false);
+                            } finally {
+                              setIsSavingBranch(false);
+                            }
+                          }}
+                        >
+                          Save
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          disabled={isSavingBranch}
+                          className="h-7 px-1.5 text-[10px]"
+                          onClick={() => setIsEditingBranch(false)}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div className="flex justify-between py-1 border-b border-border/30">
                   <span className="text-muted-foreground">Description:</span>

@@ -83,6 +83,7 @@ function MasterInvoiceContent() {
     description: string;
     invoiceImage: string | null;
     invoiceImages?: string[];
+    branch?: string;
   }) => {
     const success = await createInvoice(formData);
     if (success) {

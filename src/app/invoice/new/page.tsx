@@ -24,8 +24,10 @@ import {
   ShoppingCart,
   Sparkles,
   Plus,
+  MapPin,
 } from 'lucide-react';
-import { useInventory, Order } from '@/context/inventory-context';
+import { useInventory, Order, BRANCHES } from '@/context/inventory-context';
+import { useAuth } from '@/context/auth-context';
 import { toast } from 'react-toastify';
 import { InvoiceStockInModal, StockInItemEntry } from '@/components/invoice/InvoiceStockInModal';
 
@@ -39,12 +41,18 @@ interface UploadedInvoiceImage {
 function NewInvoiceFormContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { user } = useAuth();
   const { createInvoice } = useInvoice();
-  const { suppliers, orders, recordTransaction, updateOrder } = useInventory();
+  const { suppliers, orders, recordTransaction, updateOrder, activeBranch } = useInventory();
 
   const [vendor, setVendor] = useState('');
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [invoiceDate, setInvoiceDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [branch, setBranch] = useState<string>(() =>
+    activeBranch && activeBranch !== 'All'
+      ? activeBranch
+      : (user?.branch && user.branch !== 'All' ? user.branch : 'Delhi')
+  );
   const [taxableAmount, setTaxableAmount] = useState('');
   const [taxSlab, setTaxSlab] = useState<string>('');
   const [taxOption, setTaxOption] = useState<TaxOption>('IGST');
@@ -60,6 +68,13 @@ function NewInvoiceFormContent() {
   const submittingRef = useRef(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const initialPoAppliedRef = useRef(false);
+
+  // Sync activeBranch with form if set
+  useEffect(() => {
+    if (activeBranch && activeBranch !== 'All') {
+      setBranch(activeBranch);
+    }
+  }, [activeBranch]);
 
   // Auto Calculations based on Tax Slab
   const parsedTaxable = parseFloat(taxableAmount) || 0;
@@ -78,6 +93,10 @@ function NewInvoiceFormContent() {
 
     if (order.supplier) {
       setVendor(order.supplier);
+    }
+
+    if (order.branch && order.branch !== 'All') {
+      setBranch(order.branch);
     }
 
     // Calculate pre-tax subtotal based on leftover/remaining unfulfilled quantities
@@ -245,6 +264,7 @@ function NewInvoiceFormContent() {
         taxAmount: calculatedTax,
         amount: calculatedTotal,
         poNumber,
+        branch,
         bankLast4,
         description,
         invoiceImage: imageUrls[0] || null,
@@ -277,6 +297,7 @@ function NewInvoiceFormContent() {
         taxAmount: calculatedTax,
         amount: calculatedTotal,
         poNumber,
+        branch,
         bankLast4,
         description,
         invoiceImage: imageUrls[0] || null,
@@ -300,7 +321,7 @@ function NewInvoiceFormContent() {
                 amount: item.price,
                 supplier: vendor,
                 invoiceNumber,
-                branch: item.branch,
+                branch: item.branch || branch,
               }
             );
           }
@@ -463,8 +484,8 @@ function NewInvoiceFormContent() {
               )}
             </div>
 
-            {/* Row 1: Vendor, Invoice Number, Invoice Date */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            {/* Row 1: Vendor, Invoice Number, Invoice Date, Branch */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -522,6 +543,25 @@ function NewInvoiceFormContent() {
                   onChange={(e) => setInvoiceDate(e.target.value)}
                   className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 dark:border-gray-600 dark:bg-gray-900/90 cursor-pointer"
                 />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  <MapPin className="h-3.5 w-3.5 text-primary" />
+                  Branch / Location <span className="text-destructive">*</span>
+                </label>
+                <select
+                  required
+                  value={branch}
+                  onChange={(e) => setBranch(e.target.value)}
+                  className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 dark:border-gray-600 dark:bg-gray-900/90 font-bold text-foreground cursor-pointer"
+                >
+                  {BRANCHES.map((b) => (
+                    <option key={b} value={b}>
+                      🏢 {b} Branch
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
 
@@ -838,6 +878,7 @@ function NewInvoiceFormContent() {
           invoiceDate,
           totalAmount: calculatedTotal,
           poNumber,
+          branch,
           linkedOrder,
         }}
         onSubmitInvoiceOnly={handleCreateInvoiceOnly}

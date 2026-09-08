@@ -16,8 +16,10 @@ import {
   XCircle,
   Landmark,
   FileSpreadsheet,
+  MapPin,
 } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
+import { BRANCHES } from '@/context/inventory-context';
 import { InvoiceDetailModal } from './InvoiceDetailModal';
 import { BankDetailsModal } from './BankDetailsModal';
 import { ApproveConfirmationModal } from './ApproveConfirmationModal';
@@ -76,6 +78,7 @@ export function InvoiceTable({
 
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState(defaultStatusFilter);
+  const [branchFilter, setBranchFilter] = useState('all');
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [bankModalInvoice, setBankModalInvoice] = useState<Invoice | null>(null);
   const [approveConfirmModalTarget, setApproveConfirmModalTarget] = useState<Invoice | null>(null);
@@ -85,16 +88,21 @@ export function InvoiceTable({
 
   // Filter invoices
   const filteredInvoices = invoices.filter((inv) => {
+    const invBranch = inv.branch || 'Ahmedabad';
     const matchesSearch =
       inv.vendor.toLowerCase().includes(searchTerm.toLowerCase()) ||
       inv.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (inv.poNumber && inv.poNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      invBranch.toLowerCase().includes(searchTerm.toLowerCase()) ||
       inv.id.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesStatus =
       statusFilter === 'all' || inv.status === statusFilter;
 
-    return matchesSearch && matchesStatus;
+    const matchesBranch =
+      branchFilter === 'all' || invBranch.toLowerCase() === branchFilter.toLowerCase();
+
+    return matchesSearch && matchesStatus && matchesBranch;
   });
 
   const exportCSV = () => {
@@ -103,6 +111,7 @@ export function InvoiceTable({
       'Vendor',
       'Invoice Number',
       'Invoice Date',
+      'Branch',
       'Taxable Amount (INR)',
       'Tax Slab (%)',
       'Tax Option',
@@ -111,7 +120,6 @@ export function InvoiceTable({
       'PO Number',
       'Status',
       'Entered By',
-      'Branch',
     ];
 
     const rows = filteredInvoices.map((i) => [
@@ -119,6 +127,7 @@ export function InvoiceTable({
       `"${i.vendor.replace(/"/g, '""')}"`,
       `"${i.invoiceNumber}"`,
       `"${i.invoiceDate}"`,
+      `"${i.branch || 'Ahmedabad'}"`,
       i.taxableAmount,
       i.taxSlab ?? (i.taxAmount > 0 && i.taxableAmount > 0 ? Math.round((i.taxAmount / i.taxableAmount) * 100) : 18),
       `"${i.taxOption}"`,
@@ -127,7 +136,6 @@ export function InvoiceTable({
       `"${i.poNumber || ''}"`,
       `"${i.status}"`,
       `"${i.enteredBy}"`,
-      `"${i.branch || ''}"`,
     ]);
 
     const csvContent =
@@ -176,7 +184,7 @@ export function InvoiceTable({
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 type="search"
-                placeholder="Search vendor, inv #, PO #..."
+                placeholder="Search vendor, inv #, PO #, branch..."
                 className="pl-9 h-9 text-xs bg-white/90 dark:bg-gray-900/90 border-2 border-gray-300 dark:border-gray-600 rounded-lg font-medium focus:border-primary"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -188,28 +196,51 @@ export function InvoiceTable({
           </div>
         </div>
 
-        {/* Filter Pills */}
-        <div className="flex flex-wrap items-center gap-1.5 text-xs pt-1">
-          {[
-            { id: 'all', label: 'All Invoices' },
-            { id: 'pending_verification', label: 'Pending Verification' },
-            { id: 'pending_approval', label: 'Pending Approval' },
-            { id: 'approved', label: 'Approved' },
-            { id: 'paid', label: 'Paid' },
-            { id: 'rejected', label: 'Rejected' },
-          ].map((f) => (
-            <button
-              key={f.id}
-              onClick={() => setStatusFilter(f.id)}
-              className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors cursor-pointer ${
-                statusFilter === f.id
-                  ? 'bg-primary text-primary-foreground shadow-sm'
-                  : 'bg-muted/80 text-muted-foreground hover:bg-muted hover:text-foreground'
-              }`}
-            >
-              {f.label}
-            </button>
-          ))}
+        {/* Filter Pills & Branch Selector */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-1">
+          {/* Status Pills */}
+          <div className="flex flex-wrap items-center gap-1.5 text-xs">
+            {[
+              { id: 'all', label: 'All Statuses' },
+              { id: 'pending_verification', label: 'Pending Verification' },
+              { id: 'pending_approval', label: 'Pending Approval' },
+              { id: 'approved', label: 'Approved' },
+              { id: 'paid', label: 'Paid' },
+              { id: 'rejected', label: 'Rejected' },
+            ].map((f) => (
+              <button
+                key={f.id}
+                onClick={() => setStatusFilter(f.id)}
+                className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors cursor-pointer ${
+                  statusFilter === f.id
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'bg-muted/80 text-muted-foreground hover:bg-muted hover:text-foreground'
+                }`}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Branch Filter Pills */}
+          <div className="flex items-center gap-1 text-xs shrink-0 flex-wrap">
+            <span className="text-muted-foreground font-semibold text-[11px] flex items-center gap-1 mr-1">
+              <MapPin size={12} className="text-primary" /> Branch:
+            </span>
+            {['all', ...BRANCHES].map((b) => (
+              <button
+                key={b}
+                onClick={() => setBranchFilter(b)}
+                className={`px-2.5 py-0.5 rounded-lg text-[11px] font-bold transition-colors cursor-pointer ${
+                  branchFilter.toLowerCase() === b.toLowerCase()
+                    ? 'bg-primary/20 text-primary border border-primary/40'
+                    : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground border border-transparent'
+                }`}
+              >
+                {b === 'all' ? 'All' : b}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -222,6 +253,7 @@ export function InvoiceTable({
               <th className="py-3 px-4">Vendor Name</th>
               <th className="py-3 px-4">Invoice No.</th>
               <th className="py-3 px-4">Date</th>
+              <th className="py-3 px-4">Branch</th>
               <th className="py-3 px-4 text-right">Taxable</th>
               <th className="py-3 px-4 text-right">Total Amount</th>
               <th className="py-3 px-4">PO No.</th>
@@ -233,55 +265,70 @@ export function InvoiceTable({
           <tbody className="divide-y divide-border/20 text-xs">
             {filteredInvoices.length === 0 ? (
               <tr>
-                <td colSpan={10} className="py-12 text-center text-muted-foreground">
+                <td colSpan={11} className="py-12 text-center text-muted-foreground">
                   No invoice records found matching your filters.
                 </td>
               </tr>
             ) : (
-              filteredInvoices.map((inv) => (
-                <tr
-                  key={inv.id}
-                  className="hover:bg-muted/30 transition-colors cursor-pointer group"
-                  onClick={() => setSelectedInvoice(inv)}
-                >
-                  <td className="py-3 px-4 font-mono font-medium text-purple-600 dark:text-purple-400">
-                    {inv.id}
-                  </td>
-                  <td className="py-3 px-4 font-bold text-foreground max-w-[160px] truncate" title={inv.vendor}>
-                    {inv.vendor}
-                  </td>
-                  <td className="py-3 px-4 font-mono font-semibold text-foreground">
-                    {inv.invoiceNumber}
-                  </td>
-                  <td className="py-3 px-4 text-muted-foreground">
-                    {inv.invoiceDate}
-                  </td>
-                  <td className="py-3 px-4 text-right font-mono text-muted-foreground">
-                    ₹{inv.taxableAmount.toLocaleString('en-IN')}
-                  </td>
-                  <td className="py-3 px-4 text-right font-mono font-extrabold text-foreground">
-                    ₹{inv.amount.toLocaleString('en-IN')}
-                  </td>
-                  <td className="py-3 px-4 font-mono text-muted-foreground">
-                    {inv.poNumber || '—'}
-                  </td>
-                  <td className="py-3 px-4 text-center">
-                    {getStatusBadge(inv.status)}
-                  </td>
-                  <td className="py-3 px-4 text-center text-muted-foreground">
-                    {inv.enteredBy}
-                  </td>
-                  <td className="py-3 px-4 text-center" onClick={(e) => e.stopPropagation()}>
-                    <div className="flex items-center justify-center gap-1.5">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg"
-                        onClick={() => setSelectedInvoice(inv)}
-                        title="View Details"
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
+              filteredInvoices.map((inv) => {
+                const invBranch = inv.branch || 'Ahmedabad';
+                return (
+                  <tr
+                    key={inv.id}
+                    className="hover:bg-muted/30 transition-colors cursor-pointer group"
+                    onClick={() => setSelectedInvoice(inv)}
+                  >
+                    <td className="py-3 px-4 font-mono font-medium text-purple-600 dark:text-purple-400">
+                      {inv.id}
+                    </td>
+                    <td className="py-3 px-4 font-bold text-foreground max-w-[160px] truncate" title={inv.vendor}>
+                      {inv.vendor}
+                    </td>
+                    <td className="py-3 px-4 font-mono font-semibold text-foreground">
+                      {inv.invoiceNumber}
+                    </td>
+                    <td className="py-3 px-4 text-muted-foreground">
+                      {inv.invoiceDate}
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold border whitespace-nowrap ${
+                        invBranch === 'Delhi'
+                          ? 'bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/25'
+                          : invBranch === 'Mumbai'
+                          ? 'bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/25'
+                          : invBranch === 'Ludhiana'
+                          ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/25'
+                          : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/25'
+                      }`}>
+                        🏢 {invBranch}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-right font-mono text-muted-foreground">
+                      ₹{inv.taxableAmount.toLocaleString('en-IN')}
+                    </td>
+                    <td className="py-3 px-4 text-right font-mono font-extrabold text-foreground">
+                      ₹{inv.amount.toLocaleString('en-IN')}
+                    </td>
+                    <td className="py-3 px-4 font-mono text-muted-foreground">
+                      {inv.poNumber || '—'}
+                    </td>
+                    <td className="py-3 px-4 text-center">
+                      {getStatusBadge(inv.status)}
+                    </td>
+                    <td className="py-3 px-4 text-center text-muted-foreground">
+                      {inv.enteredBy}
+                    </td>
+                    <td className="py-3 px-4 text-center" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center justify-center gap-1.5">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg"
+                          onClick={() => setSelectedInvoice(inv)}
+                          title="View Details"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
 
                       {inv.status === 'pending_verification' && (
                         <Button
@@ -347,8 +394,8 @@ export function InvoiceTable({
                     </div>
                   </td>
                 </tr>
-              ))
-            )}
+              );
+            }))}
           </tbody>
         </table>
       </div>
