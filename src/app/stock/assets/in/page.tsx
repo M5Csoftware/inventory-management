@@ -48,7 +48,7 @@ export interface AssetModelGroup {
 }
 
 export default function StockInAssetsPage() {
-  const { products, categories, recordTransaction, activeBranch } =
+  const { products, categories, suppliers, recordTransaction, activeBranch } =
     useInventory();
   const router = useRouter();
 
@@ -57,6 +57,8 @@ export default function StockInAssetsPage() {
   const [targetBranch, setTargetBranch] = useState(() =>
     activeBranch === "All" ? "Ahmedabad" : activeBranch,
   );
+  const [supplier, setSupplier] = useState("");
+  const [customSupplier, setCustomSupplier] = useState("");
   const [invoiceNumber, setInvoiceNumber] = useState("");
   const [location, setLocation] = useState("Warehouse A (Zone 1)");
   const [notes, setNotes] = useState("");
@@ -268,8 +270,12 @@ export default function StockInAssetsPage() {
         const warrantyString =
           warrantyParts.length > 0 ? warrantyParts.join(" ") : "";
 
+        const effectiveSupplier =
+          supplier === "CUSTOM_SUPPLIER" ? customSupplier : supplier;
+
         const summaryParts = [
           `Model: ${group.model || "Standard"}`,
+          effectiveSupplier ? `Supplier: ${effectiveSupplier}` : "",
           warrantyString ? `Warranty: ${warrantyString}` : "",
           group.amount ? `Price: ₹${group.amount}` : "",
           serialsList.length > 0
@@ -293,6 +299,7 @@ export default function StockInAssetsPage() {
             invoiceNumber,
             model: group.model,
             serialNumber: serialsList.join(", "),
+            supplier: effectiveSupplier,
             branch: branchToUse,
           },
         );
@@ -324,6 +331,7 @@ export default function StockInAssetsPage() {
                   serialNumber: serial,
                   model: group.model || "",
                   warranty: warrantyString,
+                  supplier: effectiveSupplier,
                   purchaseDate: new Date().toISOString().slice(0, 10),
                   invoiceNumber: invoiceNumber || "",
                   branch: branchToUse,
