@@ -24,6 +24,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { useInventory } from '@/context/inventory-context';
 import { ConfirmModal } from '@/components/confirm-modal';
+import { toast } from 'react-toastify';
 
 export default function NewSupplierPage() {
   const { addSupplier, activeBranch } = useInventory();
@@ -43,7 +44,10 @@ export default function NewSupplierPage() {
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !contact || !email || !phone || !location) return;
+    if (!name.trim() || !contact.trim() || !email.trim() || !phone.trim() || !location.trim()) {
+      toast.error('Please fill in all required fields (Company Name, Contact Person, Email, Phone, Location).');
+      return;
+    }
     setShowConfirmModal(true);
   };
 

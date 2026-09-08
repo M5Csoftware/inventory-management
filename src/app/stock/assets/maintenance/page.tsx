@@ -108,17 +108,17 @@ interface SerialEntry {
 }
 
 // ── API config ──
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/inventory";
 
 const getAuthHeaders = (): Record<string, string> => {
   const token =
     typeof window !== "undefined" ? localStorage.getItem("token") : null;
   const dbName =
-    typeof window !== "undefined" ? localStorage.getItem("dbName") : null;
+    (typeof window !== "undefined" ? localStorage.getItem("dbName") : null) || "m5c-inventory";
   return {
     "Content-Type": "application/json",
+    "x-database": dbName,
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    ...(dbName ? { "x-database": dbName } : {}),
   };
 };
 
@@ -1166,7 +1166,7 @@ export default function MaintenancePage() {
         {/* Header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
-            <Link href="/assets">
+            <Link href="/stock/assets">
               <Button
                 variant="outline"
                 size="icon"

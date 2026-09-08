@@ -63,7 +63,10 @@ export default function EditCategoryPage() {
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !description.trim()) return;
+    if (!name.trim() || !description.trim()) {
+      toast.error('Please enter both Category Name and Description.');
+      return;
+    }
 
     if (categoryType === 'sub' && !parentCategory) {
       toast.error('Please select a Major Category for this subcategory.');

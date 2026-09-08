@@ -27,6 +27,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { toast } from "react-toastify";
 import { useInventory, Category, Supplier, BRANCHES } from '@/context/inventory-context';
 import { ConfirmModal } from '@/components/confirm-modal';
 
@@ -114,8 +115,14 @@ export default function NewProductPage() {
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !category) return;
-    if (!isAssetCategory && !stock) return;
+    if (!name.trim() || !category) {
+      toast.error('Please enter a product name and select a category.');
+      return;
+    }
+    if (!isAssetCategory && !stock) {
+      toast.error('Please specify the initial stock quantity.');
+      return;
+    }
     setShowConfirmModal(true);
   };
 
@@ -381,8 +388,8 @@ export default function NewProductPage() {
                   />
                 </div>
 
-                {/* Suppliers & Rates Section (Hidden for Fixed Assets) */}
-                {!isAssetCategory && (
+                {/* Suppliers & Rates Section */}
+                <>
                   <div className="rounded-lg bg-muted/30 p-3 sm:p-4 space-y-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
@@ -469,7 +476,7 @@ export default function NewProductPage() {
                       ))}
                     </div>
                   </div>
-                )}
+                </>
 
                 {/* Packaging & Stock Info */}
                 {isAssetCategory ? (

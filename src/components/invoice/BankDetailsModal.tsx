@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Landmark, X, Save } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
+import { toast } from 'react-toastify';
 
 interface BankDetailsModalProps {
   invoice: Invoice;
@@ -32,15 +33,19 @@ export function BankDetailsModal({ invoice, onClose, onSave }: BankDetailsModalP
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (isSubmittingRef.current || isSubmitting || !bankName || !accountName || !accountNumber || !ifscCode) return;
+    if (!bankName.trim() || !accountName.trim() || !accountNumber.trim() || !ifscCode.trim()) {
+      toast.error('Please fill in all bank details (Bank Name, Account Holder Name, Account Number, IFSC Code).');
+      return;
+    }
+    if (isSubmittingRef.current || isSubmitting) return;
     isSubmittingRef.current = true;
     setIsSubmitting(true);
 
     onSave({
-      bankName,
-      accountName,
-      accountNumber,
-      ifscCode,
+      bankName: bankName.trim(),
+      accountName: accountName.trim(),
+      accountNumber: accountNumber.trim(),
+      ifscCode: ifscCode.trim(),
       addedAt: Date.now(),
       addedBy: user?.name || 'User',
     });

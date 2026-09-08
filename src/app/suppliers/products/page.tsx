@@ -266,6 +266,7 @@ export default function SupplierProductsPage() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    toast.success("Supplier products catalog exported successfully!");
   };
 
   return (

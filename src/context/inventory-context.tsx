@@ -1,8 +1,9 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useRef } from "react";
+import React, { createContext, useContext, useState, useEffect, useRef, useMemo } from "react";
 import { toast } from "react-toastify";
 import { useAuth } from "./auth-context";
+import { getCachedAsync, invalidateCache } from "@/lib/cache";
 
 export interface ProductSupplierEntry {
   supplierName: string;
@@ -31,18 +32,19 @@ export interface Product {
 export interface Transaction {
   id: string;
   date: string;
-  purchaseDate?: string; // Added: Purchase date from the Stock In form
+  purchaseDate?: string;
   productId: string;
   productName: string;
   type: "Stock In" | "Stock Out";
   quantity: number;
   reasonOrLocation: string;
   notes?: string;
-  amount?: number; // Added: Amount/Price from the Stock In form
-  supplier?: string; // Added: Supplier from the Stock In form
-  invoiceNumber?: string; // Added: Invoice number from the Stock In form
-  model?: string; // Added: Model from the Stock In form
-  serialNumber?: string; // Added: Serial number from the Stock In form
+  amount?: number;
+  supplier?: string;
+  invoiceNumber?: string;
+  model?: string;
+  serialNumber?: string;
+  branch?: string;
 }
 
 export interface Category {
@@ -149,7 +151,6 @@ export interface AssetSerialItem {
   updatedAt?: string;
 }
 
-// Add this interface after AssetAssignment
 export interface MaintenanceRecord {
   id: string;
   assetId: string;
@@ -195,7 +196,7 @@ export interface PhysicalVerificationItem {
   category?: string;
   invoicedQuantity: number;
   physicalQuantity: number;
-  variance: number; // physicalQuantity - invoicedQuantity
+  variance: number;
   status: 'Matched' | 'Shortage' | 'Excess';
   condition: 'Good Condition' | 'Damaged' | 'Packaging Defect' | 'Seal Broken' | 'Other';
   notes?: string;
@@ -272,7 +273,7 @@ interface InventoryContextType {
   updateAssetAssignment: (id: string, updates: Partial<AssetAssignment>) => Promise<boolean>;
   deleteAssetAssignment: (id: string) => Promise<boolean>;
   assetSerials: AssetSerialItem[];
-  fetchAssetSerials: () => Promise<void>;
+  fetchAssetSerials: (forceRefresh?: boolean) => Promise<void>;
   addAssetSerial: (item: Omit<AssetSerialItem, "id" | "createdAt" | "updatedAt">) => Promise<boolean>;
   updateAssetSerial: (id: string, updates: Partial<AssetSerialItem>) => Promise<boolean>;
   deleteAssetSerial: (id: string) => Promise<boolean>;
@@ -285,6 +286,7 @@ const InventoryContext = createContext<InventoryContextType | undefined>(
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/inventory";
+
 const getDbHeader = () => {
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
   return {
@@ -343,7 +345,6 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Synchronize activeBranch with user's assigned branch or saved preference on mount/change
   useEffect(() => {
     if (!user) return;
 
@@ -396,9 +397,13 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // Fetch initial data
-  const fetchData = async () => {
-    if (!user) return; // Don't fetch until user is loaded
+  // Fetch initial data with LRU caching
+  const fetchData = async (forceRefresh = false) => {
+    if (!user) return;
+
+    if (forceRefresh) {
+      invalidateCache();
+    }
 
     try {
       const branchQuery =
@@ -406,9 +411,15 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
 
       const safeFetchJson = async (url: string, options?: RequestInit) => {
         try {
-          const res = await fetch(url, options);
-          if (!res.ok) return { success: false, data: [] };
-          return await res.json();
+          return await getCachedAsync(
+            url,
+            async () => {
+              const res = await fetch(url, options);
+              if (!res.ok) return { success: false, data: [] };
+              return await res.json();
+            },
+            45000 // 45 seconds TTL
+          );
         } catch {
           return { success: false, data: [] };
         }
@@ -518,7 +529,8 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
           });
           const data = await res.json();
           if (data.success) {
-            await fetchData();
+            invalidateCache();
+            await fetchData(true);
             toast.success("Product added successfully!");
           } else {
             toast.error(data.message || "Failed to add product.");
@@ -544,6 +556,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
           });
           const data = await res.json();
           if (data.success) {
+            invalidateCache();
             setCategories((prev) => [...prev, data.data]);
             toast.success("Category added successfully!");
           } else {
@@ -570,6 +583,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
           });
           const data = await res.json();
           if (data.success) {
+            invalidateCache();
             setSuppliers((prev) => [...prev, data.data]);
             toast.success("Supplier added successfully!");
           } else {
@@ -595,6 +609,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
           });
           const data = await res.json();
           if (data.success) {
+            invalidateCache();
             setProducts((prev) => prev.filter((p) => p.id !== id));
             toast.success("Product deleted successfully!");
           } else {
@@ -627,6 +642,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
           );
           const data = await res.json();
           if (data.success) {
+            invalidateCache();
             setCategories((prev) =>
               prev.map((c) => (c.name === name ? data.data : c)),
             );
@@ -657,6 +673,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
           );
           const data = await res.json();
           if (data.success) {
+            invalidateCache();
             setCategories((prev) => prev.filter((c) => c.name !== name));
             toast.success("Category deleted successfully!");
           } else {
@@ -689,6 +706,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
           );
           const data = await res.json();
           if (data.success) {
+            invalidateCache();
             setSuppliers((prev) =>
               prev.map((s) => (s.name === name ? data.data : s)),
             );
@@ -719,6 +737,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
           );
           const data = await res.json();
           if (data.success) {
+            invalidateCache();
             setSuppliers((prev) => prev.filter((s) => s.name !== name));
             toast.success("Supplier deleted successfully!");
           } else {
@@ -783,7 +802,8 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
           });
           const data = await res.json();
           if (data.success) {
-            await fetchData();
+            invalidateCache();
+            await fetchData(true);
             toast.success(`${type} recorded successfully!`);
             return true;
           } else {
@@ -814,6 +834,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
           });
           const data = await res.json();
           if (data.success) {
+            invalidateCache();
             setProducts((prev) =>
               prev.map((p) => (p.id === id ? data.data : p)),
             );
@@ -858,7 +879,8 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
           });
           const data = await res.json();
           if (data.success) {
-            await fetchData();
+            invalidateCache();
+            await fetchData(true);
             toast.success("Stock transferred successfully!");
             return true;
           } else {
@@ -890,7 +912,8 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
           });
           const data = await res.json();
           if (data.success) {
-            await fetchData();
+            invalidateCache();
+            await fetchData(true);
             toast.success("Order created successfully!");
           } else {
             toast.error(data.message || "Failed to create order.");
@@ -916,7 +939,8 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
           });
           const data = await res.json();
           if (data.success) {
-            await fetchData();
+            invalidateCache();
+            await fetchData(true);
             toast.success("Order updated successfully!");
           } else {
             toast.error(data.message || "Failed to update order.");
@@ -942,7 +966,8 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
           });
           const data = await res.json();
           if (data.success) {
-            await fetchData();
+            invalidateCache();
+            await fetchData(true);
             toast.success("Order status updated!");
           } else {
             toast.error(data.message || "Failed to update order.");
@@ -966,7 +991,8 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
             headers: NO_BODY_HEADER,
           });
           if (res.ok) {
-            await fetchData();
+            invalidateCache();
+            await fetchData(true);
             toast.success("Order deleted successfully!");
           } else {
             toast.error("Failed to delete order.");
@@ -1001,7 +1027,8 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
           });
           const data = await res.json();
           if (data.success) {
-            await fetchData();
+            invalidateCache();
+            await fetchData(true);
             toast.success("Asset assigned successfully!");
             return true;
           } else {
@@ -1009,7 +1036,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
             return false;
           }
         } catch (error) {
-          toast.error("An error occurred");
+          toast.error("An error occurred while assigning asset.");
           return false;
         }
       },
@@ -1028,7 +1055,8 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
           });
           const data = await res.json();
           if (data.success) {
-            await fetchData();
+            invalidateCache();
+            await fetchData(true);
             toast.success("Asset returned successfully!");
             return true;
           } else {
@@ -1036,7 +1064,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
             return false;
           }
         } catch (error) {
-          toast.error("An error occurred");
+          toast.error("An error occurred while returning asset.");
           return false;
         }
       },
@@ -1062,7 +1090,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
         console.error("Failed to save physical verification to storage:", e);
       }
     }
-    toast.success(`Physical verification recorded (${newRecord.id})! Note: Inventory stock is unchanged.`);
+    toast.success(`Physical verification recorded (${newRecord.id})!`);
   };
 
   const deletePhysicalVerification = async (id: string) => {
@@ -1087,8 +1115,9 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
       });
       const data = await res.json();
       if (data.success) {
+        invalidateCache();
         toast.success("Asset assignment updated successfully!");
-        await fetchData();
+        await fetchData(true);
         return true;
       } else {
         toast.error(data.message || "Failed to update asset assignment");
@@ -1108,8 +1137,9 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
       });
       const data = await res.json();
       if (data.success) {
+        invalidateCache();
         toast.success("Asset assignment deleted successfully!");
-        await fetchData();
+        await fetchData(true);
         return true;
       } else {
         toast.error(data.message || "Failed to delete asset assignment");
@@ -1121,14 +1151,20 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const fetchAssetSerials = async () => {
+  const fetchAssetSerials = async (forceRefresh = false) => {
     try {
       const branchQuery = activeBranch !== "All" ? `?branch=${activeBranch}` : "";
-      const res = await fetch(`${API_BASE}/asset-serials${branchQuery}`, {
-        headers: getDbHeader(),
-      });
-      const data = await res.json();
-      if (data.success) {
+      const url = `${API_BASE}/asset-serials${branchQuery}`;
+      if (forceRefresh) invalidateCache(url);
+      const data = await getCachedAsync(
+        url,
+        async () => {
+          const res = await fetch(url, { headers: getDbHeader() });
+          return await res.json();
+        },
+        45000
+      );
+      if (data?.success) {
         setAssetSerials(data.data || []);
       }
     } catch (error) {
@@ -1147,8 +1183,9 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
       });
       const data = await res.json();
       if (data.success) {
+        invalidateCache();
         toast.success("Asset unit/serial registered successfully!");
-        await fetchData();
+        await fetchData(true);
         return true;
       } else {
         toast.error(data.message || "Failed to register asset serial");
@@ -1172,8 +1209,9 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
       });
       const data = await res.json();
       if (data.success) {
+        invalidateCache();
         toast.success("Asset unit/serial updated successfully!");
-        await fetchData();
+        await fetchData(true);
         return true;
       } else {
         toast.error(data.message || "Failed to update asset serial");
@@ -1193,8 +1231,9 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
       });
       const data = await res.json();
       if (data.success) {
+        invalidateCache();
         toast.success("Asset unit/serial deleted successfully!");
-        await fetchData();
+        await fetchData(true);
         return true;
       } else {
         toast.error(data.message || "Failed to delete asset serial");
@@ -1215,8 +1254,9 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
       });
       const data = await res.json();
       if (data.success) {
+        invalidateCache();
         toast.success(data.message || "Action successfully rolled back!");
-        await fetchData();
+        await fetchData(true);
         return true;
       } else {
         toast.error(data.message || "Failed to rollback action.");
@@ -1228,47 +1268,57 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const contextValue = useMemo(() => ({
+    activeBranch,
+    setActiveBranch,
+    products,
+    transactions,
+    categories,
+    suppliers,
+    orders,
+    physicalVerifications,
+    addPhysicalVerification,
+    deletePhysicalVerification,
+    addProduct,
+    addCategory,
+    addSupplier,
+    addOrder,
+    recordTransaction,
+    transferStock,
+    deleteProduct,
+    updateProduct,
+    updateCategory,
+    deleteCategory,
+    updateSupplier,
+    deleteSupplier,
+    updateOrder,
+    updateOrderStatus,
+    deleteOrder,
+    assets,
+    assignAsset,
+    returnAsset,
+    updateAssetAssignment,
+    deleteAssetAssignment,
+    assetSerials,
+    fetchAssetSerials,
+    addAssetSerial,
+    updateAssetSerial,
+    deleteAssetSerial,
+    revertAuditLog,
+  }), [
+    activeBranch,
+    products,
+    transactions,
+    categories,
+    suppliers,
+    orders,
+    physicalVerifications,
+    assets,
+    assetSerials,
+  ]);
+
   return (
-    <InventoryContext.Provider
-      value={{
-        activeBranch,
-        setActiveBranch,
-        products,
-        transactions,
-        categories,
-        suppliers,
-        orders,
-        physicalVerifications,
-        addPhysicalVerification,
-        deletePhysicalVerification,
-        addProduct,
-        addCategory,
-        addSupplier,
-        addOrder,
-        recordTransaction,
-        transferStock,
-        deleteProduct,
-        updateProduct,
-        updateCategory,
-        deleteCategory,
-        updateSupplier,
-        deleteSupplier,
-        updateOrder,
-        updateOrderStatus,
-        deleteOrder,
-        assets,
-        assignAsset,
-        returnAsset,
-        updateAssetAssignment,
-        deleteAssetAssignment,
-        assetSerials,
-        fetchAssetSerials,
-        addAssetSerial,
-        updateAssetSerial,
-        deleteAssetSerial,
-        revertAuditLog,
-      }}
-    >
+    <InventoryContext.Provider value={contextValue}>
       {children}
     </InventoryContext.Provider>
   );

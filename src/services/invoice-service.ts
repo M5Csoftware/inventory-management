@@ -1,4 +1,5 @@
 import { Invoice, AppConfig } from '@/types/invoice';
+import { getCachedAsync, invalidateCache } from '@/lib/cache';
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_URL
@@ -7,18 +8,27 @@ const API_BASE =
 
 export const invoiceService = {
   // Config
-  getConfig: async (): Promise<AppConfig> => {
+  getConfig: async (forceRefresh = false): Promise<AppConfig> => {
+    const url = `${API_BASE}/config`;
+    if (forceRefresh) invalidateCache(url);
     try {
-      const res = await fetch(`${API_BASE}/config`);
-      if (!res.ok) return { threshold: 50000, currency: 'INR' };
-      const { data } = await res.json();
-      return data || { threshold: 50000, currency: 'INR' };
+      return await getCachedAsync(
+        url,
+        async () => {
+          const res = await fetch(url);
+          if (!res.ok) return { threshold: 50000, currency: 'INR' };
+          const { data } = await res.json();
+          return data || { threshold: 50000, currency: 'INR' };
+        },
+        60000
+      );
     } catch {
       return { threshold: 50000, currency: 'INR' };
     }
   },
 
   saveConfig: async (config: AppConfig): Promise<void> => {
+    invalidateCache(`${API_BASE}/config`);
     await fetch(`${API_BASE}/config`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -27,13 +37,22 @@ export const invoiceService = {
   },
 
   // Invoices
-  getInvoices: async (branch?: string): Promise<Invoice[]> => {
+  getInvoices: async (branch?: string, forceRefresh = false): Promise<Invoice[]> => {
+    const query = branch && branch !== 'All' ? `?branch=${encodeURIComponent(branch)}` : '';
+    const url = `${API_BASE}/invoices${query}`;
+    if (forceRefresh) invalidateCache(url);
+
     try {
-      const query = branch && branch !== 'All' ? `?branch=${encodeURIComponent(branch)}` : '';
-      const res = await fetch(`${API_BASE}/invoices${query}`);
-      if (!res.ok) return [];
-      const { data } = await res.json();
-      return data || [];
+      return await getCachedAsync(
+        url,
+        async () => {
+          const res = await fetch(url);
+          if (!res.ok) return [];
+          const { data } = await res.json();
+          return data || [];
+        },
+        45000
+      );
     } catch (err) {
       console.error('Failed to fetch invoices:', err);
       return [];
@@ -42,6 +61,7 @@ export const invoiceService = {
 
   addInvoice: async (invoice: Invoice): Promise<Invoice | null> => {
     try {
+      invalidateCache(API_BASE);
       const res = await fetch(`${API_BASE}/invoices`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -57,6 +77,7 @@ export const invoiceService = {
 
   updateInvoice: async (id: string, updates: Partial<Invoice>): Promise<Invoice | null> => {
     try {
+      invalidateCache(API_BASE);
       const res = await fetch(`${API_BASE}/invoices/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
