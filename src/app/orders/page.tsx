@@ -22,6 +22,9 @@ import {
   Trash,
   CheckCircle,
   FilePlus,
+  X,
+  Eye,
+  FileText,
 } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -37,6 +40,7 @@ import { toast } from "react-toastify";
 import { useAutoAnimate } from "@formkit/auto-animate/react";
 
 import { ConfirmDeleteModal, ConfirmModal } from "@/components/confirm-modal";
+import { M5C_LOGO_BASE64 } from "@/lib/company-logo";
 
 // M5C Company details (Buyer)
 const M5C_DETAILS = {
@@ -68,6 +72,8 @@ export default function OrdersPage() {
   const [completingOrderId, setCompletingOrderId] = useState<string | null>(
     null,
   );
+  const [pdfPreviewOrder, setPdfPreviewOrder] = useState<Order | null>(null);
+  const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
   const completingRef = useRef<Set<string>>(new Set());
 
   const handleCompleteOrder = async (order: Order) => {
@@ -157,15 +163,15 @@ export default function OrdersPage() {
     }
   };
 
-  const generatePDF = (order: Order) => {
+  const buildPDFDoc = (order: Order): jsPDF => {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
     const margin = 14;
     const printableWidth = pageWidth - margin * 2; // 182mm
 
-    // Primary Red Theme Palette
-    const PRIMARY_RED: [number, number, number] = [139, 0, 0]; // Deep Crimson Red
+    // Primary Red Theme Palette (#EA1B40 -> RGB [234, 27, 64])
+    const PRIMARY_RED: [number, number, number] = [234, 27, 64];
     const LIGHT_BG: [number, number, number] = [252, 252, 252];
     const BORDER_COLOR: [number, number, number] = [220, 220, 220];
 
@@ -193,16 +199,29 @@ export default function OrdersPage() {
     const headerBoxX = pageWidth - margin - headerBoxWidth;
     const headerBoxY = 12;
 
-    // Left Side: Company Name & Sub-details (Max width strictly left of PO Box)
-    const companyMaxLineWidth = printableWidth - headerBoxWidth - 8; // ~108mm
+    // Company Logo on Top Left
+    const logoX = margin;
+    const logoY = 10;
+    const logoWidth = 18;
+    const logoHeight = 20;
+
+    try {
+      doc.addImage(M5C_LOGO_BASE64, "PNG", logoX, logoY, logoWidth, logoHeight);
+    } catch (e) {
+      console.error("Failed to add logo to PDF:", e);
+    }
+
+    // Left Side: Company Name & Sub-details (Positioned strictly right of Logo and left of PO Box)
+    const companyX = logoX + logoWidth + 4;
+    const companyMaxLineWidth = headerBoxX - companyX - 4; // ~90mm
     
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(11);
+    doc.setFontSize(10.5);
     doc.setTextColor(30, 30, 30);
     const titleLines = doc.splitTextToSize(M5C_DETAILS.name, companyMaxLineWidth);
-    doc.text(titleLines, margin, 16);
+    doc.text(titleLines, companyX, 15);
 
-    let compY = 16 + titleLines.length * 4.5;
+    let compY = 15 + titleLines.length * 4.2;
 
     doc.setFont("helvetica", "normal");
     doc.setFontSize(7.5);
@@ -212,12 +231,12 @@ export default function OrdersPage() {
       M5C_DETAILS.address,
       companyMaxLineWidth,
     );
-    doc.text(companyAddrLines, margin, compY);
-    compY += companyAddrLines.length * 3.5;
+    doc.text(companyAddrLines, companyX, compY);
+    compY += companyAddrLines.length * 3.3;
 
     doc.text(
       `GSTIN: ${M5C_DETAILS.gstin} | State: ${M5C_DETAILS.state} | Phone: ${M5C_DETAILS.contact}`,
-      margin,
+      companyX,
       compY,
     );
     compY += 4;
@@ -625,11 +644,37 @@ export default function OrdersPage() {
       );
     }
 
-    // Save PDF
-    doc.save(`PO_${order.id}.pdf`);
+    return doc;
+  };
+
+  const handlePreviewPDF = (order: Order) => {
+    try {
+      const doc = buildPDFDoc(order);
+      const blob = doc.output("blob");
+      const url = URL.createObjectURL(blob);
+      setPdfPreviewUrl(url);
+      setPdfPreviewOrder(order);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to generate PDF preview.");
+    }
+  };
+
+  const handleDownloadPDF = () => {
+    if (!pdfPreviewOrder) return;
+    const doc = buildPDFDoc(pdfPreviewOrder);
+    doc.save(`PO_${pdfPreviewOrder.id}.pdf`);
     toast.success(
-      `Purchase order PDF for ${order.id} downloaded successfully!`,
+      `Purchase Order PDF for ${pdfPreviewOrder.id} downloaded successfully!`,
     );
+  };
+
+  const closePreviewModal = () => {
+    if (pdfPreviewUrl) {
+      URL.revokeObjectURL(pdfPreviewUrl);
+    }
+    setPdfPreviewUrl(null);
+    setPdfPreviewOrder(null);
   };
 
   // Helper function to convert numbers to words
@@ -920,10 +965,10 @@ export default function OrdersPage() {
                               <span>Edit Order</span>
                             </DropdownMenuItem>
                             <DropdownMenuItem
-                              onClick={() => generatePDF(order)}
+                              onClick={() => handlePreviewPDF(order)}
                             >
-                              <Download className="mr-2 h-4 w-4" />
-                              <span>PDF</span>
+                              <Download className="mr-2 h-4 w-4 text-[#EA1B40]" />
+                              <span className="font-medium text-[#EA1B40]">PDF / Preview</span>
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
@@ -991,6 +1036,73 @@ export default function OrdersPage() {
             : ""
         }
       />
+
+      {/* PDF Preview Modal */}
+      {pdfPreviewOrder && pdfPreviewUrl && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-200">
+          <div className="bg-background border border-border/80 rounded-2xl shadow-2xl w-full max-w-5xl h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-border bg-muted/20">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-[#EA1B40]/10 text-[#EA1B40]">
+                  <FileText className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-foreground flex items-center gap-2">
+                    Purchase Order Preview
+                    <span className="text-xs px-2.5 py-0.5 rounded-full bg-[#EA1B40]/10 text-[#EA1B40] font-bold border border-[#EA1B40]/20">
+                      PO #{pdfPreviewOrder.id}
+                    </span>
+                  </h3>
+                  <p className="text-xs text-muted-foreground">
+                    Supplier: <span className="font-semibold text-foreground">{pdfPreviewOrder.supplier}</span> · Branch: <span className="font-semibold text-foreground">{pdfPreviewOrder.branch || "Delhi"}</span>
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={closePreviewModal}
+                className="p-1.5 rounded-xl hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Modal Body - PDF Iframe Preview */}
+            <div className="flex-1 bg-muted/40 p-2 sm:p-4 overflow-hidden">
+              <iframe
+                src={pdfPreviewUrl}
+                className="w-full h-full rounded-xl border border-border/60 shadow-inner bg-white"
+                title={`Preview of PO ${pdfPreviewOrder.id}`}
+              />
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-5 py-4 border-t border-border bg-background">
+              <div className="text-xs text-muted-foreground hidden sm:block">
+                Preview mode — verify details before downloading.
+              </div>
+              <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={closePreviewModal}
+                  className="w-1/2 sm:w-auto gap-1.5 cursor-pointer font-medium hover:bg-muted"
+                >
+                  <X className="h-4 w-4" /> Exit / Close
+                </Button>
+                <Button
+                  type="button"
+                  onClick={handleDownloadPDF}
+                  className="w-1/2 sm:w-auto bg-[#EA1B40] hover:bg-[#d01536] text-white shadow-md shadow-[#EA1B40]/20 gap-1.5 cursor-pointer font-semibold"
+                >
+                  <Download className="h-4 w-4" /> Download PDF
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
