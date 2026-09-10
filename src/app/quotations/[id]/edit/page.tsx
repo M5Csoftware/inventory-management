@@ -54,9 +54,6 @@ export default function EditQuotationPage({
       setBranch(q.branch || "Delhi");
       setQuotationNumber(q.quotationNumber);
       setDate(q.date);
-      setValidUntil(q.validUntil);
-      setPaymentTerms(q.paymentTerms || "");
-      setDeliveryLeadTime(q.deliveryLeadTime || "");
       setNotes(q.notes || "");
       setStatus(q.status);
       setItems(q.items);
@@ -177,15 +174,12 @@ export default function EditQuotationPage({
         branch,
         quotationNumber,
         date,
-        validUntil,
         items,
         subtotal,
         taxAmount,
         totalAmount: grandTotal,
         status,
         notes,
-        paymentTerms,
-        deliveryLeadTime,
       });
 
       router.push("/quotations");
@@ -220,7 +214,7 @@ export default function EditQuotationPage({
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="space-y-2">
                   <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Quotation Ref # *
+                    Quotation Number *
                   </Label>
                   <Input
                     value={quotationNumber}
@@ -258,8 +252,6 @@ export default function EditQuotationPage({
                   </select>
                 </div>
 
-
-
                 <div className="space-y-2">
                   <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     Quotation Date
@@ -269,41 +261,6 @@ export default function EditQuotationPage({
                     value={date}
                     onChange={(e) => setDate(e.target.value)}
                     required
-                    className="bg-background"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Valid Until
-                  </Label>
-                  <Input
-                    type="date"
-                    value={validUntil}
-                    onChange={(e) => setValidUntil(e.target.value)}
-                    required
-                    className="bg-background"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Payment Terms
-                  </Label>
-                  <Input
-                    value={paymentTerms}
-                    onChange={(e) => setPaymentTerms(e.target.value)}
-                    className="bg-background"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Delivery Lead Time
-                  </Label>
-                  <Input
-                    value={deliveryLeadTime}
-                    onChange={(e) => setDeliveryLeadTime(e.target.value)}
                     className="bg-background"
                   />
                 </div>
