@@ -98,6 +98,38 @@ export interface Order {
   termsAndConditions?: string;
   description?: string; // Already added
 }
+
+export interface QuotationItem {
+  id?: string;
+  productId?: string;
+  name: string;
+  description?: string;
+  quantity: number;
+  unitPrice: number;
+  taxRate?: number;
+  discount?: number;
+  totalPrice: number;
+}
+
+export interface Quotation {
+  id: string;
+  quotationNumber: string;
+  supplier: string;
+  branch: string;
+  date: string;
+  validUntil: string;
+  items: QuotationItem[];
+  subtotal: number;
+  taxAmount: number;
+  totalAmount: number;
+  status: "Draft" | "Pending" | "Approved" | "Rejected" | "Expired" | "Converted";
+  notes?: string;
+  terms?: string;
+  paymentTerms?: string;
+  deliveryLeadTime?: string;
+  createdAt: string;
+}
+
 export const BRANCHES = ["Ahmedabad", "Ludhiana", "Delhi", "Mumbai"] as const;
 
 export const ASSET_DEPARTMENTS = [
@@ -238,6 +270,16 @@ interface InventoryContextType {
   categories: Category[];
   suppliers: Supplier[];
   orders: Order[];
+  quotations: Quotation[];
+  addQuotation: (
+    quotation: Omit<Quotation, "id" | "createdAt">,
+  ) => Promise<Quotation>;
+  updateQuotation: (
+    id: string,
+    quotationData: Partial<Quotation>,
+  ) => Promise<void>;
+  deleteQuotation: (id: string) => Promise<void>;
+  convertQuotationToOrder: (quotationId: string) => Promise<void>;
   assets: AssetAssignment[];
   physicalVerifications: PhysicalVerificationRecord[];
   addPhysicalVerification: (
@@ -417,6 +459,30 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [quotations, setQuotations] = useState<Quotation[]>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("m5_quotations");
+      if (saved) {
+        try {
+          const parsed: Quotation[] = JSON.parse(saved);
+          // Filter out initial mock quotations if stored in browser localStorage
+          const userOnly = parsed.filter(
+            (q) => !["QT-2026-001", "QT-2026-002", "QT-2026-003"].includes(q.id),
+          );
+          return userOnly;
+        } catch (e) {
+          console.error("Failed to load quotations from localStorage", e);
+        }
+      }
+    }
+    return [];
+  });
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("m5_quotations", JSON.stringify(quotations));
+    }
+  }, [quotations]);
   const [assets, setAssets] = useState<AssetAssignment[]>([]);
   const [assetSerials, setAssetSerials] = useState<AssetSerialItem[]>([]);
   const [physicalVerifications, setPhysicalVerifications] = useState<
@@ -1364,6 +1430,61 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
       updateAssetSerial,
       deleteAssetSerial,
       revertAuditLog,
+      quotations,
+      addQuotation: async (q: Omit<Quotation, "id" | "createdAt">): Promise<Quotation> => {
+        const nextNum = quotations.length + 1;
+        const newId = `QT-2026-${String(nextNum).padStart(3, "0")}`;
+        const newQuotation: Quotation = {
+          ...q,
+          id: newId,
+          quotationNumber: q.quotationNumber || newId,
+          createdAt: new Date().toISOString(),
+        };
+        setQuotations((prev) => [newQuotation, ...prev]);
+        toast.success(`Quotation ${newQuotation.quotationNumber} created successfully!`);
+        return newQuotation;
+      },
+      updateQuotation: async (id: string, quotationData: Partial<Quotation>): Promise<void> => {
+        setQuotations((prev) =>
+          prev.map((q) => (q.id === id ? { ...q, ...quotationData } : q)),
+        );
+        toast.success("Quotation updated successfully!");
+      },
+      deleteQuotation: async (id: string): Promise<void> => {
+        setQuotations((prev) => prev.filter((q) => q.id !== id));
+        toast.success("Quotation deleted successfully.");
+      },
+      convertQuotationToOrder: async (quotationId: string): Promise<void> => {
+        const q = quotations.find((item) => item.id === quotationId);
+        if (!q) {
+          toast.error("Quotation not found");
+          return;
+        }
+        const newOrderItems: OrderItem[] = q.items.map((item) => ({
+          productId: item.productId || "",
+          name: item.name,
+          quantity: item.quantity,
+          price: item.unitPrice,
+          receivedQuantity: 0,
+        }));
+
+        await addOrder({
+          supplier: q.supplier,
+          branch: q.branch,
+          items: newOrderItems,
+          status: "Pending",
+          totalAmount: q.totalAmount,
+          description: `Converted from Quotation ${q.quotationNumber}`,
+          termsAndConditions: q.terms || q.notes,
+        });
+
+        setQuotations((prev) =>
+          prev.map((item) =>
+            item.id === quotationId ? { ...item, status: "Converted" } : item,
+          ),
+        );
+        toast.success(`Quotation ${q.quotationNumber} converted to Purchase Order!`);
+      },
     }),
     [
       activeBranch,
@@ -1372,6 +1493,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
       categories,
       suppliers,
       orders,
+      quotations,
       physicalVerifications,
       assets,
       assetSerials,
