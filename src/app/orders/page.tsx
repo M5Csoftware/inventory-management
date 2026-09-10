@@ -907,9 +907,9 @@ export default function OrdersPage() {
                     </td>
                   </tr>
                 ) : (
-                  filteredOrders.map((order) => (
+                  filteredOrders.map((order, idx) => (
                     <tr
-                      key={order.id}
+                      key={`${order.id}-${idx}`}
                       className="hover:bg-muted/30 transition-colors"
                     >
                       <td className="px-4 sm:px-6 py-4 font-medium text-foreground whitespace-nowrap">
