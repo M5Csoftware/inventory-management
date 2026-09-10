@@ -42,15 +42,50 @@ import { useAutoAnimate } from "@formkit/auto-animate/react";
 import { ConfirmDeleteModal, ConfirmModal } from "@/components/confirm-modal";
 import { M5C_LOGO_BASE64 } from "@/lib/company-logo";
 
-// M5C Company details (Buyer)
-const M5C_DETAILS = {
-  name: "M5 CONTINENT LOGISTICS SOLUTION PRIVATE LIMITED",
-  address:
-    "Ground Floor Khasa No 91 Plot No. NJF PC 40 Bamnoli Village New Delhi New Delhi, Delhi- 110077 India",
-  contact: "8448688766",
-  gstin: "07AAQCM6359K1ZP",
-  state: "07- Delhi",
+// M5C Company details (Buyer) by Branch
+const M5C_BRANCH_DETAILS: Record<
+  string,
+  {
+    name: string;
+    address: string;
+    contact: string;
+    gstin: string;
+    state: string;
+  }
+> = {
+  Delhi: {
+    name: "M5 CONTINENT LOGISTICS SOLUTION PRIVATE LIMITED",
+    address:
+      "Ground Floor Khasa No 91 Plot No. NJF PC 40 Bamnoli Village New Delhi New Delhi, Delhi- 110077 India",
+    contact: "8448688766",
+    gstin: "07AAQCM6359K1ZP",
+    state: "07- Delhi",
+  },
+  Ahmedabad: {
+    name: "M5 CONTINENT LOGISTICS SOLUTION PRIVATE LIMITED",
+    address:
+      "Ground Floor, Block F shop no 1, Sumel Business Park 6, Dudheshwar circle, Dudheshwar, Ahmedabad, Ahmedabad, Gujarat, 380004",
+    contact: "8448688766",
+    gstin: "24AAQCM6359K1ZT",
+    state: "24- Gujarat",
+  },
+  Ludhiana: {
+    name: "M5 CONTINENT LOGISTICS SOLUTION PRIVATE LIMITED",
+    address:
+      "Floor No.: Upper Ground floor Building No./Flat No.: Plot no 354 Name Of Premises/Building: Bhagwati Tower Road/Street: RK Road Nearby Landmark: Cheema chowk Locality/Sub Locality: Industrial Area A City/Town/Village: Ludhiana District: Ludhiana State: Punjab PIN Code: 141003",
+    contact: "8448688766",
+    gstin: "03AAQCM6359K1ZX",
+    state: "03- Punjab",
+  },
 };
+
+const getM5CDetails = (branchName?: string) => {
+  if (branchName && M5C_BRANCH_DETAILS[branchName]) {
+    return M5C_BRANCH_DETAILS[branchName];
+  }
+  return M5C_BRANCH_DETAILS["Delhi"];
+};
+
 
 export default function OrdersPage() {
   const router = useRouter();
@@ -169,6 +204,10 @@ export default function OrdersPage() {
     const pageHeight = doc.internal.pageSize.getHeight();
     const margin = 14;
     const printableWidth = pageWidth - margin * 2; // 182mm
+
+    const targetBranch =
+      order.branch || (activeBranch !== "All" ? activeBranch : "Delhi");
+    const M5C_DETAILS = getM5CDetails(targetBranch);
 
     // Primary Red Theme Palette (#EA1B40 -> RGB [234, 27, 64])
     const PRIMARY_RED: [number, number, number] = [234, 27, 64];
@@ -868,9 +907,9 @@ export default function OrdersPage() {
                     </td>
                   </tr>
                 ) : (
-                  filteredOrders.map((order) => (
+                  filteredOrders.map((order, idx) => (
                     <tr
-                      key={order.id}
+                      key={`${order.id}-${idx}`}
                       className="hover:bg-muted/30 transition-colors"
                     >
                       <td className="px-4 sm:px-6 py-4 font-medium text-foreground whitespace-nowrap">
