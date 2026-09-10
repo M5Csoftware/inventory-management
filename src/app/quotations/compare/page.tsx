@@ -16,7 +16,6 @@ import {
   ArrowLeft,
   ShoppingCart,
   Building2,
-  Clock,
   Award,
   CheckCircle2,
   PlusCircle,
@@ -225,7 +224,7 @@ export default function CompareQuotationsPage() {
                   {q.supplier}
                 </CardTitle>
                 <CardDescription className="text-xs">
-                  Date: {q.date} • Valid Until: {q.validUntil}
+                  Date: {q.date}
                 </CardDescription>
               </CardHeader>
 
@@ -244,26 +243,8 @@ export default function CompareQuotationsPage() {
 
                 <div className="space-y-2 pt-1">
                   <div className="flex justify-between items-center py-1 border-b border-border/50">
-                    <span className="text-muted-foreground flex items-center gap-1">
-                      <Clock className="h-3.5 w-3.5" /> Delivery Lead Time:
-                    </span>
-                    <span className="font-medium text-foreground">
-                      {q.deliveryLeadTime || "Standard"}
-                    </span>
-                  </div>
-
-                  <div className="flex justify-between items-center py-1 border-b border-border/50">
-                    <span className="text-muted-foreground flex items-center gap-1">
-                      <Building2 className="h-3.5 w-3.5" /> Payment Terms:
-                    </span>
-                    <span className="font-medium text-foreground">
-                      {q.paymentTerms || "Net 30"}
-                    </span>
-                  </div>
-
-                  <div className="flex justify-between items-center py-1">
-                    <span className="text-muted-foreground">Status:</span>
-                    <span className="font-medium text-foreground">{q.status}</span>
+                    <span className="text-muted-foreground">Total Line Items:</span>
+                    <span className="font-medium text-foreground">{q.items.length} item(s)</span>
                   </div>
                 </div>
 

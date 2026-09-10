@@ -157,7 +157,6 @@ export default function AllQuotationsPage() {
       doc.setTextColor(50, 50, 50);
       doc.text(`Quote #: ${q.quotationNumber}`, rightX + 4, 22);
       doc.text(`Date: ${q.date}`, rightX + 4, 27);
-      doc.text(`Valid Until: ${q.validUntil}`, rightX + 4, 32);
 
       let currentY = 42;
       const cardWidth = (pageWidth - margin * 2 - 6) / 2;
@@ -177,11 +176,6 @@ export default function AllQuotationsPage() {
       doc.setFontSize(7.5);
       doc.setTextColor(100, 100, 100);
       doc.text(`Branch: ${q.branch || "Delhi"}`, margin + 4, currentY + 17);
-      doc.text(
-        `Payment: ${q.paymentTerms || "Standard"}`,
-        margin + 4,
-        currentY + 21,
-      );
 
       const rightCardX = margin + cardWidth + 6;
       doc.setFillColor(248, 249, 250);
@@ -189,20 +183,15 @@ export default function AllQuotationsPage() {
       doc.setFont("helvetica", "bold");
       doc.setFontSize(8);
       doc.setTextColor(234, 27, 64);
-      doc.text("SUMMARY & TERMS", rightCardX + 4, currentY + 6);
+      doc.text("SUMMARY", rightCardX + 4, currentY + 6);
 
       doc.setFont("helvetica", "normal");
       doc.setFontSize(7.5);
       doc.setTextColor(50, 50, 50);
       doc.text(
-        `Lead Time: ${q.deliveryLeadTime || "N/A"}`,
-        rightCardX + 4,
-        currentY + 12,
-      );
-      doc.text(
         `Total Items: ${q.items.length}`,
         rightCardX + 4,
-        currentY + 17,
+        currentY + 12,
       );
 
       currentY += 28;
@@ -325,7 +314,7 @@ export default function AllQuotationsPage() {
             <table className="w-full text-sm text-left min-w-[720px]">
               <thead className="text-xs text-muted-foreground uppercase bg-muted/50 border-b border-border/50">
                 <tr>
-                  <th className="px-4 sm:px-6 py-4 font-medium">Quote Ref</th>
+                  <th className="px-4 sm:px-6 py-4 font-medium">Quotation Number</th>
                   <th className="px-4 sm:px-6 py-4 font-medium">Supplier</th>
                   <th className="px-4 sm:px-6 py-4 font-medium">Items</th>
                   <th className="px-4 sm:px-6 py-4 font-medium">Total Amount</th>
@@ -469,16 +458,8 @@ export default function AllQuotationsPage() {
                   <span className="font-medium text-foreground">{selectedQuotation.date}</span>
                 </div>
                 <div>
-                  <span className="text-muted-foreground block">Valid Until</span>
-                  <span className="font-medium text-foreground">{selectedQuotation.validUntil}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground block">Payment Terms</span>
-                  <span className="font-medium text-foreground">{selectedQuotation.paymentTerms || "N/A"}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground block">Delivery Lead Time</span>
-                  <span className="font-medium text-foreground">{selectedQuotation.deliveryLeadTime || "N/A"}</span>
+                  <span className="text-muted-foreground block">Branch</span>
+                  <span className="font-medium text-foreground">{selectedQuotation.branch || "Delhi"}</span>
                 </div>
               </div>
 

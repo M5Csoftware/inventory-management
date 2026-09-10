@@ -117,7 +117,6 @@ export interface Quotation {
   supplier: string;
   branch: string;
   date: string;
-  validUntil: string;
   items: QuotationItem[];
   subtotal: number;
   taxAmount: number;
@@ -125,9 +124,35 @@ export interface Quotation {
   status: "Draft" | "Pending" | "Approved" | "Rejected" | "Expired" | "Converted";
   notes?: string;
   terms?: string;
-  paymentTerms?: string;
-  deliveryLeadTime?: string;
   createdAt: string;
+}
+
+export function generateQuotationNumber(
+  supplier?: string,
+  branch?: string,
+  existingQuotations: Quotation[] = []
+): string {
+  let supplierCode = "QT";
+  if (supplier && supplier.trim()) {
+    const clean = supplier.trim().replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+    if (clean.length > 0) {
+      supplierCode = `QT-${clean.slice(0, 4)}`;
+    }
+  }
+
+  let branchCode = "";
+  if (branch && branch.trim()) {
+    branchCode = `-${branch.trim().replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 3)}`;
+  }
+
+  const basePrefix = `${supplierCode}${branchCode}`;
+
+  const matching = existingQuotations.filter(
+    (q) => q.quotationNumber && q.quotationNumber.startsWith(basePrefix)
+  );
+
+  const seq = String(matching.length + 1).padStart(3, "0");
+  return `${basePrefix}-${seq}`;
 }
 
 export const BRANCHES = ["Ahmedabad", "Ludhiana", "Delhi", "Mumbai"] as const;
@@ -1432,12 +1457,12 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
       revertAuditLog,
       quotations,
       addQuotation: async (q: Omit<Quotation, "id" | "createdAt">): Promise<Quotation> => {
-        const nextNum = quotations.length + 1;
-        const newId = `QT-2026-${String(nextNum).padStart(3, "0")}`;
+        const generatedNum = q.quotationNumber || generateQuotationNumber(q.supplier, q.branch, quotations);
+        const newId = generatedNum;
         const newQuotation: Quotation = {
           ...q,
           id: newId,
-          quotationNumber: q.quotationNumber || newId,
+          quotationNumber: generatedNum,
           createdAt: new Date().toISOString(),
         };
         setQuotations((prev) => [newQuotation, ...prev]);

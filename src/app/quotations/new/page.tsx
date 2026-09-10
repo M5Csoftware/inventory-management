@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useInventory, QuotationItem } from "@/context/inventory-context";
+import { useInventory, QuotationItem, generateQuotationNumber } from "@/context/inventory-context";
 import {
   Card,
   CardContent,
@@ -15,9 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  PlusCircle,
   Trash2,
-  ArrowLeft,
   Building2,
   Calculator,
   Plus,
@@ -26,28 +24,24 @@ import { toast } from "react-toastify";
 
 export default function AddQuotationPage() {
   const router = useRouter();
-  const { suppliers, products, activeBranch, addQuotation } = useInventory();
+  const { suppliers, products, activeBranch, quotations, addQuotation } = useInventory();
 
   const [supplier, setSupplier] = useState("");
   const [branch, setBranch] = useState(
     activeBranch && activeBranch !== "All" ? activeBranch : "Delhi",
   );
-  const [quotationNumber, setQuotationNumber] = useState(
-    `QT-2026-${Math.floor(100 + Math.random() * 900)}`,
+  const [quotationNumber, setQuotationNumber] = useState(() =>
+    generateQuotationNumber("", activeBranch && activeBranch !== "All" ? activeBranch : "Delhi", quotations)
   );
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
-  const [validUntil, setValidUntil] = useState(
-    new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-      .toISOString()
-      .split("T")[0],
-  );
-  const [paymentTerms, setPaymentTerms] = useState("Net 30 Days");
-  const [deliveryLeadTime, setDeliveryLeadTime] = useState("3-5 Business Days");
   const [notes, setNotes] = useState("");
   const [terms, setTerms] = useState("");
-  const [status, setStatus] = useState<"Draft" | "Pending" | "Approved">(
-    "Pending",
-  );
+
+  // Automatically update semantic auto-incrementing quotation number when supplier or branch changes
+  useEffect(() => {
+    const autoNum = generateQuotationNumber(supplier, branch, quotations);
+    setQuotationNumber(autoNum);
+  }, [supplier, branch, quotations]);
 
   const [items, setItems] = useState<QuotationItem[]>([
     {
@@ -149,7 +143,7 @@ export default function AddQuotationPage() {
   );
   const grandTotal = subtotal + taxAmount;
 
-  const handleSubmit = async (e: React.FormEvent, customStatus?: "Draft" | "Pending") => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!supplier.trim()) {
@@ -168,16 +162,13 @@ export default function AddQuotationPage() {
         supplier,
         branch,
         date,
-        validUntil,
         items,
         subtotal,
         taxAmount,
         totalAmount: grandTotal,
-        status: customStatus || status,
+        status: "Pending",
         notes,
         terms,
-        paymentTerms,
-        deliveryLeadTime,
       });
 
       router.push("/quotations");
@@ -215,7 +206,7 @@ export default function AddQuotationPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="space-y-2">
                   <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Quotation Ref # *
+                    Quotation Number *
                   </Label>
                   <Input
                     value={quotationNumber}
@@ -260,8 +251,6 @@ export default function AddQuotationPage() {
                   </select>
                 </div>
 
-
-
                 <div className="space-y-2">
                   <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     Quotation Date
@@ -271,43 +260,6 @@ export default function AddQuotationPage() {
                     value={date}
                     onChange={(e) => setDate(e.target.value)}
                     required
-                    className="bg-background"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Valid Until
-                  </Label>
-                  <Input
-                    type="date"
-                    value={validUntil}
-                    onChange={(e) => setValidUntil(e.target.value)}
-                    required
-                    className="bg-background"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Payment Terms
-                  </Label>
-                  <Input
-                    placeholder="e.g. Net 30 Days"
-                    value={paymentTerms}
-                    onChange={(e) => setPaymentTerms(e.target.value)}
-                    className="bg-background"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Delivery Lead Time
-                  </Label>
-                  <Input
-                    placeholder="e.g. 3-5 Days"
-                    value={deliveryLeadTime}
-                    onChange={(e) => setDeliveryLeadTime(e.target.value)}
                     className="bg-background"
                   />
                 </div>
@@ -500,7 +452,7 @@ export default function AddQuotationPage() {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={(e) => handleSubmit(e, "Draft")}
+                  onClick={(e) => handleSubmit(e)}
                 >
                   Save as Draft
                 </Button>
