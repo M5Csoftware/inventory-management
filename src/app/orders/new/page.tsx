@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useRef, useMemo } from "react";
+import { useState, useRef, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useInventory } from "@/context/inventory-context";
+import { useInventory, generateOrderId } from "@/context/inventory-context";
 import {
   Card,
   CardContent,
@@ -31,12 +31,23 @@ import { ConfirmModal } from "@/components/confirm-modal";
 
 export default function NewOrderPage() {
   const router = useRouter();
-  const { suppliers, products, addOrder, activeBranch } = useInventory();
+  const { suppliers, products, addOrder, orders, activeBranch } = useInventory();
 
   const [supplier, setSupplier] = useState("");
   const [branch, setBranch] = useState(
     activeBranch && activeBranch !== "All" ? activeBranch : "Delhi",
   );
+  const [orderId, setOrderId] = useState(() =>
+    generateOrderId(
+      activeBranch && activeBranch !== "All" ? activeBranch : "Delhi",
+      orders,
+    ),
+  );
+
+  useEffect(() => {
+    const autoId = generateOrderId(branch, orders);
+    setOrderId(autoId);
+  }, [branch, orders]);
   const [items, setItems] = useState([
     { productId: "", name: "", quantity: 1, price: 0 },
   ]);
@@ -179,6 +190,7 @@ export default function NewOrderPage() {
     setIsSubmitting(true);
     try {
       await addOrder({
+        id: orderId,
         supplier,
         items,
         totalAmount,
@@ -231,8 +243,8 @@ export default function NewOrderPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6 pt-6">
-            {/* Supplier and Branch Selectors */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Supplier, Branch, and Order ID Selectors */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* Supplier Selector */}
               <div className="space-y-2">
                 <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -269,6 +281,23 @@ export default function NewOrderPage() {
                   <option value="Ludhiana">🏭 Ludhiana</option>
                   <option value="Mumbai">🏭 Mumbai</option>
                 </select>
+              </div>
+
+              {/* Order ID Selector / Input */}
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Order ID / PO Number *
+                </Label>
+                <Input
+                  value={orderId}
+                  onChange={(e) => setOrderId(e.target.value)}
+                  placeholder="e.g. DEL-PO-001"
+                  className="h-10 font-mono font-semibold text-primary"
+                  required
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  Auto-generated prefix from 3 letters of branch ({branch ? branch.trim().slice(0, 3).toUpperCase() : "DEL"})
+                </p>
               </div>
             </div>
 
