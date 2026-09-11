@@ -155,6 +155,41 @@ export function generateQuotationNumber(
   return `${basePrefix}-${seq}`;
 }
 
+export function generateOrderId(
+  branch?: string,
+  existingOrders: Order[] = []
+): string {
+  let branchCode = "ORD";
+  if (branch && branch.trim()) {
+    const clean = branch.trim().replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+    if (clean.length > 0) {
+      branchCode = clean.slice(0, 3);
+    }
+  }
+
+  const basePrefix = `${branchCode}-PO`;
+
+  const safeOrders = existingOrders || [];
+  const matchingNumbers: number[] = [];
+  safeOrders.forEach((o) => {
+    if (o && o.id && o.id.toUpperCase().startsWith(basePrefix)) {
+      const parts = o.id.split("-");
+      const num = parseInt(parts[parts.length - 1], 10);
+      if (!isNaN(num)) {
+        matchingNumbers.push(num);
+      }
+    }
+  });
+
+  const nextSeq =
+    matchingNumbers.length > 0
+      ? Math.max(...matchingNumbers) + 1
+      : safeOrders.filter((o) => o && o.id && o.id.toUpperCase().startsWith(basePrefix)).length + 1;
+
+  const seq = String(nextSeq).padStart(3, "0");
+  return `${basePrefix}-${seq}`;
+}
+
 export const BRANCHES = ["Ahmedabad", "Ludhiana", "Delhi", "Mumbai"] as const;
 
 export const ASSET_DEPARTMENTS = [
@@ -311,7 +346,7 @@ interface InventoryContextType {
     record: Omit<PhysicalVerificationRecord, "id" | "createdAt">,
   ) => Promise<void>;
   deletePhysicalVerification: (id: string) => Promise<void>;
-  addOrder: (order: Omit<Order, "id" | "createdAt">) => Promise<void>;
+  addOrder: (order: Omit<Order, "id" | "createdAt"> & { id?: string }) => Promise<void>;
   updateOrder: (id: string, orderData: Partial<Order>) => Promise<void>;
   updateOrderStatus: (id: string, status: Order["status"]) => Promise<void>;
   deleteOrder: (id: string) => Promise<void>;
@@ -1032,17 +1067,20 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
     );
   };
 
-  const addOrder = async (order: Omit<Order, "id" | "createdAt">) => {
+  const addOrder = async (order: Omit<Order, "id" | "createdAt"> & { id?: string }) => {
     return withLock(
       `add-order-${order.supplier}-${order.totalAmount}`,
       async () => {
         try {
+          const targetBranch = order.branch || (activeBranch !== "All" ? activeBranch : "Delhi");
+          const generatedId = order.id || generateOrderId(targetBranch, orders);
           const res = await fetch(`${API_BASE}/orders`, {
             method: "POST",
             headers: DB_HEADER,
             body: JSON.stringify({
-              branch: activeBranch !== "All" ? activeBranch : "Delhi",
+              branch: targetBranch,
               ...order,
+              id: generatedId,
             }),
           });
           const data = await res.json();
