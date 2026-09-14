@@ -116,7 +116,15 @@ function NewInvoiceFormContent() {
     if (subtotal > 0) {
       setTaxableAmount(subtotal.toFixed(2));
     }
-    setTaxSlab((prev) => (prev !== '' ? prev : '18'));
+    if (order.taxSlab !== undefined && order.taxSlab !== null) {
+      setTaxSlab(String(order.taxSlab));
+    } else {
+      setTaxSlab((prev) => (prev !== '' ? prev : '18'));
+    }
+
+    if (order.taxOption) {
+      setTaxOption(order.taxOption);
+    }
 
     // Format full Order Details for the description box
     const orderDate = order.createdAt
@@ -241,7 +249,7 @@ function NewInvoiceFormContent() {
       return;
     }
     if (!isTaxSlabSelected) {
-      toast.error('Please select a Tax Slab option (0%, 5%, 18%, 40%) before proceeding.');
+      toast.error('Please select a Tax Slab option (0%, 5%, 12%, 18%, 40%) before proceeding.');
       return;
     }
     // Open the confirmation modal with Stock In options
@@ -272,6 +280,12 @@ function NewInvoiceFormContent() {
       });
 
       if (success) {
+        if (linkedOrder) {
+          await updateOrder(linkedOrder.id, {
+            taxSlab: selectedTaxRate !== null ? selectedTaxRate : 18,
+            taxOption,
+          });
+        }
         setIsConfirmModalOpen(false);
         router.push('/invoice');
       }
@@ -351,6 +365,8 @@ function NewInvoiceFormContent() {
           await updateOrder(linkedOrder.id, {
             status: newStatus,
             items: updatedOrderItems,
+            taxSlab: selectedTaxRate !== null ? selectedTaxRate : 18,
+            taxOption,
           });
         }
 
@@ -377,7 +393,7 @@ function NewInvoiceFormContent() {
             New Invoice
           </h1>
           <p className="text-muted-foreground mt-1">
-            Enter vendor details, taxable amount, tax slab (0%, 5%, 18%, 40%), tax option (IGST / CGST+SGST), link with Purchase Order (PO), and attach document scans.
+            Enter vendor details, taxable amount, tax slab (0%, 5%, 12%, 18%, 40%), tax option (IGST / CGST+SGST), link with Purchase Order (PO), and attach document scans.
           </p>
         </div>
       </div>
@@ -604,6 +620,7 @@ function NewInvoiceFormContent() {
                   <option value="">-- Select Tax Slab --</option>
                   <option value="0">0% (Nil Rate)</option>
                   <option value="5">5% (Concessional)</option>
+                  <option value="12">12% (Standard Lower GST)</option>
                   <option value="18">18% (Standard GST)</option>
                   <option value="40">40% (Luxury / Sin Goods)</option>
                 </select>

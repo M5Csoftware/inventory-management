@@ -436,9 +436,12 @@ export default function OrdersPage() {
 
     const tableRows: any[] = [];
 
+    const orderTaxSlab = order.taxSlab !== undefined ? order.taxSlab : 18;
+    const orderTaxOption = order.taxOption || "CGST_SGST";
+
     order.items.forEach((item, index) => {
       const taxableAmount = item.quantity * item.price;
-      const gst = taxableAmount * 0.18;
+      const gst = (taxableAmount * orderTaxSlab) / 100;
       const total = taxableAmount + gst;
       tableRows.push([
         index + 1,
@@ -447,7 +450,7 @@ export default function OrdersPage() {
         item.quantity,
         `Rs. ${item.price.toFixed(2)}`,
         `Rs. ${taxableAmount.toFixed(2)}`,
-        `18%`,
+        `${orderTaxSlab}%`,
         `Rs. ${total.toFixed(2)}`,
       ]);
     });
@@ -500,9 +503,8 @@ export default function OrdersPage() {
       (acc, item) => acc + item.quantity * item.price,
       0,
     );
-    const cgst = subtotal * 0.09;
-    const sgst = subtotal * 0.09;
-    const grandTotal = subtotal + cgst + sgst;
+    const totalTax = (subtotal * orderTaxSlab) / 100;
+    const grandTotal = subtotal + totalTax;
 
     const totalsWidth = 84;
     const totalsX = pageWidth - margin - totalsWidth;
@@ -523,17 +525,27 @@ export default function OrdersPage() {
       align: "right",
     });
 
-    tRowY += 5.5;
-    doc.text("CGST @ 9%", totalsX + 5, tRowY);
-    doc.text(`Rs. ${cgst.toFixed(2)}`, totalsX + totalsWidth - 5, tRowY, {
-      align: "right",
-    });
+    if (orderTaxOption === "IGST") {
+      tRowY += 5.5;
+      doc.text(`IGST @ ${orderTaxSlab}%`, totalsX + 5, tRowY);
+      doc.text(`Rs. ${totalTax.toFixed(2)}`, totalsX + totalsWidth - 5, tRowY, {
+        align: "right",
+      });
+    } else {
+      const halfRate = orderTaxSlab / 2;
+      const halfTax = totalTax / 2;
+      tRowY += 5.5;
+      doc.text(`CGST @ ${halfRate}%`, totalsX + 5, tRowY);
+      doc.text(`Rs. ${halfTax.toFixed(2)}`, totalsX + totalsWidth - 5, tRowY, {
+        align: "right",
+      });
 
-    tRowY += 5.5;
-    doc.text("SGST @ 9%", totalsX + 5, tRowY);
-    doc.text(`Rs. ${sgst.toFixed(2)}`, totalsX + totalsWidth - 5, tRowY, {
-      align: "right",
-    });
+      tRowY += 5.5;
+      doc.text(`SGST @ ${halfRate}%`, totalsX + 5, tRowY);
+      doc.text(`Rs. ${halfTax.toFixed(2)}`, totalsX + totalsWidth - 5, tRowY, {
+        align: "right",
+      });
+    }
 
     // Grand Total Banner inside Box (Red Theme)
     tRowY += 5;
@@ -599,7 +611,7 @@ export default function OrdersPage() {
       });
     } else {
       const defaultTerms = [
-        "1. Goods once sold will not be taken back.",
+        "1. Payment will be released after goods are received in fine condition.",
         "2. Payment terms: 15 days from invoice date.",
         "3. Delivery within 7 working days.",
         "4. All disputes subject to Delhi jurisdiction.",
