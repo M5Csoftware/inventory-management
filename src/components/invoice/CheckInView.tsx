@@ -111,7 +111,14 @@ export const CheckInView: React.FC<CheckInViewProps> = ({
           : 0;
 
       if (subtotal > 0) setTaxableAmount(subtotal.toFixed(2));
-      setTaxSlab((prev) => (prev !== '' ? prev : '18'));
+      if (matched.taxSlab !== undefined && matched.taxSlab !== null) {
+        setTaxSlab(String(matched.taxSlab));
+      } else {
+        setTaxSlab((prev) => (prev !== '' ? prev : '18'));
+      }
+      if (matched.taxOption) {
+        setTaxOption(matched.taxOption);
+      }
       if (matched.createdAt) {
         const d = new Date(matched.createdAt);
         if (!isNaN(d.getTime())) setInvoiceDate(d.toISOString().slice(0, 10));
@@ -196,7 +203,7 @@ export const CheckInView: React.FC<CheckInViewProps> = ({
       return;
     }
     if (!isTaxSlabSelected) {
-      toast.error('Please select a Tax Slab option (0%, 5%, 18%, 40%) before proceeding.');
+      toast.error('Please select a Tax Slab option (0%, 5%, 12%, 18%, 40%) before proceeding.');
       return;
     }
 
@@ -243,6 +250,13 @@ export const CheckInView: React.FC<CheckInViewProps> = ({
         invoiceImage: imageUrls[0] || null,
         invoiceImages: imageUrls,
       });
+
+      if (linkedOrder) {
+        await updateOrder(linkedOrder.id, {
+          taxSlab: selectedTaxRate !== null ? selectedTaxRate : 18,
+          taxOption,
+        });
+      }
 
       resetForm();
       setIsConfirmModalOpen(false);
@@ -322,6 +336,8 @@ export const CheckInView: React.FC<CheckInViewProps> = ({
           await updateOrder(linkedOrder.id, {
             status: newStatus,
             items: updatedOrderItems,
+            taxSlab: selectedTaxRate !== null ? selectedTaxRate : 18,
+            taxOption,
           });
         }
 
@@ -493,6 +509,7 @@ export const CheckInView: React.FC<CheckInViewProps> = ({
                   <option value="">-- Select Tax Slab --</option>
                   <option value="0">0% (Nil Rate)</option>
                   <option value="5">5% (Concessional)</option>
+                  <option value="12">12% (Standard Lower GST)</option>
                   <option value="18">18% (Standard GST)</option>
                   <option value="40">40% (Luxury / Sin Goods)</option>
                 </select>
