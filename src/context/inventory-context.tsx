@@ -93,10 +93,14 @@ export interface Order {
   items: OrderItem[];
   status: "Pending" | "Processing" | "Completed" | "Cancelled" | "Partial";
   totalAmount: number;
+  taxableAmount?: number;
+  taxSlab?: number;
+  taxOption?: "IGST" | "CGST_SGST";
+  taxAmount?: number;
   branch?: string;
   createdAt?: string;
   termsAndConditions?: string;
-  description?: string; // Already added
+  description?: string;
 }
 
 export interface QuotationItem {
