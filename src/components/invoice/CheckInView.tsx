@@ -107,7 +107,7 @@ export const CheckInView: React.FC<CheckInViewProps> = ({
               return acc + (billQty * it.price);
             }, 0)
           : matched.totalAmount
-          ? Number((matched.totalAmount / 1.18).toFixed(2))
+          ? Number((matched.totalAmount / (1 + (matched.taxSlab !== undefined && matched.taxSlab !== null ? Number(matched.taxSlab) : 18) / 100)).toFixed(2))
           : 0;
 
       if (subtotal > 0) setTaxableAmount(subtotal.toFixed(2));
