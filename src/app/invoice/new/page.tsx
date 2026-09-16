@@ -100,6 +100,7 @@ function NewInvoiceFormContent() {
     }
 
     // Calculate pre-tax subtotal based on leftover/remaining unfulfilled quantities
+    const orderSlab = order.taxSlab !== undefined && order.taxSlab !== null ? Number(order.taxSlab) : 18;
     const subtotal =
       order.items && order.items.length > 0
         ? order.items.reduce((acc, it) => {
@@ -110,7 +111,7 @@ function NewInvoiceFormContent() {
             return acc + (billQty * it.price);
           }, 0)
         : order.totalAmount
-        ? Number((order.totalAmount / 1.18).toFixed(2))
+        ? Number((order.totalAmount / (1 + orderSlab / 100)).toFixed(2))
         : 0;
 
     if (subtotal > 0) {

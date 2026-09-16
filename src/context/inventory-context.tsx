@@ -95,7 +95,7 @@ export interface Order {
   totalAmount: number;
   taxableAmount?: number;
   taxSlab?: number;
-  taxOption?: "IGST" | "CGST_SGST";
+  taxOption?: "IGST" | "CGST_SGST" | "NO_TAX";
   taxAmount?: number;
   branch?: string;
   createdAt?: string;
@@ -131,6 +131,18 @@ export interface Quotation {
   createdAt: string;
 }
 
+export function getBranchCode(branch?: string): string {
+  if (!branch || !branch.trim()) return "DEL";
+  const b = branch.trim().toLowerCase();
+  if (b.includes("delhi")) return "DEL";
+  if (b.includes("ahmedabad")) return "AMD";
+  if (b.includes("ludhiana")) return "LDH";
+  if (b.includes("mumbai")) return "MUM";
+
+  const clean = branch.trim().replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+  return clean.slice(0, 3) || "DEL";
+}
+
 export function generateQuotationNumber(
   supplier?: string,
   branch?: string,
@@ -144,12 +156,12 @@ export function generateQuotationNumber(
     }
   }
 
-  let branchCode = "";
+  let branchCodeStr = "";
   if (branch && branch.trim()) {
-    branchCode = `-${branch.trim().replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 3)}`;
+    branchCodeStr = `-${getBranchCode(branch)}`;
   }
 
-  const basePrefix = `${supplierCode}${branchCode}`;
+  const basePrefix = `${supplierCode}${branchCodeStr}`;
 
   const matching = existingQuotations.filter(
     (q) => q.quotationNumber && q.quotationNumber.startsWith(basePrefix)
@@ -163,32 +175,41 @@ export function generateOrderId(
   branch?: string,
   existingOrders: Order[] = []
 ): string {
-  let branchCode = "ORD";
-  if (branch && branch.trim()) {
-    const clean = branch.trim().replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
-    if (clean.length > 0) {
-      branchCode = clean.slice(0, 3);
-    }
-  }
-
+  const branchCode = getBranchCode(branch);
   const basePrefix = `${branchCode}-PO`;
-
   const safeOrders = existingOrders || [];
+
+  const altBranchCode = branchCode === "AMD" ? "AHM" : branchCode === "LDH" ? "LUD" : branchCode;
+
   const matchingNumbers: number[] = [];
+
   safeOrders.forEach((o) => {
-    if (o && o.id && o.id.toUpperCase().startsWith(basePrefix)) {
-      const parts = o.id.split("-");
-      const num = parseInt(parts[parts.length - 1], 10);
-      if (!isNaN(num)) {
-        matchingNumbers.push(num);
+    if (!o || !o.id) return;
+    const orderIdUpper = o.id.trim().toUpperCase();
+
+    // Never consider legacy ORD- IDs
+    if (orderIdUpper.startsWith("ORD-") || orderIdUpper.startsWith("ORD")) return;
+
+    if (
+      orderIdUpper.startsWith(basePrefix) ||
+      orderIdUpper.startsWith(`${branchCode}-`) ||
+      orderIdUpper.startsWith(`${altBranchCode}-PO`) ||
+      orderIdUpper.startsWith(`${altBranchCode}-`)
+    ) {
+      const numberMatches = o.id.match(/\d+/g);
+      if (numberMatches && numberMatches.length > 0) {
+        const lastNum = parseInt(numberMatches[numberMatches.length - 1], 10);
+        if (!isNaN(lastNum) && lastNum > 0) {
+          matchingNumbers.push(lastNum);
+        }
       }
     }
   });
 
-  const nextSeq =
-    matchingNumbers.length > 0
-      ? Math.max(...matchingNumbers) + 1
-      : safeOrders.filter((o) => o && o.id && o.id.toUpperCase().startsWith(basePrefix)).length + 1;
+  let nextSeq = 1;
+  if (matchingNumbers.length > 0) {
+    nextSeq = Math.max(...matchingNumbers) + 1;
+  }
 
   const seq = String(nextSeq).padStart(3, "0");
   return `${basePrefix}-${seq}`;
@@ -1077,14 +1098,20 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
       async () => {
         try {
           const targetBranch = order.branch || (activeBranch !== "All" ? activeBranch : "Delhi");
-          const generatedId = order.id || generateOrderId(targetBranch, orders);
+          const branchCode = getBranchCode(targetBranch);
+
+          let finalId = order.id ? order.id.trim() : "";
+          if (!finalId || finalId.toUpperCase().startsWith("ORD") || !finalId.toUpperCase().startsWith(`${branchCode}-`)) {
+            finalId = generateOrderId(targetBranch, orders);
+          }
+
           const res = await fetch(`${API_BASE}/orders`, {
             method: "POST",
             headers: DB_HEADER,
             body: JSON.stringify({
-              branch: targetBranch,
               ...order,
-              id: generatedId,
+              branch: targetBranch,
+              id: finalId,
             }),
           });
           const data = await res.json();

@@ -21,6 +21,8 @@ export default function EditOrderPage() {
   const [supplier, setSupplier] = useState('');
   const [branch, setBranch] = useState('Delhi');
   const [status, setStatus] = useState<'Pending' | 'Processing' | 'Completed' | 'Cancelled' | 'Partial'>('Pending');
+  const [taxSlab, setTaxSlab] = useState<string>('18');
+  const [taxOption, setTaxOption] = useState<'IGST' | 'CGST_SGST' | 'NO_TAX'>('IGST');
   const [items, setItems] = useState([{ productId: '', name: '', quantity: 1, price: 0 }]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -34,6 +36,12 @@ export default function EditOrderPage() {
         setSupplier(orderToEdit.supplier);
         setBranch(orderToEdit.branch || 'Delhi');
         setStatus(orderToEdit.status);
+        if (orderToEdit.taxSlab !== undefined && orderToEdit.taxSlab !== null) {
+          setTaxSlab(String(orderToEdit.taxSlab));
+        }
+        if (orderToEdit.taxOption) {
+          setTaxOption(orderToEdit.taxOption);
+        }
         setItems(orderToEdit.items.map(item => ({ ...item })));
         setIsLoaded(true);
       } else {
@@ -68,7 +76,8 @@ export default function EditOrderPage() {
   };
 
   const subtotal = items.reduce((acc, item) => acc + (item.quantity * item.price), 0);
-  const gstAmount = subtotal * 0.18;
+  const selectedTaxRate = taxSlab !== "" && !isNaN(parseFloat(taxSlab)) ? parseFloat(taxSlab) : 0;
+  const gstAmount = (subtotal * selectedTaxRate) / 100;
   const totalAmount = subtotal + gstAmount;
 
   const handleFormSubmit = (e: React.FormEvent) => {
@@ -109,14 +118,18 @@ export default function EditOrderPage() {
       await updateOrder(id, {
         supplier,
         branch,
+        status,
         items,
+        taxableAmount: subtotal,
+        taxSlab: selectedTaxRate,
+        taxOption,
+        taxAmount: gstAmount,
         totalAmount,
-        status
       });
       setShowConfirmModal(false);
       router.push('/orders');
     } catch (err) {
-      toast.error('Failed to update purchase order.');
+      toast.error('Failed to update order.');
     } finally {
       submittingRef.current = false;
       setIsSubmitting(false);
@@ -193,37 +206,78 @@ export default function EditOrderPage() {
                   <option value="Cancelled">Cancelled</option>
                 </select>
               </div>
+
+              <div className="space-y-2">
+                <Label>Tax Slab (%)</Label>
+                <select 
+                  className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm outline-none focus:border-primary font-semibold"
+                  value={taxSlab}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setTaxSlab(val);
+                    if (val === "0") setTaxOption("NO_TAX");
+                    else if (taxOption === "NO_TAX") setTaxOption("IGST");
+                  }}
+                  required
+                >
+                  <option value="0">0% (Nil Rate)</option>
+                  <option value="5">5% (Concessional)</option>
+                  <option value="12">12% (Standard Lower GST)</option>
+                  <option value="18">18% (Standard GST)</option>
+                  <option value="40">40% (Luxury / Sin Goods)</option>
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Tax Option</Label>
+                <select 
+                  className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm outline-none focus:border-primary font-semibold disabled:opacity-75 disabled:cursor-not-allowed"
+                  value={taxSlab === "0" ? "NO_TAX" : taxOption}
+                  onChange={(e) => setTaxOption(e.target.value as "IGST" | "CGST_SGST" | "NO_TAX")}
+                  disabled={taxSlab === "0"}
+                  required
+                >
+                  {taxSlab === "0" ? (
+                    <option value="NO_TAX">No Tax (0% Nil Rated)</option>
+                  ) : (
+                    <>
+                      <option value="IGST">IGST (Inter-State Tax)</option>
+                      <option value="CGST_SGST">CGST + SGST (Intra-State Tax)</option>
+                    </>
+                  )}
+                </select>
+              </div>
             </div>
 
+            {/* Product Items Table / List */}
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <Label>Order Items</Label>
-                <Button type="button" variant="outline" size="sm" onClick={addItem} className="gap-2 h-8">
-                  <PlusCircle className="h-3.5 w-3.5" />
-                  Add Product
+              <div className="flex justify-between items-center border-b border-border/50 pb-2">
+                <h3 className="font-semibold text-foreground">Order Items</h3>
+                <Button type="button" variant="outline" size="sm" onClick={addItem} className="h-8">
+                  <PlusCircle className="mr-2 h-4 w-4" /> Add Product
                 </Button>
               </div>
 
               <div className="space-y-3">
                 {items.map((item, index) => (
-                  <div key={index} className="flex flex-col sm:flex-row gap-3 items-start sm:items-center bg-muted/20 p-3 rounded-lg border border-border/50">
+                  <div key={index} className="flex flex-col sm:flex-row gap-3 items-start sm:items-center bg-muted/20 p-3 rounded-lg border border-border/40">
                     
                     <div className="flex-1 w-full space-y-1">
                       <Label className="text-xs text-muted-foreground">Product</Label>
                       <select 
-                        className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm outline-none"
+                        className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm outline-none focus:border-primary"
                         value={item.productId}
                         onChange={(e) => handleItemChange(index, 'productId', e.target.value)}
                         required
                       >
-                        <option value="">Select Product...</option>
-                        {products.map((p, pIdx) => (
-                          <option key={`${p.id}-${pIdx}`} value={p.id}>{p.name} (Stock: {activeBranch === 'All' ? Object.values(p.stock || {}).reduce((a, b) => a + b, 0) : p.stock?.[activeBranch] || 0})</option>
+                        <option value="">-- Select Product --</option>
+                        {products.map((p) => (
+                          <option key={p.id} value={p.id}>{p.name}</option>
                         ))}
                       </select>
                     </div>
 
-                    <div className="w-full sm:w-24 space-y-1">
+                    <div className="w-full sm:w-28 space-y-1">
                       <Label className="text-xs text-muted-foreground">Quantity</Label>
                       <Input 
                         type="number" 
@@ -234,7 +288,7 @@ export default function EditOrderPage() {
                       />
                     </div>
 
-                    <div className="w-full sm:w-28 space-y-1">
+                    <div className="w-full sm:w-32 space-y-1">
                       <Label className="text-xs text-muted-foreground">Unit Price (₹)</Label>
                       <Input 
                         type="number" 
@@ -268,10 +322,28 @@ export default function EditOrderPage() {
                 <span className="text-muted-foreground">Subtotal</span>
                 <span className="font-medium">₹{subtotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
               </div>
-              <div className="flex justify-between w-full sm:w-64 text-sm">
-                <span className="text-muted-foreground">GST (18%)</span>
-                <span className="font-medium">₹{gstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-              </div>
+              {taxSlab === "0" || taxOption === "NO_TAX" ? (
+                <div className="flex justify-between w-full sm:w-64 text-sm">
+                  <span className="text-muted-foreground">Tax</span>
+                  <span className="font-semibold text-emerald-500">No Tax (0% Nil Rated)</span>
+                </div>
+              ) : taxOption === "CGST_SGST" ? (
+                <>
+                  <div className="flex justify-between w-full sm:w-64 text-sm">
+                    <span className="text-muted-foreground">CGST ({selectedTaxRate / 2}%)</span>
+                    <span className="font-medium">₹{(gstAmount / 2).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  </div>
+                  <div className="flex justify-between w-full sm:w-64 text-sm">
+                    <span className="text-muted-foreground">SGST ({selectedTaxRate / 2}%)</span>
+                    <span className="font-medium">₹{(gstAmount / 2).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  </div>
+                </>
+              ) : (
+                <div className="flex justify-between w-full sm:w-64 text-sm">
+                  <span className="text-muted-foreground">IGST ({selectedTaxRate}%)</span>
+                  <span className="font-medium">₹{gstAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                </div>
+              )}
               <div className="flex justify-between w-full sm:w-64 pt-2 border-t border-border/50">
                 <span className="text-base font-medium mt-1">Grand Total</span>
                 <span className="text-2xl font-bold text-emerald-500">₹{totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>

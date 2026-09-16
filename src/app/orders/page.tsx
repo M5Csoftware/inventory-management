@@ -434,10 +434,25 @@ export default function OrdersPage() {
       "Total Amount",
     ];
 
-    const tableRows: any[] = [];
+    const subtotalCalc = order.items.reduce(
+      (acc, item) => acc + item.quantity * item.price,
+      0,
+    );
 
-    const orderTaxSlab = order.taxSlab !== undefined ? order.taxSlab : 18;
-    const orderTaxOption = order.taxOption || "CGST_SGST";
+    const isNilRated =
+      Number(order.taxSlab) === 0 ||
+      order.taxOption === "NO_TAX" ||
+      order.taxAmount === 0 ||
+      (order.taxableAmount !== undefined && Math.abs(order.totalAmount - order.taxableAmount) < 0.01) ||
+      (subtotalCalc > 0 && Math.abs(order.totalAmount - subtotalCalc) < 0.01);
+
+    const orderTaxSlab = isNilRated
+      ? 0
+      : (order.taxSlab !== undefined && order.taxSlab !== null ? Number(order.taxSlab) : 18);
+
+    const orderTaxOption = isNilRated ? "NO_TAX" : (order.taxOption || "CGST_SGST");
+
+    const tableRows: any[] = [];
 
     order.items.forEach((item, index) => {
       const taxableAmount = item.quantity * item.price;
@@ -525,7 +540,13 @@ export default function OrdersPage() {
       align: "right",
     });
 
-    if (orderTaxOption === "IGST") {
+    if (orderTaxSlab === 0 || orderTaxOption === "NO_TAX") {
+      tRowY += 5.5;
+      doc.text("No Tax (0% Nil Rated)", totalsX + 5, tRowY);
+      doc.text("Rs. 0.00", totalsX + totalsWidth - 5, tRowY, {
+        align: "right",
+      });
+    } else if (orderTaxOption === "IGST") {
       tRowY += 5.5;
       doc.text(`IGST @ ${orderTaxSlab}%`, totalsX + 5, tRowY);
       doc.text(`Rs. ${totalTax.toFixed(2)}`, totalsX + totalsWidth - 5, tRowY, {
