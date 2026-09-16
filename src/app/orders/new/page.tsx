@@ -2,7 +2,7 @@
 
 import { useState, useRef, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useInventory, generateOrderId } from "@/context/inventory-context";
+import { useInventory, generateOrderId, getBranchCode } from "@/context/inventory-context";
 import {
   Card,
   CardContent,
@@ -56,7 +56,16 @@ export default function NewOrderPage() {
   );
   const [description, setDescription] = useState("");
   const [taxSlab, setTaxSlab] = useState<string>("18");
-  const [taxOption, setTaxOption] = useState<"IGST" | "CGST_SGST">("IGST");
+  const [taxOption, setTaxOption] = useState<"IGST" | "CGST_SGST" | "NO_TAX">("IGST");
+
+  const handleTaxSlabChange = (val: string) => {
+    setTaxSlab(val);
+    if (val === "0") {
+      setTaxOption("NO_TAX");
+    } else if (taxOption === "NO_TAX") {
+      setTaxOption("IGST");
+    }
+  };
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const submittingRef = useRef(false);
@@ -303,7 +312,7 @@ export default function NewOrderPage() {
                   required
                 />
                 <p className="text-[11px] text-muted-foreground">
-                  Auto-generated prefix from 3 letters of branch ({branch ? branch.trim().slice(0, 3).toUpperCase() : "DEL"})
+                  Auto-generated prefix from branch code ({getBranchCode(branch)})
                 </p>
               </div>
             </div>
@@ -323,7 +332,7 @@ export default function NewOrderPage() {
                 <select
                   className="w-full h-10 bg-background border border-input rounded-lg px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary cursor-pointer transition-colors font-semibold"
                   value={taxSlab}
-                  onChange={(e) => setTaxSlab(e.target.value)}
+                  onChange={(e) => handleTaxSlabChange(e.target.value)}
                   required
                 >
                   <option value="0">0% (Nil Rate)</option>
@@ -340,13 +349,20 @@ export default function NewOrderPage() {
                   Tax Option *
                 </Label>
                 <select
-                  className="w-full h-10 bg-background border border-input rounded-lg px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary cursor-pointer transition-colors font-semibold"
-                  value={taxOption}
-                  onChange={(e) => setTaxOption(e.target.value as "IGST" | "CGST_SGST")}
+                  className="w-full h-10 bg-background border border-input rounded-lg px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary cursor-pointer transition-colors font-semibold disabled:opacity-75 disabled:cursor-not-allowed"
+                  value={taxSlab === "0" ? "NO_TAX" : taxOption}
+                  onChange={(e) => setTaxOption(e.target.value as "IGST" | "CGST_SGST" | "NO_TAX")}
+                  disabled={taxSlab === "0"}
                   required
                 >
-                  <option value="IGST">IGST (Inter-State Tax)</option>
-                  <option value="CGST_SGST">CGST + SGST (Intra-State Tax)</option>
+                  {taxSlab === "0" ? (
+                    <option value="NO_TAX">No Tax (0% Nil Rated)</option>
+                  ) : (
+                    <>
+                      <option value="IGST">IGST (Inter-State Tax)</option>
+                      <option value="CGST_SGST">CGST + SGST (Intra-State Tax)</option>
+                    </>
+                  )}
                 </select>
               </div>
             </div>
@@ -635,7 +651,14 @@ export default function NewOrderPage() {
                 </span>
               </div>
 
-              {taxOption === "CGST_SGST" ? (
+              {taxSlab === "0" || taxOption === "NO_TAX" ? (
+                <div className="flex justify-between w-full sm:w-72 text-sm">
+                  <span className="text-muted-foreground">Tax</span>
+                  <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                    No Tax (0% Nil Rated)
+                  </span>
+                </div>
+              ) : taxOption === "CGST_SGST" ? (
                 <>
                   <div className="flex justify-between w-full sm:w-72 text-sm">
                     <span className="text-muted-foreground">
