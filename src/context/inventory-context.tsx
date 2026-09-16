@@ -187,6 +187,9 @@ export function generateOrderId(
     if (!o || !o.id) return;
     const orderIdUpper = o.id.trim().toUpperCase();
 
+    // Never consider legacy ORD- IDs
+    if (orderIdUpper.startsWith("ORD-") || orderIdUpper.startsWith("ORD")) return;
+
     if (
       orderIdUpper.startsWith(basePrefix) ||
       orderIdUpper.startsWith(`${branchCode}-`) ||
@@ -1098,7 +1101,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
           const branchCode = getBranchCode(targetBranch);
 
           let finalId = order.id ? order.id.trim() : "";
-          if (!finalId || !finalId.toUpperCase().startsWith(`${branchCode}-`)) {
+          if (!finalId || finalId.toUpperCase().startsWith("ORD") || !finalId.toUpperCase().startsWith(`${branchCode}-`)) {
             finalId = generateOrderId(targetBranch, orders);
           }
 
