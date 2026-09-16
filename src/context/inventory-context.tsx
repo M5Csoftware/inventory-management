@@ -93,11 +93,107 @@ export interface Order {
   items: OrderItem[];
   status: "Pending" | "Processing" | "Completed" | "Cancelled" | "Partial";
   totalAmount: number;
+  taxableAmount?: number;
+  taxSlab?: number;
+  taxOption?: "IGST" | "CGST_SGST";
+  taxAmount?: number;
   branch?: string;
   createdAt?: string;
   termsAndConditions?: string;
-  description?: string; // Already added
+  description?: string;
 }
+
+export interface QuotationItem {
+  id?: string;
+  productId?: string;
+  name: string;
+  description?: string;
+  quantity: number;
+  unitPrice: number;
+  taxRate?: number;
+  discount?: number;
+  totalPrice: number;
+}
+
+export interface Quotation {
+  id: string;
+  quotationNumber: string;
+  supplier: string;
+  branch: string;
+  date: string;
+  items: QuotationItem[];
+  subtotal: number;
+  taxAmount: number;
+  totalAmount: number;
+  status: "Draft" | "Pending" | "Approved" | "Rejected" | "Expired" | "Converted";
+  notes?: string;
+  terms?: string;
+  createdAt: string;
+}
+
+export function generateQuotationNumber(
+  supplier?: string,
+  branch?: string,
+  existingQuotations: Quotation[] = []
+): string {
+  let supplierCode = "QT";
+  if (supplier && supplier.trim()) {
+    const clean = supplier.trim().replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+    if (clean.length > 0) {
+      supplierCode = `QT-${clean.slice(0, 4)}`;
+    }
+  }
+
+  let branchCode = "";
+  if (branch && branch.trim()) {
+    branchCode = `-${branch.trim().replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 3)}`;
+  }
+
+  const basePrefix = `${supplierCode}${branchCode}`;
+
+  const matching = existingQuotations.filter(
+    (q) => q.quotationNumber && q.quotationNumber.startsWith(basePrefix)
+  );
+
+  const seq = String(matching.length + 1).padStart(3, "0");
+  return `${basePrefix}-${seq}`;
+}
+
+export function generateOrderId(
+  branch?: string,
+  existingOrders: Order[] = []
+): string {
+  let branchCode = "ORD";
+  if (branch && branch.trim()) {
+    const clean = branch.trim().replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+    if (clean.length > 0) {
+      branchCode = clean.slice(0, 3);
+    }
+  }
+
+  const basePrefix = `${branchCode}-PO`;
+
+  const safeOrders = existingOrders || [];
+  const matchingNumbers: number[] = [];
+  safeOrders.forEach((o) => {
+    if (o && o.id && o.id.toUpperCase().startsWith(basePrefix)) {
+      const parts = o.id.split("-");
+      const num = parseInt(parts[parts.length - 1], 10);
+      if (!isNaN(num)) {
+        matchingNumbers.push(num);
+      }
+    }
+  });
+
+  const nextSeq =
+    matchingNumbers.length > 0
+      ? Math.max(...matchingNumbers) + 1
+      : safeOrders.filter((o) => o && o.id && o.id.toUpperCase().startsWith(basePrefix)).length + 1;
+
+  const seq = String(nextSeq).padStart(3, "0");
+  return `${basePrefix}-${seq}`;
+}
+
 export const BRANCHES = ["Ahmedabad", "Ludhiana", "Delhi", "Mumbai"] as const;
 
 export const ASSET_DEPARTMENTS = [
@@ -238,13 +334,23 @@ interface InventoryContextType {
   categories: Category[];
   suppliers: Supplier[];
   orders: Order[];
+  quotations: Quotation[];
+  addQuotation: (
+    quotation: Omit<Quotation, "id" | "createdAt">,
+  ) => Promise<Quotation>;
+  updateQuotation: (
+    id: string,
+    quotationData: Partial<Quotation>,
+  ) => Promise<void>;
+  deleteQuotation: (id: string) => Promise<void>;
+  convertQuotationToOrder: (quotationId: string) => Promise<void>;
   assets: AssetAssignment[];
   physicalVerifications: PhysicalVerificationRecord[];
   addPhysicalVerification: (
     record: Omit<PhysicalVerificationRecord, "id" | "createdAt">,
   ) => Promise<void>;
   deletePhysicalVerification: (id: string) => Promise<void>;
-  addOrder: (order: Omit<Order, "id" | "createdAt">) => Promise<void>;
+  addOrder: (order: Omit<Order, "id" | "createdAt"> & { id?: string }) => Promise<void>;
   updateOrder: (id: string, orderData: Partial<Order>) => Promise<void>;
   updateOrderStatus: (id: string, status: Order["status"]) => Promise<void>;
   deleteOrder: (id: string) => Promise<void>;
@@ -417,6 +523,30 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [quotations, setQuotations] = useState<Quotation[]>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("m5_quotations");
+      if (saved) {
+        try {
+          const parsed: Quotation[] = JSON.parse(saved);
+          // Filter out initial mock quotations if stored in browser localStorage
+          const userOnly = parsed.filter(
+            (q) => !["QT-2026-001", "QT-2026-002", "QT-2026-003"].includes(q.id),
+          );
+          return userOnly;
+        } catch (e) {
+          console.error("Failed to load quotations from localStorage", e);
+        }
+      }
+    }
+    return [];
+  });
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("m5_quotations", JSON.stringify(quotations));
+    }
+  }, [quotations]);
   const [assets, setAssets] = useState<AssetAssignment[]>([]);
   const [assetSerials, setAssetSerials] = useState<AssetSerialItem[]>([]);
   const [physicalVerifications, setPhysicalVerifications] = useState<
@@ -941,17 +1071,20 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
     );
   };
 
-  const addOrder = async (order: Omit<Order, "id" | "createdAt">) => {
+  const addOrder = async (order: Omit<Order, "id" | "createdAt"> & { id?: string }) => {
     return withLock(
       `add-order-${order.supplier}-${order.totalAmount}`,
       async () => {
         try {
+          const targetBranch = order.branch || (activeBranch !== "All" ? activeBranch : "Delhi");
+          const generatedId = order.id || generateOrderId(targetBranch, orders);
           const res = await fetch(`${API_BASE}/orders`, {
             method: "POST",
             headers: DB_HEADER,
             body: JSON.stringify({
-              branch: activeBranch !== "All" ? activeBranch : "Delhi",
+              branch: targetBranch,
               ...order,
+              id: generatedId,
             }),
           });
           const data = await res.json();
@@ -1364,6 +1497,61 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
       updateAssetSerial,
       deleteAssetSerial,
       revertAuditLog,
+      quotations,
+      addQuotation: async (q: Omit<Quotation, "id" | "createdAt">): Promise<Quotation> => {
+        const generatedNum = q.quotationNumber || generateQuotationNumber(q.supplier, q.branch, quotations);
+        const newId = generatedNum;
+        const newQuotation: Quotation = {
+          ...q,
+          id: newId,
+          quotationNumber: generatedNum,
+          createdAt: new Date().toISOString(),
+        };
+        setQuotations((prev) => [newQuotation, ...prev]);
+        toast.success(`Quotation ${newQuotation.quotationNumber} created successfully!`);
+        return newQuotation;
+      },
+      updateQuotation: async (id: string, quotationData: Partial<Quotation>): Promise<void> => {
+        setQuotations((prev) =>
+          prev.map((q) => (q.id === id ? { ...q, ...quotationData } : q)),
+        );
+        toast.success("Quotation updated successfully!");
+      },
+      deleteQuotation: async (id: string): Promise<void> => {
+        setQuotations((prev) => prev.filter((q) => q.id !== id));
+        toast.success("Quotation deleted successfully.");
+      },
+      convertQuotationToOrder: async (quotationId: string): Promise<void> => {
+        const q = quotations.find((item) => item.id === quotationId);
+        if (!q) {
+          toast.error("Quotation not found");
+          return;
+        }
+        const newOrderItems: OrderItem[] = q.items.map((item) => ({
+          productId: item.productId || "",
+          name: item.name,
+          quantity: item.quantity,
+          price: item.unitPrice,
+          receivedQuantity: 0,
+        }));
+
+        await addOrder({
+          supplier: q.supplier,
+          branch: q.branch,
+          items: newOrderItems,
+          status: "Pending",
+          totalAmount: q.totalAmount,
+          description: `Converted from Quotation ${q.quotationNumber}`,
+          termsAndConditions: q.terms || q.notes,
+        });
+
+        setQuotations((prev) =>
+          prev.map((item) =>
+            item.id === quotationId ? { ...item, status: "Converted" } : item,
+          ),
+        );
+        toast.success(`Quotation ${q.quotationNumber} converted to Purchase Order!`);
+      },
     }),
     [
       activeBranch,
@@ -1372,6 +1560,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
       categories,
       suppliers,
       orders,
+      quotations,
       physicalVerifications,
       assets,
       assetSerials,

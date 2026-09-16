@@ -706,8 +706,8 @@ export default function Dashboard() {
                       {allOrdersData.list.length === 0 ? (
                         <p className="text-center py-6 text-muted-foreground italic">No purchase orders found.</p>
                       ) : (
-                        allOrdersData.list.map((order) => (
-                          <div key={order.id} className="p-3 rounded-lg bg-muted/20 border border-border/40 space-y-2">
+                        allOrdersData.list.map((order, idx) => (
+                          <div key={`${order.id}-${idx}`} className="p-3 rounded-lg bg-muted/20 border border-border/40 space-y-2">
                             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/40 pb-2">
                               <div className="flex items-center gap-2">
                                 <span className="font-mono font-bold text-amber-600 dark:text-amber-400">{order.id}</span>

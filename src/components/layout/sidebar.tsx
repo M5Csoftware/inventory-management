@@ -28,6 +28,7 @@ import {
   CheckCircle2,
   ClipboardCheck,
   History,
+  GitCompare,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -154,6 +155,15 @@ export const navItems: NavItem[] = [
       { href: "/invoice/new", label: "New Invoice", icon: PlusCircle },
       { href: "/invoice/approvals", label: "Approvals", icon: CheckCircle2 },
       { href: "/invoice/audit", label: "Invoice Log", icon: History },
+    ],
+  },
+  {
+    label: "Quotations",
+    icon: FileText,
+    subItems: [
+      { href: "/quotations", label: "All Quotations", icon: List },
+      { href: "/quotations/new", label: "Add Quotation", icon: PlusCircle },
+      { href: "/quotations/compare", label: "Compare Quotations", icon: GitCompare },
     ],
   },
 ];

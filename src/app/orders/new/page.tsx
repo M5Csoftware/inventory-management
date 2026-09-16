@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useRef, useMemo } from "react";
+import { useState, useRef, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useInventory } from "@/context/inventory-context";
+import { useInventory, generateOrderId } from "@/context/inventory-context";
 import {
   Card,
   CardContent,
@@ -31,19 +31,32 @@ import { ConfirmModal } from "@/components/confirm-modal";
 
 export default function NewOrderPage() {
   const router = useRouter();
-  const { suppliers, products, addOrder, activeBranch } = useInventory();
+  const { suppliers, products, addOrder, orders, activeBranch } = useInventory();
 
   const [supplier, setSupplier] = useState("");
   const [branch, setBranch] = useState(
     activeBranch && activeBranch !== "All" ? activeBranch : "Delhi",
   );
+  const [orderId, setOrderId] = useState(() =>
+    generateOrderId(
+      activeBranch && activeBranch !== "All" ? activeBranch : "Delhi",
+      orders,
+    ),
+  );
+
+  useEffect(() => {
+    const autoId = generateOrderId(branch, orders);
+    setOrderId(autoId);
+  }, [branch, orders]);
   const [items, setItems] = useState([
     { productId: "", name: "", quantity: 1, price: 0 },
   ]);
   const [termsAndConditions, setTermsAndConditions] = useState(
-    "1. Goods once sold will not be taken back.\n2. Payment terms: 15 days from invoice date.\n3. Delivery within 7 working days.\n4. All disputes subject to Delhi jurisdiction.",
+    "1. Payment will be released after goods are received in fine condition.\n2. Payment terms: 15 days from invoice date.\n3. Delivery within 7 working days.\n4. All disputes subject to Delhi jurisdiction.",
   );
   const [description, setDescription] = useState("");
+  const [taxSlab, setTaxSlab] = useState<string>("18");
+  const [taxOption, setTaxOption] = useState<"IGST" | "CGST_SGST">("IGST");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const submittingRef = useRef(false);
@@ -140,7 +153,8 @@ export default function NewOrderPage() {
     (acc, item) => acc + item.quantity * item.price,
     0,
   );
-  const gstAmount = subtotal * 0.18;
+  const selectedTaxRate = parseFloat(taxSlab) || 0;
+  const gstAmount = (subtotal * selectedTaxRate) / 100;
   const totalAmount = subtotal + gstAmount;
 
   const handleFormSubmit = (e: React.FormEvent) => {
@@ -179,8 +193,13 @@ export default function NewOrderPage() {
     setIsSubmitting(true);
     try {
       await addOrder({
+        id: orderId,
         supplier,
         items,
+        taxableAmount: subtotal,
+        taxSlab: selectedTaxRate,
+        taxOption,
+        taxAmount: gstAmount,
         totalAmount,
         branch,
         status: "Pending",
@@ -231,8 +250,8 @@ export default function NewOrderPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6 pt-6">
-            {/* Supplier and Branch Selectors */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Supplier, Branch, and Order ID Selectors */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* Supplier Selector */}
               <div className="space-y-2">
                 <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -268,6 +287,66 @@ export default function NewOrderPage() {
                   <option value="Ahmedabad">🏭 Ahmedabad</option>
                   <option value="Ludhiana">🏭 Ludhiana</option>
                   <option value="Mumbai">🏭 Mumbai</option>
+                </select>
+              </div>
+
+              {/* Order ID Selector / Input */}
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Order ID / PO Number *
+                </Label>
+                <Input
+                  value={orderId}
+                  onChange={(e) => setOrderId(e.target.value)}
+                  placeholder="e.g. DEL-PO-001"
+                  className="h-10 font-mono font-semibold text-primary"
+                  required
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  Auto-generated prefix from 3 letters of branch ({branch ? branch.trim().slice(0, 3).toUpperCase() : "DEL"})
+                </p>
+              </div>
+            </div>
+
+            {/* Tax Slab and Tax Option Selectors */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-border/40">
+              {/* Tax Slab */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Tax Slab (%) *
+                  </Label>
+                  <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded">
+                    {selectedTaxRate}% Slab
+                  </span>
+                </div>
+                <select
+                  className="w-full h-10 bg-background border border-input rounded-lg px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary cursor-pointer transition-colors font-semibold"
+                  value={taxSlab}
+                  onChange={(e) => setTaxSlab(e.target.value)}
+                  required
+                >
+                  <option value="0">0% (Nil Rate)</option>
+                  <option value="5">5% (Concessional)</option>
+                  <option value="12">12% (Standard Lower GST)</option>
+                  <option value="18">18% (Standard GST)</option>
+                  <option value="40">40% (Luxury / Sin Goods)</option>
+                </select>
+              </div>
+
+              {/* Tax Option */}
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Tax Option *
+                </Label>
+                <select
+                  className="w-full h-10 bg-background border border-input rounded-lg px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary cursor-pointer transition-colors font-semibold"
+                  value={taxOption}
+                  onChange={(e) => setTaxOption(e.target.value as "IGST" | "CGST_SGST")}
+                  required
+                >
+                  <option value="IGST">IGST (Inter-State Tax)</option>
+                  <option value="CGST_SGST">CGST + SGST (Intra-State Tax)</option>
                 </select>
               </div>
             </div>
@@ -546,7 +625,7 @@ export default function NewOrderPage() {
             {/* Calculations Summary */}
             <div className="flex flex-col items-end pt-4 border-t border-border/50 gap-2">
               <div className="flex justify-between w-full sm:w-72 text-sm">
-                <span className="text-muted-foreground">Items Subtotal</span>
+                <span className="text-muted-foreground">Subtotal (Taxable)</span>
                 <span className="font-medium">
                   ₹
                   {subtotal.toLocaleString("en-IN", {
@@ -555,26 +634,49 @@ export default function NewOrderPage() {
                   })}
                 </span>
               </div>
-              <div className="flex justify-between w-full sm:w-72 text-sm">
-                <span className="text-muted-foreground">CGST (9%)</span>
-                <span className="font-medium">
-                  ₹
-                  {(subtotal * 0.09).toLocaleString("en-IN", {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
-                </span>
-              </div>
-              <div className="flex justify-between w-full sm:w-72 text-sm">
-                <span className="text-muted-foreground">SGST (9%)</span>
-                <span className="font-medium">
-                  ₹
-                  {(subtotal * 0.09).toLocaleString("en-IN", {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
-                </span>
-              </div>
+
+              {taxOption === "CGST_SGST" ? (
+                <>
+                  <div className="flex justify-between w-full sm:w-72 text-sm">
+                    <span className="text-muted-foreground">
+                      CGST ({(selectedTaxRate / 2)}%)
+                    </span>
+                    <span className="font-medium">
+                      ₹
+                      {(gstAmount / 2).toLocaleString("en-IN", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </span>
+                  </div>
+                  <div className="flex justify-between w-full sm:w-72 text-sm">
+                    <span className="text-muted-foreground">
+                      SGST ({(selectedTaxRate / 2)}%)
+                    </span>
+                    <span className="font-medium">
+                      ₹
+                      {(gstAmount / 2).toLocaleString("en-IN", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <div className="flex justify-between w-full sm:w-72 text-sm">
+                  <span className="text-muted-foreground">
+                    IGST ({selectedTaxRate}%)
+                  </span>
+                  <span className="font-medium">
+                    ₹
+                    {gstAmount.toLocaleString("en-IN", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </span>
+                </div>
+              )}
+
               <div className="flex justify-between w-full sm:w-72 pt-2 border-t border-border/50">
                 <span className="text-base font-semibold">Grand Total</span>
                 <span className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
