@@ -59,7 +59,9 @@ export interface AuditLogItem {
   createdAt?: string;
 }
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/inventory';
+import { getInventoryApiUrl } from '@/lib/api-config';
+
+const API_BASE = getInventoryApiUrl();
 const getDbHeader = () => {
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
   return {
