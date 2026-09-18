@@ -434,6 +434,8 @@ interface InventoryContextType {
     reason?: string,
     password?: string,
   ) => Promise<boolean>;
+  isLoading: boolean;
+  fetchData: (forceRefresh?: boolean) => Promise<void>;
 }
 
 const InventoryContext = createContext<InventoryContextType | undefined>(
@@ -588,10 +590,16 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+
   // Fetch initial data with LRU caching
   const fetchData = async (forceRefresh = false) => {
-    if (!user) return;
+    if (!user) {
+      setIsLoading(false);
+      return;
+    }
 
+    setIsLoading(true);
     if (forceRefresh) {
       invalidateCache();
     }
@@ -677,6 +685,8 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (error) {
       console.error("Failed to load inventory data from backend:", error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -1524,6 +1534,8 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
       updateAssetSerial,
       deleteAssetSerial,
       revertAuditLog,
+      isLoading,
+      fetchData,
       quotations,
       addQuotation: async (q: Omit<Quotation, "id" | "createdAt">): Promise<Quotation> => {
         const generatedNum = q.quotationNumber || generateQuotationNumber(q.supplier, q.branch, quotations);
@@ -1591,6 +1603,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
       physicalVerifications,
       assets,
       assetSerials,
+      isLoading,
     ],
   );
 
