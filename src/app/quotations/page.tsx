@@ -271,15 +271,9 @@ export default function AllQuotationsPage() {
         </div>
         <div className="flex items-center gap-3 w-full sm:w-auto">
           <Link href="/quotations/compare" className="w-full sm:w-auto">
-            <Button variant="outline" className="w-full sm:w-auto gap-2">
-              <GitCompare className="h-4 w-4" />
-              Compare Quotes
-            </Button>
-          </Link>
-          <Link href="/quotations/new" className="w-full sm:w-auto">
             <Button className="w-full sm:w-auto gap-2">
-              <PlusCircle className="h-4 w-4" />
-              Add Quotation
+              <GitCompare className="h-4 w-4" />
+              Compare Vendor Quotes
             </Button>
           </Link>
         </div>
