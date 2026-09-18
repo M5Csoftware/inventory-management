@@ -27,8 +27,9 @@ interface Transaction {
   branch: string;
 }
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/inventory";
+import { getInventoryApiUrl } from "@/lib/api-config";
+
+const API_BASE = getInventoryApiUrl();
 const DB_HEADER = {
   "x-database": "m5c-inventory",
   "Content-Type": "application/json",
