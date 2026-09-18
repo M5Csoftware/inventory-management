@@ -16,8 +16,10 @@ import {
   Legend,
 } from 'recharts';
 
+import { PageLoading } from '@/components/ui/loading';
+
 export default function Dashboard() {
-  const { products, transactions, categories, orders, assets, assetSerials, suppliers, activeBranch } = useInventory();
+  const { products, transactions, categories, orders, assets, assetSerials, suppliers, activeBranch, isLoading } = useInventory();
   const [activeModalCard, setActiveModalCard] = useState<'bopp' | 'woven' | 'assets' | 'orders' | null>(null);
 
   const getStock = useCallback((p: any) => {
@@ -149,6 +151,17 @@ export default function Dashboard() {
   const COLORS = ['#8b5cf6', '#3b82f6', '#10b981', '#f59e0b', '#ec4899', '#6366f1'];
 
   const recentTransactions = useMemo(() => transactions.slice(0, 5), [transactions]);
+
+  if (isLoading) {
+    return (
+      <div className="p-4 sm:p-6 lg:p-8">
+        <PageLoading
+          title="Loading Dashboard Overview..."
+          subtitle="Fetching live inventory data, metrics, and stock alerts"
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8 animate-in fade-in duration-500">
