@@ -12,9 +12,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { getInventoryApiUrl } from "@/lib/api-config";
 
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/inventory";
+const API_URL = getInventoryApiUrl();
 
 import { toast } from "react-toastify";
 import { useAuth } from "@/context/auth-context";
