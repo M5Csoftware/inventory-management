@@ -107,8 +107,10 @@ interface SerialEntry {
   supplier?: string;
 }
 
+import { getInventoryApiUrl } from "@/lib/api-config";
+
 // ── API config ──
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/inventory";
+const API_BASE = getInventoryApiUrl();
 
 const getAuthHeaders = (): Record<string, string> => {
   const token =
