@@ -17,9 +17,10 @@ import { toast } from "react-toastify";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { ConfirmModal } from "@/components/confirm-modal";
+import { getInventoryApiUrl } from "@/lib/api-config";
 import { SIDEBAR_TABS_STRUCTURE, SidebarFolderGroup } from "../../new/page";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/inventory";
+const API_BASE = getInventoryApiUrl();
 const DB_HEADER = { "x-database": "m5c-inventory", "Content-Type": "application/json" };
 
 export default function EditUserPage() {

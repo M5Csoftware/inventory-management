@@ -70,6 +70,56 @@ export default function NewOrderPage() {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const submittingRef = useRef(false);
 
+  // Handle pre-filling from URL query params (e.g. from Compare Quotations)
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const suppParam = params.get("supplier");
+      const itemsParam = params.get("items");
+
+      if (suppParam) {
+        const suppLower = suppParam.toLowerCase().trim();
+        const matchedSupplier = suppliers.find(
+          (s) => s.name.toLowerCase().trim() === suppLower,
+        );
+        setSupplier(matchedSupplier ? matchedSupplier.name : suppParam);
+
+        if (itemsParam) {
+          try {
+            let parsed: any = null;
+            try {
+              parsed = JSON.parse(itemsParam);
+            } catch {
+              parsed = JSON.parse(decodeURIComponent(itemsParam));
+            }
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setItems(parsed);
+              return;
+            }
+          } catch (e) {
+            console.error("Failed to parse items param", e);
+          }
+        }
+
+        // If products are loaded and an item was requested or we just set supplier
+        const prodParam = params.get("productId");
+        if (prodParam && products.length > 0) {
+          const matched = products.find((p) => p.id === prodParam);
+          if (matched) {
+            let unitPrice = matched.price;
+            const customRateObj = matched.suppliersList?.find(
+              (s) => s.supplierName.toLowerCase().trim() === suppLower,
+            );
+            if (customRateObj && customRateObj.rate > 0) {
+              unitPrice = customRateObj.rate;
+            }
+            setItems([{ productId: matched.id, name: matched.name, quantity: 1, price: unitPrice }]);
+          }
+        }
+      }
+    }
+  }, [products, suppliers]);
+
   // Get selected supplier details
   const selectedSupplier = useMemo(() => {
     return suppliers.find((s) => s.name === supplier);

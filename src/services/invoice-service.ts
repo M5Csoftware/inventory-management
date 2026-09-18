@@ -1,10 +1,8 @@
 import { Invoice, AppConfig } from '@/types/invoice';
 import { getCachedAsync, invalidateCache } from '@/lib/cache';
+import { getInvoiceApiUrl } from '@/lib/api-config';
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL
-    ? process.env.NEXT_PUBLIC_API_URL.replace('/inventory', '/invoice-registration')
-    : 'http://localhost:5000/api/invoice-registration';
+const API_BASE = getInvoiceApiUrl();
 
 export const invoiceService = {
   // Config

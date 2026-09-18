@@ -26,9 +26,9 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useInventory, ASSET_DEPARTMENTS } from "@/context/inventory-context";
+import { getInventoryApiUrl } from "@/lib/api-config";
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/inventory";
+const API_BASE = getInventoryApiUrl();
 
 interface AssetAssignment {
   _id?: string;

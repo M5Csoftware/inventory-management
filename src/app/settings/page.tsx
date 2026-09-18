@@ -20,8 +20,9 @@ import { toast } from 'react-toastify';
 import { useAuth } from '@/context/auth-context';
 import { useInventory } from '@/context/inventory-context';
 import { ConfirmModal } from '@/components/confirm-modal';
+import { getInventoryApiUrl } from '@/lib/api-config';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/inventory';
+const API_BASE = getInventoryApiUrl();
 const getDbHeader = () => {
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
   return {
