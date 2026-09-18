@@ -13,6 +13,7 @@ import {
   Filter,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { LoadingSpinner } from "@/components/ui/loading";
 import { useInventory, Category, Product } from "@/context/inventory-context";
 
 interface Transaction {
@@ -304,10 +305,9 @@ export default function TransactionsReportPage() {
                   <tr>
                     <td
                       colSpan={7}
-                      className="p-6 text-center text-muted-foreground"
+                      className="p-8 text-center text-muted-foreground"
                     >
-                      <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-primary" />
-                      Loading transaction report...
+                      <LoadingSpinner size="md" label="Loading transaction report..." />
                     </td>
                   </tr>
                 ) : transactions.length ? (
