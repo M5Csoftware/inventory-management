@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { getInventoryApiUrl } from "@/lib/api-config";
 import {
   ArrowUpRight,
   Laptop,
@@ -311,8 +312,7 @@ export default function StockInAssetsPage() {
 
         // Save each serial number to AssetSerial collection
         if (serialsList.length > 0) {
-          const API_BASE =
-            process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/inventory";
+          const API_BASE = getInventoryApiUrl();
           const token = localStorage.getItem("token");
           const dbName = localStorage.getItem("dbName") || "m5c-inventory";
 
