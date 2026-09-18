@@ -31,6 +31,8 @@ import {
   Plus,
 } from 'lucide-react';
 
+import { PageLoading } from '@/components/ui/loading';
+
 function MasterInvoiceContent() {
   const { user } = useAuth();
   const {
@@ -172,10 +174,10 @@ function MasterInvoiceContent() {
 
       {/* View Content */}
       {loading ? (
-        <Card className="p-12 text-center text-muted-foreground border border-border/50 bg-background/60 backdrop-blur-sm">
-          <RefreshCw className="h-6 w-6 animate-spin mx-auto mb-2 text-primary" />
-          Loading Invoice Data...
-        </Card>
+        <PageLoading
+          title="Loading Invoice Data..."
+          subtitle="Fetching live invoices, risk flags, and verification status from server"
+        />
       ) : (
         <>
           {activeTab === 'dashboard' && (
