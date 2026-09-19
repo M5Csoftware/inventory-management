@@ -25,10 +25,11 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useInventory, type Product, type Category } from "@/context/inventory-context";
 import { ConfirmDeleteModal } from "@/components/confirm-delete-modal";
+import { TableSkeleton } from "@/components/ui/loading";
 
 export default function StockPage() {
   const router = useRouter();
-  const { transactions, products, categories, activeBranch, deleteProduct } =
+  const { transactions, products, categories, activeBranch, deleteProduct, isLoading } =
     useInventory();
   const [activeTab, setActiveTab] = useState<"current" | "transactions">(
     "current",
@@ -389,8 +390,11 @@ export default function StockPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="relative w-full overflow-auto">
-              {filteredProducts.length === 0 ? (
+            {isLoading ? (
+              <TableSkeleton rows={6} cols={6} />
+            ) : (
+              <div className="relative w-full overflow-auto">
+                {filteredProducts.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-6">
                   No products found.
                 </p>
@@ -492,6 +496,7 @@ export default function StockPage() {
                 </table>
               )}
             </div>
+            )}
           </CardContent>
         </Card>
       )}

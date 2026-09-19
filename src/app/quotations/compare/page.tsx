@@ -40,6 +40,8 @@ import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import { M5C_LOGO_BASE64 } from "@/lib/company-logo";
 
+import { PageLoading } from "@/components/ui/loading";
+
 interface VendorRateInfo {
   supplierName: string;
   rate: number;
@@ -64,7 +66,7 @@ interface BasketItem {
 
 export default function CompareQuotationsPage() {
   const router = useRouter();
-  const { products, suppliers, activeBranch, categories } = useInventory();
+  const { products, suppliers, activeBranch, categories, isLoading } = useInventory();
 
   // Search & Filter state
   const [searchTerm, setSearchTerm] = useState("");
@@ -649,6 +651,18 @@ export default function CompareQuotationsPage() {
       toast.error("Failed to export PDF.");
     }
   };
+
+  // If data is loading
+  if (isLoading) {
+    return (
+      <div className="p-4 sm:p-6 lg:p-8 space-y-6 animate-in fade-in duration-500 w-full">
+        <PageLoading
+          title="Loading Vendor Quotations..."
+          subtitle="Fetching and calculating vendor price comparison matrix"
+        />
+      </div>
+    );
+  }
 
   // If no products with vendors exist
   if (allVendors.length === 0) {

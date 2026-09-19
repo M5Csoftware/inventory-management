@@ -26,10 +26,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { useInventory, Supplier, Product } from "@/context/inventory-context";
 import { ConfirmDeleteModal } from "@/components/confirm-delete-modal";
+import { CardSkeletonGrid } from "@/components/ui/loading";
 
 export default function SuppliersPage() {
   const pathname = usePathname();
-  const { suppliers, products, deleteSupplier, activeBranch } = useInventory();
+  const { suppliers, products, deleteSupplier, activeBranch, isLoading } = useInventory();
   const [supplierToDelete, setSupplierToDelete] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -122,7 +123,9 @@ export default function SuppliersPage() {
             />
           </div>
 
-          {filteredSuppliers.length === 0 ? (
+          {isLoading ? (
+            <CardSkeletonGrid count={6} />
+          ) : filteredSuppliers.length === 0 ? (
             <Card className="bg-background/60 backdrop-blur-sm border-border/50 p-8 sm:p-12 text-center">
               <p className="text-muted-foreground text-sm">
                 {searchTerm

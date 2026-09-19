@@ -25,10 +25,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { useInventory, Category, Product } from "@/context/inventory-context";
 import { ConfirmDeleteModal } from "@/components/confirm-delete-modal";
+import { CardSkeletonGrid } from "@/components/ui/loading";
 
 export default function CategoriesPage() {
   const router = useRouter();
-  const { categories, products, deleteCategory, activeBranch } = useInventory();
+  const { categories, products, deleteCategory, activeBranch, isLoading } = useInventory();
   const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
   const [filterMode, setFilterMode] = useState<"all" | "major" | "sub">("all");
@@ -145,7 +146,10 @@ export default function CategoriesPage() {
       </div>
 
       {/* Categories Grid */}
-      <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
+      {isLoading ? (
+        <CardSkeletonGrid count={4} />
+      ) : (
+        <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
         {displayedCategories.map((category: Category) => {
           const isMajor = !category.parentCategory;
           const directSubcategories =
@@ -385,6 +389,7 @@ export default function CategoriesPage() {
           );
         })}
       </div>
+      )}
 
       {/* Delete Confirmation Modal */}
       <ConfirmDeleteModal

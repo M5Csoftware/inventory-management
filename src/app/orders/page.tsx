@@ -41,6 +41,7 @@ import { useAutoAnimate } from "@formkit/auto-animate/react";
 
 import { ConfirmDeleteModal, ConfirmModal } from "@/components/confirm-modal";
 import { M5C_LOGO_BASE64 } from "@/lib/company-logo";
+import { TableSkeleton } from "@/components/ui/loading";
 
 // M5C Company details (Buyer) by Branch
 const M5C_BRANCH_DETAILS: Record<
@@ -97,6 +98,7 @@ export default function OrdersPage() {
     deleteOrder,
     recordTransaction,
     activeBranch,
+    isLoading,
   } = useInventory();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState<"all" | "active" | "past">(
@@ -907,7 +909,12 @@ export default function OrdersPage() {
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
+          {isLoading ? (
+            <div className="p-4">
+              <TableSkeleton rows={5} cols={6} />
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
             <table className="w-full text-sm text-left min-w-[720px]">
               <thead className="text-xs text-muted-foreground uppercase bg-muted/50 border-b border-border/50">
                 <tr>
@@ -1059,6 +1066,7 @@ export default function OrdersPage() {
               </tbody>
             </table>
           </div>
+          )}
         </CardContent>
       </Card>
 

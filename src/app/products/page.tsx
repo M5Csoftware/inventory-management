@@ -7,9 +7,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { useInventory, Product } from '@/context/inventory-context';
 import { ConfirmDeleteModal } from '@/components/confirm-delete-modal';
+import { TableSkeleton } from '@/components/ui/loading';
 
 export default function ProductsPage() {
-  const { products, deleteProduct, activeBranch } = useInventory();
+  const { products, deleteProduct, activeBranch, isLoading } = useInventory();
   const [searchTerm, setSearchTerm] = useState('');
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
 
@@ -68,10 +69,13 @@ export default function ProductsPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="relative w-full overflow-x-auto rounded-md">
-            {filteredProducts.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-6">No products found matching your criteria.</p>
-            ) : (
+          {isLoading ? (
+            <TableSkeleton rows={6} cols={7} />
+          ) : (
+            <div className="relative w-full overflow-x-auto rounded-md">
+              {filteredProducts.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-6">No products found matching your criteria.</p>
+              ) : (
               <table className="w-full caption-bottom text-sm">
                 <thead className="[&_tr]:border-b">
                   <tr className="border-b transition-colors hover:bg-muted/50">
@@ -143,6 +147,7 @@ export default function ProductsPage() {
               </table>
             )}
           </div>
+          )}
         </CardContent>
       </Card>
 
