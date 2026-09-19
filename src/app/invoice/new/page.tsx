@@ -30,6 +30,7 @@ import { useInventory, Order, BRANCHES } from '@/context/inventory-context';
 import { useAuth } from '@/context/auth-context';
 import { toast } from 'react-toastify';
 import { InvoiceStockInModal, StockInItemEntry } from '@/components/invoice/InvoiceStockInModal';
+import { compressImageFile } from '@/lib/image-compression';
 
 interface UploadedInvoiceImage {
   id: string;
@@ -198,7 +199,7 @@ function NewInvoiceFormContent() {
     }
   }, [orders, searchParams, applyOrderDetails]);
 
-  const handleFilesRead = (files: FileList | File[]) => {
+  const handleFilesRead = async (files: FileList | File[]) => {
     if (!files || files.length === 0) return;
     const targetFiles = Array.from(files).filter(
       (f) => f.type.startsWith('image/') || f.name.match(/\.(png|jpe?g|webp|gif|svg|pdf)$/i)
@@ -209,34 +210,30 @@ function NewInvoiceFormContent() {
       return;
     }
 
-    const newImages: UploadedInvoiceImage[] = [];
-    let processed = 0;
+    const toastId = toast.info(`Processing & compressing ${targetFiles.length} image(s)...`, { autoClose: false });
 
-    targetFiles.forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        const dataUrl = ev.target?.result as string;
-        const sizeKb = (file.size / 1024).toFixed(1);
-        const sizeStr =
-          file.size > 1024 * 1024
-            ? `${(file.size / (1024 * 1024)).toFixed(2)} MB`
-            : `${sizeKb} KB`;
+    try {
+      const compressedResults = await Promise.all(
+        targetFiles.map((file) => compressImageFile(file))
+      );
 
-        newImages.push({
-          id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-          dataUrl,
-          fileName: file.name,
-          fileSize: sizeStr,
-        });
+      const newImages: UploadedInvoiceImage[] = compressedResults.map((res) => ({
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        dataUrl: res.dataUrl,
+        fileName: res.fileName,
+        fileSize: res.compressionRatio !== '0%'
+          ? `${res.fileSizeStr} (Saved ${res.compressionRatio})`
+          : res.fileSizeStr,
+      }));
 
-        processed++;
-        if (processed === targetFiles.length) {
-          setInvoiceImages((prev) => [...prev, ...newImages]);
-          toast.success(`Attached ${targetFiles.length} document image(s)`);
-        }
-      };
-      reader.readAsDataURL(file);
-    });
+      setInvoiceImages((prev) => [...prev, ...newImages]);
+      toast.dismiss(toastId);
+      toast.success(`Attached ${targetFiles.length} document image(s) (Compressed for fast upload)`);
+    } catch (err) {
+      console.error('Failed to compress image:', err);
+      toast.dismiss(toastId);
+      toast.error('Failed to process image file');
+    }
   };
 
   const handleRemoveImage = (id: string) => {
