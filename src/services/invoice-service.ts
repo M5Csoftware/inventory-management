@@ -57,6 +57,25 @@ export const invoiceService = {
     }
   },
 
+  getInvoiceById: async (id: string): Promise<Invoice | null> => {
+    const url = `${API_BASE}/invoices/${encodeURIComponent(id)}`;
+    try {
+      return await getCachedAsync(
+        url,
+        async () => {
+          const res = await fetch(url);
+          if (!res.ok) return null;
+          const { data } = await res.json();
+          return data || null;
+        },
+        60000
+      );
+    } catch (err) {
+      console.error('Failed to fetch invoice by ID:', err);
+      return null;
+    }
+  },
+
   addInvoice: async (invoice: Invoice): Promise<Invoice | null> => {
     try {
       invalidateCache(API_BASE);

@@ -30,6 +30,8 @@ import { useAuth } from '@/context/auth-context';
 import { canApproveInvoice } from '@/utils/invoice-permissions';
 import { TeamMember, AppConfig } from '@/types/invoice';
 
+import { invoiceService } from '@/services/invoice-service';
+
 interface InvoiceDetailModalProps {
   invoice: Invoice;
   isOpen?: boolean;
@@ -70,6 +72,7 @@ export function InvoiceDetailModal({
   const [verifyNotes, setVerifyNotes] = useState('');
   const [showVerifyForm, setShowVerifyForm] = useState(false);
   const [selectedImgIdx, setSelectedImgIdx] = useState(0);
+  const [fullInvoiceData, setFullInvoiceData] = useState<Invoice>(invoice);
   const [isEditingBranch, setIsEditingBranch] = useState(false);
   const [selectedBranch, setSelectedBranch] = useState(invoice.branch || 'Delhi');
   const [isSavingBranch, setIsSavingBranch] = useState(false);
@@ -77,22 +80,31 @@ export function InvoiceDetailModal({
   useEffect(() => {
     setSelectedBranch(invoice.branch || 'Delhi');
     setIsEditingBranch(false);
+    setFullInvoiceData(invoice);
+
+    if (invoice?.id && (!invoice.invoiceImages || invoice.invoiceImages.length === 0) && !invoice.invoiceImage) {
+      invoiceService.getInvoiceById(invoice.id).then((fetched) => {
+        if (fetched) setFullInvoiceData(fetched);
+      });
+    }
   }, [invoice]);
+
+  const activeInvoice = fullInvoiceData || invoice;
 
   const linkedPv = physicalVerifications.find(
     (pv) =>
       (pv.invoiceNumber &&
-        invoice.invoiceNumber &&
+        activeInvoice.invoiceNumber &&
         pv.invoiceNumber.trim().toLowerCase() ===
-          invoice.invoiceNumber.trim().toLowerCase()) ||
+          activeInvoice.invoiceNumber.trim().toLowerCase()) ||
       (pv.poNumber &&
-        invoice.poNumber &&
-        pv.poNumber.trim().toLowerCase() === invoice.poNumber.trim().toLowerCase())
+        activeInvoice.poNumber &&
+        pv.poNumber.trim().toLowerCase() === activeInvoice.poNumber.trim().toLowerCase())
   );
 
-  const attachedImages: string[] = invoice.invoiceImages && invoice.invoiceImages.length > 0
-    ? invoice.invoiceImages
-    : (invoice.invoiceImage ? [invoice.invoiceImage] : []);
+  const attachedImages: string[] = activeInvoice.invoiceImages && activeInvoice.invoiceImages.length > 0
+    ? activeInvoice.invoiceImages
+    : (activeInvoice.invoiceImage ? [activeInvoice.invoiceImage] : []);
 
   useEffect(() => {
     setMounted(true);
