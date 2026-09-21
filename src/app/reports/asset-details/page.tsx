@@ -27,6 +27,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { useInventory, ASSET_DEPARTMENTS } from "@/context/inventory-context";
 import { getInventoryApiUrl } from "@/lib/api-config";
+import { DebouncedInput } from "@/components/ui/debounced-input";
+import { Pagination, usePagination } from "@/components/ui/pagination";
 
 const API_BASE = getInventoryApiUrl();
 
@@ -177,6 +179,16 @@ export default function AssetDetailsReportPage() {
       return timeB - timeA;
     });
   }, [assets, statusFilter, deptFilter, durationFilter, searchTerm]);
+
+  const {
+    currentPage,
+    setCurrentPage,
+    pageSize,
+    setPageSize,
+    totalPages,
+    totalItems,
+    paginatedItems: paginatedAssets,
+  } = usePagination(filteredAssets, 10);
 
   // Real-time available units in stock across asset products
   const availableInStock = useMemo(() => {
@@ -640,7 +652,7 @@ export default function AssetDetailsReportPage() {
                     </td>
                   </tr>
                 ) : (
-                  filteredAssets.map((asset) => {
+                  paginatedAssets.map((asset) => {
                     const status = asset.status || "Assigned";
                     const daysActive = getDaysAssigned(asset.assignedDate);
                     const custodianName = asset.assignedTo || asset.assignedToName || "—";
@@ -763,6 +775,17 @@ export default function AssetDetailsReportPage() {
                 )}
               </tbody>
             </table>
+          </div>
+
+          <div className="p-4 border-t border-border/50">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={setPageSize}
+            />
           </div>
         </Card>
       )}
