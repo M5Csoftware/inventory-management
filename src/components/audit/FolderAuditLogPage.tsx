@@ -35,6 +35,8 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'react-toastify';
 import { useInventory, BRANCHES } from '@/context/inventory-context';
 import { useAuth } from '@/context/auth-context';
+import { DebouncedInput } from '@/components/ui/debounced-input';
+import { Pagination, usePagination } from '@/components/ui/pagination';
 
 export interface AuditLogItem {
   id: string;
@@ -220,6 +222,16 @@ export function FolderAuditLogPage({
       return true;
     });
   }, [logs, branchFilter, startDate, endDate, searchTerm]);
+
+  const {
+    currentPage,
+    setCurrentPage,
+    pageSize,
+    setPageSize,
+    totalPages,
+    totalItems,
+    paginatedItems: paginatedLogs,
+  } = usePagination(filteredLogs, 10);
 
   // Statistics
   const stats = useMemo(() => {
@@ -517,7 +529,7 @@ export function FolderAuditLogPage({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/40">
-                  {filteredLogs.map((log) => {
+                  {paginatedLogs.map((log) => {
                     const isRevertedLog = log.isReverted;
                     const isRevertAction = log.action === 'Action Reverted';
                     const badgeClass =
@@ -639,11 +651,11 @@ export function FolderAuditLogPage({
                                   setRevertReason('');
                                   setRevertPassword('');
                                   setPasswordError('');
-                                  setShowPassword(false);
                                 }}
-                                className="h-7 px-2.5 text-[11px] font-bold text-destructive hover:bg-destructive/10 hover:border-destructive/40 border-border/80 cursor-pointer shadow-xs transition-colors"
+                                className="h-7 px-2 text-[11px] font-semibold text-destructive border-destructive/30 hover:bg-destructive/10 cursor-pointer"
+                                title="Rollback this operation"
                               >
-                                <RotateCcw className="h-3 w-3 mr-1 text-destructive" /> Revert
+                                <RotateCcw className="h-3 w-3 mr-1" /> Revert
                               </Button>
                             )}
                           </div>
@@ -655,6 +667,15 @@ export function FolderAuditLogPage({
               </table>
             )}
           </div>
+
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={setPageSize}
+          />
         </CardContent>
       </Card>
 

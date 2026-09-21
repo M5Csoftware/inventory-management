@@ -36,10 +36,22 @@ const DB_HEADER = {
   "Content-Type": "application/json",
 };
 
+import { Pagination, usePagination } from "@/components/ui/pagination";
+
 export default function TransactionsReportPage() {
   const { categories, products } = useInventory();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const {
+    currentPage,
+    setCurrentPage,
+    pageSize,
+    setPageSize,
+    totalPages,
+    totalItems,
+    paginatedItems: paginatedTransactions,
+  } = usePagination(transactions, 10);
 
   // filter state
   const [branch, setBranch] = useState<string>("All");
@@ -311,7 +323,7 @@ export default function TransactionsReportPage() {
                     </td>
                   </tr>
                 ) : transactions.length ? (
-                  transactions.map((t, idx) => (
+                  paginatedTransactions.map((t, idx) => (
                     <tr
                       key={`${t.id}-${idx}`}
                       className="hover:bg-muted/20 transition-colors"
@@ -362,11 +374,8 @@ export default function TransactionsReportPage() {
           </div>
         </div>
 
-        {/* Results Summary & Export Button (Always visible right below table) */}
-        <div className="flex flex-col sm:flex-row justify-between items-center gap-2 pt-1 px-1">
-          <p className="text-xs sm:text-sm text-muted-foreground">
-            Showing <span className="font-semibold text-foreground">{transactions.length}</span> transaction records
-          </p>
+        {/* Pagination & Export Bar */}
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-3 pt-1">
           <button
             onClick={exportToExcel}
             className="w-full sm:w-auto flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-1.5 rounded-lg text-sm font-medium transition-colors shadow-xs"
@@ -374,6 +383,16 @@ export default function TransactionsReportPage() {
             <Download className="w-4 h-4" />
             Export to Excel
           </button>
+
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={setPageSize}
+            className="w-full sm:w-auto border-none bg-transparent shadow-none p-0"
+          />
         </div>
       </div>
     </div>

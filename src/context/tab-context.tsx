@@ -70,12 +70,15 @@ export function TabProvider({ children }: { children: React.ReactNode }) {
     if (!pathname || pathname === "/login") return;
 
     setTabs((prevTabs) => {
-      // Ensure Dashboard is always at position 0
       const dashboardTab = { id: "/", href: "/", label: "Dashboard" };
       const nonDashboardTabs = prevTabs.filter((t) => t.href !== "/");
       const baseTabs = [dashboardTab, ...nonDashboardTabs];
 
-      if (pathname === "/" || baseTabs.some((t) => t.href === pathname)) {
+      const exists = baseTabs.some((t) => t.href === pathname);
+      if (pathname === "/" || exists) {
+        if (prevTabs.length === baseTabs.length && prevTabs.every((t, i) => t.href === baseTabs[i].href)) {
+          return prevTabs;
+        }
         return baseTabs;
       }
 

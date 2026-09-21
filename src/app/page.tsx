@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 import { Package, Truck, AlertCircle, IndianRupee, ShoppingCart, Layers, Laptop, ShoppingBag, X, ExternalLink, ChevronRight, Building2, Phone, Mail } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { useInventory } from '@/context/inventory-context';
+import { useInventory, Product } from '@/context/inventory-context';
 import {
   Tooltip,
   ResponsiveContainer,
@@ -22,7 +22,7 @@ export default function Dashboard() {
   const { products, transactions, categories, orders, assets, assetSerials, suppliers, activeBranch, isLoading } = useInventory();
   const [activeModalCard, setActiveModalCard] = useState<'bopp' | 'woven' | 'assets' | 'orders' | null>(null);
 
-  const getStock = useCallback((p: any) => {
+  const getStock = useCallback((p: Product) => {
     if (!p.stock) return 0;
     if (typeof p.stock === 'number') return p.stock;
     if (activeBranch === 'All') {

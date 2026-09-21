@@ -42,6 +42,8 @@ import { useAutoAnimate } from "@formkit/auto-animate/react";
 import { ConfirmDeleteModal, ConfirmModal } from "@/components/confirm-modal";
 import { M5C_LOGO_BASE64 } from "@/lib/company-logo";
 import { TableSkeleton } from "@/components/ui/loading";
+import { DebouncedInput } from "@/components/ui/debounced-input";
+import { Pagination, usePagination } from "@/components/ui/pagination";
 
 // M5C Company details (Buyer) by Branch
 const M5C_BRANCH_DETAILS: Record<
@@ -184,6 +186,8 @@ export default function OrdersPage() {
 
     return matchesSearch && matchesType;
   });
+
+  const orderPagination = usePagination(filteredOrders, 10);
 
   const getStatusColor = (status: Order["status"]) => {
     switch (status) {
@@ -896,176 +900,184 @@ export default function OrdersPage() {
                 </Button>
               </div>
               <div className="relative w-full sm:w-56">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  type="search"
+                <DebouncedInput
                   placeholder="Search orders..."
-                  className="pl-9 bg-background"
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={(val) => setSearchTerm(val)}
                 />
               </div>
             </div>
           </div>
         </CardHeader>
-        <CardContent className="p-0">
+        <CardContent className="p-4 space-y-4">
           {isLoading ? (
             <div className="p-4">
               <TableSkeleton rows={5} cols={6} />
             </div>
           ) : (
-            <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left min-w-[720px]">
-              <thead className="text-xs text-muted-foreground uppercase bg-muted/50 border-b border-border/50">
-                <tr>
-                  <th className="px-4 sm:px-6 py-4 font-medium">Order ID</th>
-                  <th className="px-4 sm:px-6 py-4 font-medium">Supplier</th>
-                  <th className="px-4 sm:px-6 py-4 font-medium">Items</th>
-                  <th className="px-4 sm:px-6 py-4 font-medium">
-                    Total Amount
-                  </th>
-                  <th className="px-4 sm:px-6 py-4 font-medium">Status</th>
-                  <th className="px-4 sm:px-6 py-4 font-medium text-right">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody
-                ref={animationParent}
-                className="divide-y divide-border/50"
-              >
-                {filteredOrders.length === 0 ? (
+            <>
+              <div className="overflow-x-auto rounded-md border border-border/50">
+              <table className="w-full text-sm text-left min-w-[720px]">
+                <thead className="text-xs text-muted-foreground uppercase bg-muted/50 border-b border-border/50">
                   <tr>
-                    <td
-                      colSpan={6}
-                      className="px-6 py-12 text-center text-muted-foreground"
-                    >
-                      <div className="flex flex-col items-center justify-center">
-                        <ShoppingCart className="h-10 w-10 text-muted-foreground/30 mb-4" />
-                        <p>No orders found.</p>
-                      </div>
-                    </td>
+                    <th className="px-4 sm:px-6 py-4 font-medium">Order ID</th>
+                    <th className="px-4 sm:px-6 py-4 font-medium">Supplier</th>
+                    <th className="px-4 sm:px-6 py-4 font-medium">Items</th>
+                    <th className="px-4 sm:px-6 py-4 font-medium">
+                      Total Amount
+                    </th>
+                    <th className="px-4 sm:px-6 py-4 font-medium">Status</th>
+                    <th className="px-4 sm:px-6 py-4 font-medium text-right">
+                      Actions
+                    </th>
                   </tr>
-                ) : (
-                  filteredOrders.map((order, idx) => (
-                    <tr
-                      key={`${order.id}-${idx}`}
-                      className="hover:bg-muted/30 transition-colors"
-                    >
-                      <td className="px-4 sm:px-6 py-4 font-medium text-foreground whitespace-nowrap">
-                        {order.id}
-                      </td>
-                      <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
-                        <div className="font-medium text-foreground">
-                          {order.supplier}
+                </thead>
+                <tbody
+                  ref={animationParent}
+                  className="divide-y divide-border/50"
+                >
+                  {filteredOrders.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={6}
+                        className="px-6 py-12 text-center text-muted-foreground"
+                      >
+                        <div className="flex flex-col items-center justify-center">
+                          <ShoppingCart className="h-10 w-10 text-muted-foreground/30 mb-4" />
+                          <p>No orders found.</p>
                         </div>
-                        <div className="text-[11px] text-muted-foreground mt-0.5">
-                          🏭 {order.branch || "Delhi"}
-                        </div>
-                      </td>
-                      <td className="px-4 sm:px-6 py-4">
-                        {(() => {
-                          const totalUnits = order.items.reduce(
-                            (acc, it) => acc + it.quantity,
-                            0,
-                          );
-                          const receivedUnits = order.items.reduce(
-                            (acc, it) => acc + (it.receivedQuantity || 0),
-                            0,
-                          );
-                          const remainingUnits = Math.max(
-                            0,
-                            totalUnits - receivedUnits,
-                          );
-
-                          return (
-                            <div className="space-y-1">
-                              <span className="text-xs text-muted-foreground whitespace-nowrap block">
-                                {order.items.length} product(s) · {totalUnits}{" "}
-                                units total
-                              </span>
-                              {receivedUnits > 0 && (
-                                <span className="text-[11px] font-semibold text-amber-600 dark:text-amber-400 block whitespace-nowrap">
-                                  Fulfilled: {receivedUnits}/{totalUnits} (
-                                  {remainingUnits} left)
-                                </span>
-                              )}
-                            </div>
-                          );
-                        })()}
-                      </td>
-                      <td className="px-4 sm:px-6 py-4 font-medium text-emerald-500 whitespace-nowrap">
-                        ₹{order.totalAmount.toLocaleString("en-IN")}
-                      </td>
-                      <td className="px-4 sm:px-6 py-4">
-                        <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border whitespace-nowrap ${getStatusColor(order.status)}`}
-                        >
-                          {order.status}
-                        </span>
-                      </td>
-                      <td className="px-4 sm:px-6 py-4 text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger className="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-muted/50 transition-colors outline-none text-muted-foreground hover:text-foreground cursor-pointer">
-                            <MoreVertical className="h-4 w-4" />
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            {order.status !== "Completed" &&
-                              order.status !== "Cancelled" && (
-                                <DropdownMenuItem
-                                  onClick={() => setOrderToComplete(order)}
-                                  className="text-emerald-600 focus:text-emerald-600 cursor-pointer font-medium"
-                                >
-                                  <CheckCircle className="mr-2 h-4 w-4 text-emerald-600" />
-                                  <span>
-                                    {completingOrderId === order.id
-                                      ? "Completing..."
-                                      : "Complete & Stock"}
-                                  </span>
-                                </DropdownMenuItem>
-                              )}
-                            <DropdownMenuItem
-                              onClick={() =>
-                                router.push(
-                                  `/invoice/new?po=${encodeURIComponent(order.id)}`,
-                                )
-                              }
-                              className="text-primary font-semibold focus:text-primary cursor-pointer"
-                            >
-                              <FilePlus className="mr-2 h-4 w-4 text-primary" />
-                              <span>Create Invoice</span>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() =>
-                                router.push(`/orders/${order.id}/edit`)
-                              }
-                            >
-                              <Pencil className="mr-2 h-4 w-4" />
-                              <span>Edit Order</span>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => handlePreviewPDF(order)}
-                            >
-                              <Download className="mr-2 h-4 w-4 text-[#EA1B40]" />
-                              <span className="font-medium text-[#EA1B40]">PDF / Preview</span>
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              className="text-destructive focus:text-destructive"
-                              onClick={() => setOrderToDelete(order)}
-                            >
-                              <Trash className="mr-2 h-4 w-4" />
-                              <span>Delete Order</span>
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                  ) : (
+                    orderPagination.paginatedItems.map((order, idx) => (
+                      <tr
+                        key={`${order.id}-${idx}`}
+                        className="hover:bg-muted/30 transition-colors"
+                      >
+                        <td className="px-4 sm:px-6 py-4 font-medium text-foreground whitespace-nowrap">
+                          {order.id}
+                        </td>
+                        <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
+                          <div className="font-medium text-foreground">
+                            {order.supplier}
+                          </div>
+                          <div className="text-[11px] text-muted-foreground mt-0.5">
+                            🏭 {order.branch || "Delhi"}
+                          </div>
+                        </td>
+                        <td className="px-4 sm:px-6 py-4">
+                          {(() => {
+                            const totalUnits = order.items.reduce(
+                              (acc, it) => acc + it.quantity,
+                              0,
+                            );
+                            const receivedUnits = order.items.reduce(
+                              (acc, it) => acc + (it.receivedQuantity || 0),
+                              0,
+                            );
+                            const remainingUnits = Math.max(
+                              0,
+                              totalUnits - receivedUnits,
+                            );
+
+                            return (
+                              <div className="space-y-1">
+                                <span className="text-xs text-muted-foreground whitespace-nowrap block">
+                                  {order.items.length} product(s) · {totalUnits}{" "}
+                                  units total
+                                </span>
+                                {receivedUnits > 0 && (
+                                  <span className="text-[11px] font-semibold text-amber-600 dark:text-amber-400 block whitespace-nowrap">
+                                    Fulfilled: {receivedUnits}/{totalUnits} (
+                                    {remainingUnits} left)
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })()}
+                        </td>
+                        <td className="px-4 sm:px-6 py-4 font-medium text-emerald-500 whitespace-nowrap">
+                          ₹{order.totalAmount.toLocaleString("en-IN")}
+                        </td>
+                        <td className="px-4 sm:px-6 py-4">
+                          <span
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border whitespace-nowrap ${getStatusColor(order.status)}`}
+                          >
+                            {order.status}
+                          </span>
+                        </td>
+                        <td className="px-4 sm:px-6 py-4 text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger className="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-muted/50 transition-colors outline-none text-muted-foreground hover:text-foreground cursor-pointer">
+                              <MoreVertical className="h-4 w-4" />
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              {order.status !== "Completed" &&
+                                order.status !== "Cancelled" && (
+                                  <DropdownMenuItem
+                                    onClick={() => setOrderToComplete(order)}
+                                    className="text-emerald-600 focus:text-emerald-600 cursor-pointer font-medium"
+                                  >
+                                    <CheckCircle className="mr-2 h-4 w-4 text-emerald-600" />
+                                    <span>
+                                      {completingOrderId === order.id
+                                        ? "Completing..."
+                                        : "Complete & Stock"}
+                                    </span>
+                                  </DropdownMenuItem>
+                                )}
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  router.push(
+                                    `/invoice/new?po=${encodeURIComponent(order.id)}`,
+                                  )
+                                }
+                                className="text-primary font-semibold focus:text-primary cursor-pointer"
+                              >
+                                <FilePlus className="mr-2 h-4 w-4 text-primary" />
+                                <span>Create Invoice</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  router.push(`/orders/${order.id}/edit`)
+                                }
+                              >
+                                <Pencil className="mr-2 h-4 w-4" />
+                                <span>Edit Order</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => handlePreviewPDF(order)}
+                              >
+                                <Download className="mr-2 h-4 w-4 text-[#EA1B40]" />
+                                <span className="font-medium text-[#EA1B40]">PDF / Preview</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                className="text-destructive focus:text-destructive"
+                                onClick={() => setOrderToDelete(order)}
+                              >
+                                <Trash className="mr-2 h-4 w-4" />
+                                <span>Delete Order</span>
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            <Pagination
+              currentPage={orderPagination.currentPage}
+              totalPages={orderPagination.totalPages}
+              totalItems={orderPagination.totalItems}
+              pageSize={orderPagination.pageSize}
+              onPageChange={orderPagination.setCurrentPage}
+              onPageSizeChange={orderPagination.setPageSize}
+            />
+          </>
           )}
         </CardContent>
       </Card>

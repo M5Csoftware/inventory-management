@@ -4,7 +4,7 @@ import { LRUCache } from 'lru-cache';
  * LRU Cache for API GET requests and network payloads.
  * Default TTL: 60 seconds. Max 200 cached responses.
  */
-export const apiLruCache = new LRUCache<string, any>({
+export const apiLruCache = new LRUCache<string, object>({
   max: 200,
   ttl: 1000 * 60, // 60 seconds default TTL
   allowStale: false,
@@ -16,7 +16,7 @@ export const apiLruCache = new LRUCache<string, any>({
  * (e.g., historical monthly stock calculations, filtered report summaries, metrics).
  * Default TTL: 5 minutes. Max 500 cached entries.
  */
-export const computationLruCache = new LRUCache<string, any>({
+export const computationLruCache = new LRUCache<string, object>({
   max: 500,
   ttl: 1000 * 60 * 5, // 5 minutes
   allowStale: false,
@@ -28,7 +28,7 @@ export const computationLruCache = new LRUCache<string, any>({
  * If cached and fresh, returns cached response immediately.
  * Otherwise executes fetcher and caches the result.
  */
-export async function getCachedAsync<T extends {} = any>(
+export async function getCachedAsync<T extends object = object>(
   key: string,
   fetcher: () => Promise<T>,
   ttlMs?: number
@@ -47,7 +47,7 @@ export async function getCachedAsync<T extends {} = any>(
  * Compute value with LRU caching.
  * Synchronous memoization helper for heavy loops, groupings, and statistics.
  */
-export function getCachedSync<T extends {} = any>(
+export function getCachedSync<T extends object = object>(
   key: string,
   computer: () => T,
   ttlMs?: number
@@ -89,14 +89,21 @@ export function invalidateCache(prefixOrKey?: string): void {
 }
 
 /**
+ * Invalidate all cached data related to a specific resource entity (e.g., "products", "orders", "reports").
+ */
+export function invalidateCacheForResource(resource: "products" | "orders" | "invoices" | "reports" | "stock"): void {
+  invalidateCache(resource);
+}
+
+/**
  * Generic memoizer wrapping a function with an LRU cache.
  */
-export function memoizeWithLru<Args extends any[], R extends {} = any>(
+export function memoizeWithLru<Args extends unknown[], R extends object = object>(
   fn: (...args: Args) => R,
   keyGenerator?: (...args: Args) => string,
   maxSize: number = 100
 ): (...args: Args) => R {
-  const cache = new LRUCache<string, any>({ max: maxSize });
+  const cache = new LRUCache<string, object>({ max: maxSize });
 
   return (...args: Args): R => {
     const key = keyGenerator ? keyGenerator(...args) : JSON.stringify(args);

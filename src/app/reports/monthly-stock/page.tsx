@@ -25,6 +25,8 @@ interface MonthlyStockItem {
 }
 
 import { getInventoryApiUrl } from "@/lib/api-config";
+import { getCachedAsync } from "@/lib/cache";
+import { Pagination, usePagination } from "@/components/ui/pagination";
 
 const API_BASE = getInventoryApiUrl();
 const DB_HEADER = {
@@ -60,55 +62,70 @@ export default function MonthlyStockReportPage() {
   const [monthlyData, setMonthlyData] = useState<MonthlyStockItem[]>([]);
   const [loadingMonthly, setLoadingMonthly] = useState<boolean>(true);
 
+  const {
+    currentPage,
+    setCurrentPage,
+    pageSize,
+    setPageSize,
+    totalPages,
+    totalItems,
+    paginatedItems: paginatedMonthlyData,
+  } = usePagination(monthlyData, 10);
+
   const fetchMonthlyReport = async () => {
     setLoadingMonthly(true);
     try {
-      const token = localStorage.getItem("token");
-      const headers: Record<string, string> = { ...DB_HEADER };
-      if (token) headers["Authorization"] = `Bearer ${token}`;
+      const cacheKey = `reports_monthly_${selectedYear}_${selectedMonth}_${monthlyBranch}_${monthlyCategory}_${monthlySearch}`;
+      const data = await getCachedAsync(cacheKey, async () => {
+        const token = localStorage.getItem("token");
+        const headers: Record<string, string> = { ...DB_HEADER };
+        if (token) headers["Authorization"] = `Bearer ${token}`;
 
-      const params = new URLSearchParams();
-      params.append("year", String(selectedYear));
-      params.append("month", String(selectedMonth));
-      if (monthlyBranch && monthlyBranch !== "All") {
-        params.append("branch", monthlyBranch);
-      }
-      if (monthlyCategory && monthlyCategory !== "All") {
-        params.append("category", monthlyCategory);
-      }
-      if (monthlySearch.trim()) {
-        params.append("search", monthlySearch.trim());
-      }
-
-      const res = await fetch(
-        `${API_BASE}/reports/monthly-stock?${params.toString()}`,
-        { headers },
-      );
-
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success) {
-          let list: MonthlyStockItem[] = data.data || [];
-          if (monthlyCategory && monthlyCategory !== "All") {
-            const catLower = monthlyCategory.toLowerCase();
-            list = list.filter(
-              (item) => item.category?.toLowerCase() === catLower,
-            );
-          }
-          list.sort((a, b) => {
-            const timeA = a.lastPurchaseDate && a.lastPurchaseDate !== "-" ? new Date(a.lastPurchaseDate).getTime() : 0;
-            const timeB = b.lastPurchaseDate && b.lastPurchaseDate !== "-" ? new Date(b.lastPurchaseDate).getTime() : 0;
-            const validA = !isNaN(timeA) && timeA > 0;
-            const validB = !isNaN(timeB) && timeB > 0;
-            if (validA && validB) return timeB - timeA;
-            if (validA && !validB) return -1;
-            if (!validA && validB) return 1;
-            return a.productName.localeCompare(b.productName);
-          });
-          setMonthlyData(list);
-          setLoadingMonthly(false);
-          return;
+        const params = new URLSearchParams();
+        params.append("year", String(selectedYear));
+        params.append("month", String(selectedMonth));
+        if (monthlyBranch && monthlyBranch !== "All") {
+          params.append("branch", monthlyBranch);
         }
+        if (monthlyCategory && monthlyCategory !== "All") {
+          params.append("category", monthlyCategory);
+        }
+        if (monthlySearch.trim()) {
+          params.append("search", monthlySearch.trim());
+        }
+
+        const res = await fetch(
+          `${API_BASE}/reports/monthly-stock?${params.toString()}`,
+          { headers },
+        );
+        if (res.ok) {
+          const json = await res.json();
+          if (json.success) return json.data || [];
+        }
+        return null;
+      }, 1000 * 60 * 3); // Cache for 3 minutes
+
+      if (data && Array.isArray(data)) {
+        let list: MonthlyStockItem[] = data;
+        if (monthlyCategory && monthlyCategory !== "All") {
+          const catLower = monthlyCategory.toLowerCase();
+          list = list.filter(
+            (item) => item.category?.toLowerCase() === catLower,
+          );
+        }
+        list.sort((a, b) => {
+          const timeA = a.lastPurchaseDate && a.lastPurchaseDate !== "-" ? new Date(a.lastPurchaseDate).getTime() : 0;
+          const timeB = b.lastPurchaseDate && b.lastPurchaseDate !== "-" ? new Date(b.lastPurchaseDate).getTime() : 0;
+          const validA = !isNaN(timeA) && timeA > 0;
+          const validB = !isNaN(timeB) && timeB > 0;
+          if (validA && validB) return timeB - timeA;
+          if (validA && !validB) return -1;
+          if (!validA && validB) return 1;
+          return a.productName.localeCompare(b.productName);
+        });
+        setMonthlyData(list);
+        setLoadingMonthly(false);
+        return;
       }
 
       // CLIENT-SIDE FALLBACK if /reports/monthly-stock returns 404 (e.g. deployed Render server)
@@ -609,7 +626,7 @@ export default function MonthlyStockReportPage() {
                     </td>
                   </tr>
                 ) : monthlyData.length ? (
-                  monthlyData.map((item, idx) => {
+                  paginatedMonthlyData.map((item, idx) => {
                     return (
                       <tr
                         key={`${item.productId}-${item.branch}-${idx}`}
@@ -698,19 +715,8 @@ export default function MonthlyStockReportPage() {
           </div>
         </div>
 
-        {/* Results Summary & Export Button */}
-        <div className="flex flex-col sm:flex-row justify-between items-center gap-2 pt-1 px-1">
-          <p className="text-xs sm:text-sm text-muted-foreground">
-            Showing{" "}
-            <span className="font-semibold text-foreground">
-              {monthlyData.length}
-            </span>{" "}
-            inventory items for{" "}
-            <span className="font-semibold text-foreground">
-              {MONTHS.find((m) => m.value === selectedMonth)?.label}{" "}
-              {selectedYear}
-            </span>
-          </p>
+        {/* Pagination & Export Bar */}
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-3 pt-1">
           <button
             onClick={exportMonthlyToExcel}
             className="w-full sm:w-auto flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-1.5 rounded-lg text-sm font-medium transition-colors shadow-xs"
@@ -718,6 +724,16 @@ export default function MonthlyStockReportPage() {
             <Download className="w-4 h-4" />
             Export to Excel
           </button>
+
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={setPageSize}
+            className="w-full sm:w-auto border-none bg-transparent shadow-none p-0"
+          />
         </div>
       </div>
     </div>
