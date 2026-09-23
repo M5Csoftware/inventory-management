@@ -68,7 +68,7 @@ export function InvoiceProvider({ children }: { children: React.ReactNode }) {
 
   const refreshInvoices = useCallback(async (forceRefresh?: boolean | unknown) => {
     const isForce = typeof forceRefresh === 'boolean' ? forceRefresh : false;
-    setLoading(true);
+    setLoading((prev) => (prev ? prev : true));
     try {
       const [fetchedInvoices, fetchedConfig] = await Promise.all([
         invoiceService.getInvoices(undefined, isForce),
@@ -85,7 +85,16 @@ export function InvoiceProvider({ children }: { children: React.ReactNode }) {
   }, [currentSessionUser]);
 
   useEffect(() => {
-    refreshInvoices();
+    let active = true;
+    const load = async () => {
+      if (active) {
+        await refreshInvoices();
+      }
+    };
+    void load();
+    return () => {
+      active = false;
+    };
   }, [refreshInvoices]);
 
   const saveConfig = async (newConfig: AppConfig) => {
@@ -547,7 +556,20 @@ export function InvoiceProvider({ children }: { children: React.ReactNode }) {
     addTeamMember,
     removeTeamMember,
     editTeamMember,
-  }), [invoices, config, team, loading]);
+  }), [
+    invoices,
+    config,
+    team,
+    loading,
+    refreshInvoices,
+    createInvoice,
+    verifyInvoice,
+    approveInvoice,
+    rejectInvoice,
+    payInvoice,
+    updateBankDetails,
+    updateInvoiceBranch,
+  ]);
 
   return (
     <InvoiceContext.Provider value={contextValue}>

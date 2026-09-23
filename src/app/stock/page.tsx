@@ -25,10 +25,13 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useInventory, type Product, type Category } from "@/context/inventory-context";
 import { ConfirmDeleteModal } from "@/components/confirm-delete-modal";
+import { TableSkeleton } from "@/components/ui/loading";
+import { DebouncedInput } from "@/components/ui/debounced-input";
+import { Pagination, usePagination } from "@/components/ui/pagination";
 
 export default function StockPage() {
   const router = useRouter();
-  const { transactions, products, categories, activeBranch, deleteProduct } =
+  const { transactions, products, categories, activeBranch, deleteProduct, isLoading } =
     useInventory();
   const [activeTab, setActiveTab] = useState<"current" | "transactions">(
     "current",
@@ -79,6 +82,9 @@ export default function StockPage() {
 
     return matchesSearch && matchesCategory;
   });
+
+  const txPagination = usePagination(filteredTransactions, 10);
+  const prodPagination = usePagination(filteredProducts, 10);
 
   return (
     <div className="p-6 sm:p-8 space-y-8">
@@ -203,18 +209,16 @@ export default function StockPage() {
                 </CardDescription>
               </div>
               <div className="relative">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <input
-                  type="search"
+                <DebouncedInput
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={(val) => setSearchTerm(val)}
                   placeholder="Search transactions..."
-                  className="h-9 w-full sm:w-64 rounded-md border border-input bg-background/50 pl-9 pr-3 text-sm shadow-sm transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                  className="h-9 w-full sm:w-64"
                 />
               </div>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             <div className="relative w-full overflow-auto">
               {filteredTransactions.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-6">
@@ -248,7 +252,7 @@ export default function StockPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredTransactions.map((tx, index) => (
+                    {txPagination.paginatedItems.map((tx, index) => (
                       <tr
                         key={`${tx.id}-${index}`}
                         className="border-b transition-colors hover:bg-muted/50"
@@ -297,6 +301,15 @@ export default function StockPage() {
                 </table>
               )}
             </div>
+
+            <Pagination
+              currentPage={txPagination.currentPage}
+              totalPages={txPagination.totalPages}
+              totalItems={txPagination.totalItems}
+              pageSize={txPagination.pageSize}
+              onPageChange={txPagination.setCurrentPage}
+              onPageSizeChange={txPagination.setPageSize}
+            />
           </CardContent>
         </Card>
       )}
@@ -376,122 +389,135 @@ export default function StockPage() {
                   </select>
                 </div>
                 <div className="relative">
-                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <input
-                    type="search"
+                  <DebouncedInput
                     value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onChange={(val) => setSearchTerm(val)}
                     placeholder="Search products..."
-                    className="h-9 w-full sm:w-64 rounded-md border border-input bg-background/50 pl-9 pr-3 text-sm shadow-sm transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                    className="h-9 w-full sm:w-64"
                   />
                 </div>
               </div>
             </div>
           </CardHeader>
-          <CardContent>
-            <div className="relative w-full overflow-auto">
-              {filteredProducts.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-6">
-                  No products found.
-                </p>
-              ) : (
-                <table className="w-full caption-bottom text-sm">
-                  <thead className="[&_tr]:border-b">
-                    <tr className="border-b transition-colors hover:bg-muted/50">
-                      <th className="h-10 px-4 text-left align-middle font-medium text-muted-foreground">
-                        Product
-                      </th>
-                      <th className="h-10 px-4 text-left align-middle font-medium text-muted-foreground">
-                        SKU
-                      </th>
-                      <th className="h-10 px-4 text-left align-middle font-medium text-muted-foreground">
-                        Category
-                      </th>
-                      <th className="h-10 px-4 text-left align-middle font-medium text-muted-foreground">
-                        Measurement
-                      </th>
-                      <th className="h-10 px-4 text-right align-middle font-medium text-muted-foreground">
-                        Available Stock
-                      </th>
-                      <th className="h-10 px-4 text-right align-middle font-medium text-muted-foreground">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredProducts.map((p, index) => (
-                      <tr
-                        key={`${p.id}-${index}`}
-                        className="border-b transition-colors hover:bg-muted/50"
-                      >
-                        <td className="p-4 align-middle font-medium">
-                          {p.name}
-                        </td>
-                        <td className="p-4 align-middle font-mono text-xs text-muted-foreground">
-                          {p.sku || "-"}
-                        </td>
-                        <td className="p-4 align-middle text-muted-foreground">
-                          {p.category}
-                        </td>
-                        <td className="p-4 align-middle text-muted-foreground text-xs">
-                          {p.uomValue && p.uom ? `${p.uomValue} ${p.uom}` : "-"}
-                        </td>
-                        <td className="p-4 align-middle text-right">
-                          <span
-                            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${
-                              (activeBranch === "All"
+          <CardContent className="space-y-4">
+            {isLoading ? (
+              <TableSkeleton rows={6} cols={6} />
+            ) : (
+              <>
+                <div className="relative w-full overflow-auto">
+                  {filteredProducts.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-6">
+                    No products found.
+                  </p>
+                ) : (
+                  <table className="w-full caption-bottom text-sm">
+                    <thead className="[&_tr]:border-b">
+                      <tr className="border-b transition-colors hover:bg-muted/50">
+                        <th className="h-10 px-4 text-left align-middle font-medium text-muted-foreground">
+                          Product
+                        </th>
+                        <th className="h-10 px-4 text-left align-middle font-medium text-muted-foreground">
+                          SKU
+                        </th>
+                        <th className="h-10 px-4 text-left align-middle font-medium text-muted-foreground">
+                          Category
+                        </th>
+                        <th className="h-10 px-4 text-left align-middle font-medium text-muted-foreground">
+                          Measurement
+                        </th>
+                        <th className="h-10 px-4 text-right align-middle font-medium text-muted-foreground">
+                          Available Stock
+                        </th>
+                        <th className="h-10 px-4 text-right align-middle font-medium text-muted-foreground">
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {prodPagination.paginatedItems.map((p, index) => (
+                        <tr
+                          key={`${p.id}-${index}`}
+                          className="border-b transition-colors hover:bg-muted/50"
+                        >
+                          <td className="p-4 align-middle font-medium">
+                            {p.name}
+                          </td>
+                          <td className="p-4 align-middle font-mono text-xs text-muted-foreground">
+                            {p.sku || "-"}
+                          </td>
+                          <td className="p-4 align-middle text-muted-foreground">
+                            {p.category}
+                          </td>
+                          <td className="p-4 align-middle text-muted-foreground text-xs">
+                            {p.uomValue && p.uom ? `${p.uomValue} ${p.uom}` : "-"}
+                          </td>
+                          <td className="p-4 align-middle text-right">
+                            <span
+                              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${
+                                (activeBranch === "All"
+                                  ? Object.values(p.stock || {}).reduce(
+                                      (a, b) => a + (Number(b) || 0),
+                                      0,
+                                    )
+                                  : p.stock?.[activeBranch] || 0) <= (p.threshold ?? 10)
+                                  ? "bg-destructive/10 text-destructive"
+                                  : "bg-primary/10 text-primary"
+                              }`}
+                            >
+                              {activeBranch === "All"
                                 ? Object.values(p.stock || {}).reduce(
                                     (a, b) => a + (Number(b) || 0),
                                     0,
                                   )
-                                : p.stock?.[activeBranch] || 0) <= (p.threshold ?? 10)
-                                ? "bg-destructive/10 text-destructive"
-                                : "bg-primary/10 text-primary"
-                            }`}
-                          >
-                            {activeBranch === "All"
-                              ? Object.values(p.stock || {}).reduce(
-                                  (a, b) => a + (Number(b) || 0),
-                                  0,
-                                )
-                              : p.stock?.[activeBranch] || 0}{" "}
-                            {p.packaging || "units"}
-                          </span>
-                        </td>
-                        <td className="p-4 align-middle text-right space-x-1">
-                          <Button
-                            type="button"
-                            onClick={() => {
-                              const currentStock =
-                                activeBranch === "All"
-                                  ? Object.values(p.stock || {}).reduce((a, b) => a + (Number(b) || 0), 0)
-                                  : p.stock?.[activeBranch] || 0;
-                              const targetRoute =
-                                currentStock > 0 ? "/stock/out" : "/stock/in";
-                              router.push(`${targetRoute}?productId=${p.id}&mode=edit`);
-                            }}
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                          >
-                            <Edit2 className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            type="button"
-                            onClick={() => setProductToDelete(p)}
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-destructive hover:bg-destructive/10"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
+                                : p.stock?.[activeBranch] || 0}{" "}
+                              {p.packaging || "units"}
+                            </span>
+                          </td>
+                          <td className="p-4 align-middle text-right space-x-1">
+                            <Button
+                              type="button"
+                              onClick={() => {
+                                const currentStock =
+                                  activeBranch === "All"
+                                    ? Object.values(p.stock || {}).reduce((a, b) => a + (Number(b) || 0), 0)
+                                    : p.stock?.[activeBranch] || 0;
+                                const targetRoute =
+                                  currentStock > 0 ? "/stock/out" : "/stock/in";
+                                router.push(`${targetRoute}?productId=${p.id}&mode=edit`);
+                              }}
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                            >
+                              <Edit2 className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              type="button"
+                              onClick={() => setProductToDelete(p)}
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-destructive hover:bg-destructive/10"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+
+              <Pagination
+                currentPage={prodPagination.currentPage}
+                totalPages={prodPagination.totalPages}
+                totalItems={prodPagination.totalItems}
+                pageSize={prodPagination.pageSize}
+                onPageChange={prodPagination.setCurrentPage}
+                onPageSizeChange={prodPagination.setPageSize}
+              />
+            </>
+            )}
           </CardContent>
         </Card>
       )}

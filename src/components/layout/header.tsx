@@ -10,6 +10,8 @@ import Link from "next/link";
 import { MobileSidebar } from "./mobile-sidebar";
 import { TabBar } from "./tab-bar";
 
+import { HeaderLoadingBar } from "@/components/ui/loading";
+
 export function Header() {
   const pathname = usePathname();
   if (pathname === "/login") return null;
@@ -19,7 +21,7 @@ export function Header() {
 
 function HeaderInner() {
   const pathname = usePathname();
-  const { products, activeBranch } = useInventory();
+  const { products, activeBranch, isLoading } = useInventory();
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -68,6 +70,7 @@ function HeaderInner() {
 
   return (
     <>
+      <HeaderLoadingBar active={isLoading} />
       <MobileSidebar
         isOpen={isMobileMenuOpen}
         onClose={() => setIsMobileMenuOpen(false)}

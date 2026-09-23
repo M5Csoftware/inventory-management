@@ -40,7 +40,11 @@ export interface AuditLogItem {
   timestamp: string;
 }
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/inventory";
+import { getInventoryApiUrl } from "@/lib/api-config";
+import { DebouncedInput } from "@/components/ui/debounced-input";
+import { Pagination, usePagination } from "@/components/ui/pagination";
+
+const API_BASE = getInventoryApiUrl();
 const DB_HEADER = { "x-database": "m5c-inventory", "Content-Type": "application/json" };
 
 const actionBadgeStyles: Record<string, string> = {
@@ -155,6 +159,16 @@ export default function AuditLogPage() {
         return timeB - timeA;
       });
   }, [logs, searchQuery]);
+
+  const {
+    currentPage,
+    setCurrentPage,
+    pageSize,
+    setPageSize,
+    totalPages,
+    totalItems,
+    paginatedItems: paginatedLogs,
+  } = usePagination(filteredLogs, 10);
 
   // Statistics Metrics
   const stats = useMemo(() => {
@@ -465,7 +479,7 @@ export default function AuditLogPage() {
                   </td>
                 </tr>
               ) : (
-                filteredLogs.map((log) => {
+                paginatedLogs.map((log) => {
                   const badgeStyle =
                     actionBadgeStyles[log.action] ||
                     "bg-slate-500/15 text-slate-700 dark:text-slate-300 border-slate-500/30";
@@ -555,6 +569,17 @@ export default function AuditLogPage() {
               )}
             </tbody>
           </table>
+        </div>
+
+        <div className="p-4 border-t border-border/50 bg-card/40">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={setPageSize}
+          />
         </div>
       </Card>
     </div>

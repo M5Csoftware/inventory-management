@@ -161,9 +161,8 @@ export const navItems: NavItem[] = [
     label: "Quotations",
     icon: FileText,
     subItems: [
-      { href: "/quotations", label: "All Quotations", icon: List },
-      { href: "/quotations/new", label: "Add Quotation", icon: PlusCircle },
       { href: "/quotations/compare", label: "Compare Quotations", icon: GitCompare },
+      { href: "/quotations", label: "Quotation History", icon: List },
     ],
   },
 ];

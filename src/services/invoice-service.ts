@@ -1,10 +1,8 @@
 import { Invoice, AppConfig } from '@/types/invoice';
 import { getCachedAsync, invalidateCache } from '@/lib/cache';
+import { getInvoiceApiUrl } from '@/lib/api-config';
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL
-    ? process.env.NEXT_PUBLIC_API_URL.replace('/inventory', '/invoice-registration')
-    : 'http://localhost:5000/api/invoice-registration';
+const API_BASE = getInvoiceApiUrl();
 
 export const invoiceService = {
   // Config
@@ -56,6 +54,25 @@ export const invoiceService = {
     } catch (err) {
       console.error('Failed to fetch invoices:', err);
       return [];
+    }
+  },
+
+  getInvoiceById: async (id: string): Promise<Invoice | null> => {
+    const url = `${API_BASE}/invoices/${encodeURIComponent(id)}`;
+    try {
+      return await getCachedAsync(
+        url,
+        async () => {
+          const res = await fetch(url);
+          if (!res.ok) return null;
+          const { data } = await res.json();
+          return data || null;
+        },
+        60000
+      );
+    } catch (err) {
+      console.error('Failed to fetch invoice by ID:', err);
+      return null;
     }
   },
 

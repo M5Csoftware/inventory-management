@@ -2,14 +2,17 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Plus, Search, Edit2, Trash2, ClipboardCheck } from 'lucide-react';
+import { Plus, Edit2, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useInventory, Product } from '@/context/inventory-context';
 import { ConfirmDeleteModal } from '@/components/confirm-delete-modal';
+import { TableSkeleton } from '@/components/ui/loading';
+import { DebouncedInput } from '@/components/ui/debounced-input';
+import { Pagination, usePagination } from '@/components/ui/pagination';
 
 export default function ProductsPage() {
-  const { products, deleteProduct, activeBranch } = useInventory();
+  const { products, deleteProduct, activeBranch, isLoading } = useInventory();
   const [searchTerm, setSearchTerm] = useState('');
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
 
@@ -31,6 +34,16 @@ export default function ProductsPage() {
     (product.category || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
     (product.uom || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const {
+    currentPage,
+    setCurrentPage,
+    pageSize,
+    setPageSize,
+    totalPages,
+    totalItems,
+    paginatedItems: paginatedProducts,
+  } = usePagination(filteredProducts, 10);
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8">
@@ -56,93 +69,106 @@ export default function ProductsPage() {
               <CardDescription>View, search, and manage products.</CardDescription>
             </div>
             <div className="relative">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <input
-                type="search"
+              <DebouncedInput
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(val) => setSearchTerm(val)}
                 placeholder="Search products..."
-                className="h-9 w-full sm:w-64 rounded-md border border-input bg-background/50 pl-9 pr-3 text-sm shadow-sm transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                className="h-9 w-full sm:w-64"
               />
             </div>
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="relative w-full overflow-x-auto rounded-md">
-            {filteredProducts.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-6">No products found matching your criteria.</p>
-            ) : (
-              <table className="w-full caption-bottom text-sm">
-                <thead className="[&_tr]:border-b">
-                  <tr className="border-b transition-colors hover:bg-muted/50">
-                    <th className="h-10 px-4 text-left align-middle font-medium text-muted-foreground">ID</th>
-                    <th className="h-10 px-4 text-left align-middle font-medium text-muted-foreground">Name</th>
-                    <th className="h-10 px-4 text-left align-middle font-medium text-muted-foreground">Category</th>
-                    <th className="h-10 px-4 text-left align-middle font-medium text-muted-foreground">UOM</th>
-                    <th className="h-10 px-4 text-left align-middle font-medium text-muted-foreground">Price</th>
-                    <th className="h-10 px-4 text-left align-middle font-medium text-muted-foreground">Branch</th>
-                    <th className="h-10 px-4 text-left align-middle font-medium text-muted-foreground">Stock</th>
-                    <th className="h-10 px-4 text-left align-middle font-medium text-muted-foreground">Supplier</th>
-                    <th className="h-10 px-4 align-middle font-medium text-muted-foreground text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredProducts.map((product: Product, index: number) => {
-                    const currentStock = getProductStock(product);
-                    return (
-                    <tr key={`${product.id}-${index}`} className="border-b transition-colors hover:bg-muted/50">
-                      <td className="p-4 align-middle font-medium font-mono text-xs">{product.id}</td>
-                      <td className="p-4 align-middle font-medium">{product.name}</td>
-                      <td className="p-4 align-middle text-muted-foreground">{product.category}</td>
-                      <td className="p-4 align-middle text-muted-foreground text-sm">
-                        {product.uomValue && product.uom
-                          ? `${product.uomValue} ${product.uom}`
-                          : (product.uom || '-')}
-                      </td>
-                      <td className="p-4 align-middle font-mono">₹{product.price.toLocaleString('en-IN')}</td>
-                      <td className="p-4 align-middle text-muted-foreground text-sm">
-                        {activeBranch === 'All'
-                          ? Object.keys(product.stock || {}).filter((branch) => (product.stock?.[branch] || 0) > 0).join(', ') || '-'
-                          : activeBranch}
-                      </td>
-                      <td className="p-4 align-middle">
-                        <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-semibold ${
-                          currentStock <= (product.threshold ?? 10)
-                            ? 'bg-destructive/10 text-destructive animate-pulse' 
-                            : 'bg-emerald-500/10 text-emerald-500'
-                        }`}>
-                          {currentStock} units
-                        </span>
-                      </td>
-                      <td className="p-4 align-middle text-muted-foreground">
-                        {product.suppliersList && product.suppliersList.length > 0
-                          ? product.suppliersList.length > 1
-                            ? `${product.suppliersList[0].supplierName} (+${product.suppliersList.length - 1} more)`
-                            : product.suppliersList[0].supplierName
-                          : product.supplier || '-'}
-                      </td>
-                      <td className="p-4 align-middle text-right space-x-1">
-                        <Link href={`/products/edit/${product.id}`}>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
-                            <Edit2 className="h-4 w-4" />
-                          </Button>
-                        </Link>
-                        <Button
-                          onClick={() => setProductToDelete(product)}
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-destructive hover:bg-destructive/10"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </td>
+        <CardContent className="space-y-4">
+          {isLoading ? (
+            <TableSkeleton rows={6} cols={7} />
+          ) : (
+            <>
+              <div className="relative w-full overflow-x-auto rounded-md">
+                {filteredProducts.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-6">No products found matching your criteria.</p>
+                ) : (
+                <table className="w-full caption-bottom text-sm">
+                  <thead className="[&_tr]:border-b">
+                    <tr className="border-b transition-colors hover:bg-muted/50">
+                      <th className="h-10 px-4 text-left align-middle font-medium text-muted-foreground">ID</th>
+                      <th className="h-10 px-4 text-left align-middle font-medium text-muted-foreground">Name</th>
+                      <th className="h-10 px-4 text-left align-middle font-medium text-muted-foreground">Category</th>
+                      <th className="h-10 px-4 text-left align-middle font-medium text-muted-foreground">UOM</th>
+                      <th className="h-10 px-4 text-left align-middle font-medium text-muted-foreground">Price</th>
+                      <th className="h-10 px-4 text-left align-middle font-medium text-muted-foreground">Branch</th>
+                      <th className="h-10 px-4 text-left align-middle font-medium text-muted-foreground">Stock</th>
+                      <th className="h-10 px-4 text-left align-middle font-medium text-muted-foreground">Supplier</th>
+                      <th className="h-10 px-4 align-middle font-medium text-muted-foreground text-right">Actions</th>
                     </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            )}
-          </div>
+                  </thead>
+                  <tbody>
+                    {paginatedProducts.map((product: Product, index: number) => {
+                      const currentStock = getProductStock(product);
+                      return (
+                      <tr key={`${product.id}-${index}`} className="border-b transition-colors hover:bg-muted/50">
+                        <td className="p-4 align-middle font-medium font-mono text-xs">{product.id}</td>
+                        <td className="p-4 align-middle font-medium">{product.name}</td>
+                        <td className="p-4 align-middle text-muted-foreground">{product.category}</td>
+                        <td className="p-4 align-middle text-muted-foreground text-sm">
+                          {product.uomValue && product.uom
+                            ? `${product.uomValue} ${product.uom}`
+                            : (product.uom || '-')}
+                        </td>
+                        <td className="p-4 align-middle font-mono">₹{product.price.toLocaleString('en-IN')}</td>
+                        <td className="p-4 align-middle text-muted-foreground text-sm">
+                          {activeBranch === 'All'
+                            ? Object.keys(product.stock || {}).filter((branch) => (product.stock?.[branch] || 0) > 0).join(', ') || '-'
+                            : activeBranch}
+                        </td>
+                        <td className="p-4 align-middle">
+                          <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-semibold ${
+                            currentStock <= (product.threshold ?? 10)
+                              ? 'bg-destructive/10 text-destructive animate-pulse' 
+                              : 'bg-emerald-500/10 text-emerald-500'
+                          }`}>
+                            {currentStock} units
+                          </span>
+                        </td>
+                        <td className="p-4 align-middle text-muted-foreground">
+                          {product.suppliersList && product.suppliersList.length > 0
+                            ? product.suppliersList.length > 1
+                              ? `${product.suppliersList[0].supplierName} (+${product.suppliersList.length - 1} more)`
+                              : product.suppliersList[0].supplierName
+                            : product.supplier || '-'}
+                        </td>
+                        <td className="p-4 align-middle text-right space-x-1">
+                          <Link href={`/products/edit/${product.id}`}>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
+                              <Edit2 className="h-4 w-4" />
+                            </Button>
+                          </Link>
+                          <Button
+                            onClick={() => setProductToDelete(product)}
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:bg-destructive/10"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </td>
+                      </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
+
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={setPageSize}
+            />
+          </>
+          )}
         </CardContent>
       </Card>
 
