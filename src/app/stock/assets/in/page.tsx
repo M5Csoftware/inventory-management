@@ -33,6 +33,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useInventory, Product, BRANCHES } from "@/context/inventory-context";
 import { ConfirmModal } from "@/components/confirm-modal";
+import AssetSpreadsheetImport from "@/components/stock/AssetSpreadsheetImport";
+import { FileSpreadsheet } from "lucide-react";
 import { toast } from "react-toastify";
 
 export interface AssetModelGroup {
@@ -52,6 +54,7 @@ export default function StockInAssetsPage() {
   const { products, categories, suppliers, recordTransaction, activeBranch } =
     useInventory();
   const router = useRouter();
+  const [activeTab, setActiveTab] = useState<"spreadsheet" | "manual">("spreadsheet");
 
   // General Intake Info
   const [productId, setProductId] = useState("");
@@ -218,6 +221,28 @@ export default function StockInAssetsPage() {
         return { ...g, serialNumbers: updatedSerials };
       }),
     );
+  };
+
+  const handleBulkPasteSerials = (groupId: string, text: string) => {
+    const lines = text
+      .split(/[\n,;]+/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (lines.length === 0) return;
+
+    setModelGroups((prev) =>
+      prev.map((g) => {
+        if (g.id !== groupId) return g;
+        return {
+          ...g,
+          quantity: lines.length,
+          serialNumbers: lines,
+          showBulkPaste: false,
+          bulkText: "",
+        };
+      })
+    );
+    toast.success(`Imported ${lines.length} serial numbers for model!`);
   };
 
   // Totals calculations
@@ -402,7 +427,41 @@ export default function StockInAssetsPage() {
         </div>
       </div>
 
-      {assetProducts.length === 0 ? (
+      {/* Mode Switcher Tabs */}
+      <div className="inline-flex items-center gap-2 p-1.5 rounded-2xl bg-muted/60 border border-border/70 shadow-inner w-full sm:w-auto overflow-x-auto">
+        <button
+          type="button"
+          onClick={() => setActiveTab("manual")}
+          className={`flex items-center justify-center gap-2.5 py-2.5 px-5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+            activeTab === "manual"
+              ? "bg-background text-foreground shadow-md shadow-black/5 border border-border/40"
+              : "text-muted-foreground hover:text-foreground hover:bg-background/40"
+          }`}
+        >
+          <Laptop className="h-4 w-4 text-primary shrink-0" />
+          <span className="whitespace-nowrap">Standard Batch Intake Form</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("spreadsheet")}
+          className={`flex items-center justify-center gap-2.5 py-2.5 px-5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+            activeTab === "spreadsheet"
+              ? "bg-background text-foreground shadow-md shadow-black/5 border border-border/40"
+              : "text-muted-foreground hover:text-foreground hover:bg-background/40"
+          }`}
+        >
+          <FileSpreadsheet className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+          <span className="whitespace-nowrap">Spreadsheet Bulk Import</span>
+          <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 font-extrabold whitespace-nowrap shrink-0">
+            Excel / CSV
+          </span>
+        </button>
+      </div>
+
+      {activeTab === "spreadsheet" ? (
+        <AssetSpreadsheetImport onSuccess={() => router.push("/stock/assets")} />
+      ) : assetProducts.length === 0 ? (
         <Card className="border border-border/50 bg-background/60 backdrop-blur-sm p-8 text-center space-y-4 max-w-lg mx-auto shadow-xl">
           <p className="text-sm text-muted-foreground">
             You must have at least one asset product created (under an asset
@@ -810,12 +869,71 @@ export default function StockInAssetsPage() {
 
                   {/* Serial Numbers Section */}
                   <div className="pt-3 border-t border-border/40 space-y-3">
-                    <div className="flex items-center gap-2">
-                      <Barcode className="h-4 w-4 text-primary" />
-                      <h4 className="text-xs font-bold uppercase tracking-wider">
-                        Individual Serial Numbers ({group.quantity} Required)
-                      </h4>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Barcode className="h-4 w-4 text-primary" />
+                        <h4 className="text-xs font-bold uppercase tracking-wider">
+                          Individual Serial Numbers ({group.quantity} Required)
+                        </h4>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() =>
+                          updateModelGroup(group.id, {
+                            showBulkPaste: !group.showBulkPaste,
+                          })
+                        }
+                        className="text-[11px] h-7 px-2.5 text-primary hover:bg-primary/10 gap-1 font-semibold"
+                      >
+                        <FileText className="h-3 w-3" />
+                        {group.showBulkPaste ? "Hide Quick Paste" : "Quick Paste Serials"}
+                      </Button>
                     </div>
+
+                    {group.showBulkPaste && (
+                      <div className="p-3.5 rounded-xl bg-muted/40 border border-primary/20 space-y-2">
+                        <p className="text-xs font-semibold text-foreground">
+                          Paste Serial Numbers (separated by newlines, commas, or spaces):
+                        </p>
+                        <textarea
+                          rows={3}
+                          value={group.bulkText || ""}
+                          onChange={(e) =>
+                            updateModelGroup(group.id, { bulkText: e.target.value })
+                          }
+                          placeholder="PF49A001&#10;PF49A002&#10;PF49A003"
+                          className="w-full text-xs font-mono p-2 rounded-lg border border-input bg-background focus:outline-none focus:ring-1 focus:ring-primary"
+                        />
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="secondary"
+                            onClick={() =>
+                              updateModelGroup(group.id, {
+                                showBulkPaste: false,
+                                bulkText: "",
+                              })
+                            }
+                            className="text-xs h-7"
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={() =>
+                              handleBulkPasteSerials(group.id, group.bulkText || "")
+                            }
+                            className="text-xs h-7 font-bold"
+                          >
+                            Populate Serials
+                          </Button>
+                        </div>
+                      </div>
+                    )}
 
                     {/* Individual Serial Input Grid */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
