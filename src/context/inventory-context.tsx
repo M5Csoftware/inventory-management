@@ -424,6 +424,15 @@ interface InventoryContextType {
   addAssetSerial: (
     item: Omit<AssetSerialItem, "id" | "createdAt" | "updatedAt">,
   ) => Promise<boolean>;
+  addAssetSerialsBulk: (
+    items: Omit<AssetSerialItem, "id" | "createdAt" | "updatedAt">[],
+  ) => Promise<{
+    success: boolean;
+    insertedCount: number;
+    duplicates?: string[];
+    message?: string;
+  }>;
+
   updateAssetSerial: (
     id: string,
     updates: Partial<AssetSerialItem>,
@@ -1421,6 +1430,85 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const addAssetSerialsBulk = async (
+    items: Omit<AssetSerialItem, "id" | "createdAt" | "updatedAt">[],
+  ): Promise<{
+    success: boolean;
+    insertedCount: number;
+    duplicates?: string[];
+    message?: string;
+  }> => {
+    try {
+      const res = await fetch(`${API_BASE}/asset-serials/bulk`, {
+        method: "POST",
+        headers: getDbHeader(),
+        body: JSON.stringify({ items }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        invalidateCache();
+        await fetchData(true);
+        return {
+          success: true,
+          insertedCount: data.count || items.length,
+        };
+      }
+
+      if (res.status === 400 && data.duplicates) {
+        return {
+          success: false,
+          insertedCount: 0,
+          duplicates: data.duplicates,
+          message: data.message,
+        };
+      }
+
+      if (res.status === 404) {
+        let successCount = 0;
+        const failed: string[] = [];
+        for (const item of items) {
+          try {
+            const singleRes = await fetch(`${API_BASE}/asset-serials`, {
+              method: "POST",
+              headers: getDbHeader(),
+              body: JSON.stringify(item),
+            });
+            if (singleRes.ok) {
+              successCount++;
+            } else {
+              failed.push(item.serialNumber);
+            }
+          } catch {
+            failed.push(item.serialNumber);
+          }
+        }
+        invalidateCache();
+        await fetchData(true);
+        return {
+          success: successCount > 0,
+          insertedCount: successCount,
+          duplicates: failed,
+          message:
+            failed.length > 0 ? `Failed for: ${failed.join(", ")}` : undefined,
+        };
+      }
+
+      return {
+        success: false,
+        insertedCount: 0,
+        message: data.message || "Failed to bulk register asset serials",
+      };
+    } catch (error: any) {
+      console.error("Bulk asset serial creation error:", error);
+      return {
+        success: false,
+        insertedCount: 0,
+        message:
+          error.message || "Network error during bulk asset registration",
+      };
+    }
+  };
+
   const updateAssetSerial = async (
     id: string,
     updates: Partial<AssetSerialItem>,
@@ -1531,6 +1619,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
       assetSerials,
       fetchAssetSerials,
       addAssetSerial,
+      addAssetSerialsBulk,
       updateAssetSerial,
       deleteAssetSerial,
       revertAuditLog,
