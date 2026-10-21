@@ -71,6 +71,8 @@ export interface Supplier {
   location: string;
   branch?: string;
   taxId?: string;
+  gstNo?: string;
+  gstin?: string;
   website?: string;
   // Add bank details fields
   bankName?: string;
@@ -645,10 +647,10 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
         safeFetchJson(`${API_BASE}/orders${branchQuery}`, {
           headers: NO_BODY_HEADER,
         }),
-        safeFetchJson(`${API_BASE}/assets${branchQuery}`, {
+        safeFetchJson(`${API_BASE}/assets`, {
           headers: NO_BODY_HEADER,
         }),
-        safeFetchJson(`${API_BASE}/asset-serials${branchQuery}`, {
+        safeFetchJson(`${API_BASE}/asset-serials`, {
           headers: NO_BODY_HEADER,
         }),
       ]);
@@ -1385,9 +1387,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
 
   const fetchAssetSerials = async (forceRefresh = false) => {
     try {
-      const branchQuery =
-        activeBranch !== "All" ? `?branch=${activeBranch}` : "";
-      const url = `${API_BASE}/asset-serials${branchQuery}`;
+      const url = `${API_BASE}/asset-serials`;
       if (forceRefresh) invalidateCache(url);
       const data = await getCachedAsync(
         url,

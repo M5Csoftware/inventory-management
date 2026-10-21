@@ -12,7 +12,8 @@ import {
   Phone,
   MapPin,
   Save,
-  Edit2
+  Edit2,
+  FileText,
 } from 'lucide-react';
 import {
   Card,
@@ -54,7 +55,7 @@ export default function EditSupplierPage() {
         setPhone(supplier.phone);
         setLocation(supplier.location);
         setBranch(supplier.branch || 'Delhi');
-        setTaxId(supplier.taxId || '');
+        setTaxId(supplier.gstNo || supplier.taxId || supplier.gstin || '');
         setWebsite(supplier.website || '');
       }
     }
@@ -76,7 +77,19 @@ export default function EditSupplierPage() {
     setIsSubmitting(true);
 
     try {
-      await updateSupplier(decodedName, { name, contact, email, phone, location, branch, taxId, website });
+      const formattedGst = taxId.trim().toUpperCase();
+      await updateSupplier(decodedName, {
+        name,
+        contact,
+        email,
+        phone,
+        location,
+        branch,
+        taxId: formattedGst,
+        gstNo: formattedGst,
+        gstin: formattedGst,
+        website,
+      });
       setShowConfirmModal(false);
       router.push('/suppliers');
     } finally {
@@ -238,15 +251,20 @@ export default function EditSupplierPage() {
                 </div>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-1.5">
-                    <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                      Tax ID / VAT Number <span className="text-muted-foreground/60 lowercase text-[9px] font-normal">(optional)</span>
-                    </label>
+                    <div className="flex items-center justify-between">
+                      <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-foreground">
+                        <FileText className="h-3 w-3 text-primary" />
+                        GST Number / GSTIN (Tax ID)
+                      </label>
+                      <span className="text-[10px] font-mono text-muted-foreground">15 digits (e.g. 07AAQCM6359K1ZP)</span>
+                    </div>
                     <input
                       type="text"
                       value={taxId}
-                      onChange={(e) => setTaxId(e.target.value)}
-                      placeholder="e.g. 12-3456789"
-                      className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all placeholder:text-muted-foreground/50 hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
+                      maxLength={15}
+                      onChange={(e) => setTaxId(e.target.value.toUpperCase())}
+                      placeholder="e.g. 07AAQCM6359K1ZP"
+                      className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 font-mono text-sm uppercase shadow-sm transition-all placeholder:text-muted-foreground/50 hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
                     />
                   </div>
                   <div className="space-y-1.5">

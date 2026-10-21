@@ -15,6 +15,7 @@ import {
   IndianRupee,
   Package,
   Plus,
+  FileText,
 } from "lucide-react";
 import {
   Card,
@@ -42,12 +43,14 @@ export default function SuppliersPage() {
       s.branch === activeBranch;
 
     const searchLower = searchTerm.toLowerCase().trim();
+    const gstin = (s.gstNo || s.taxId || s.gstin || "").toLowerCase();
     const matchesSearch =
       searchLower === "" ||
       s.name.toLowerCase().includes(searchLower) ||
       s.contact.toLowerCase().includes(searchLower) ||
       s.email.toLowerCase().includes(searchLower) ||
       s.location.toLowerCase().includes(searchLower) ||
+      gstin.includes(searchLower) ||
       (s.branch && s.branch.toLowerCase().includes(searchLower));
 
     return matchesBranch && matchesSearch;
@@ -185,6 +188,14 @@ export default function SuppliersPage() {
                           <Phone className="h-4 w-4 text-primary/70 shrink-0" />
                           <span className="truncate">{supplier.phone}</span>
                         </div>
+                        {(supplier.taxId || supplier.gstNo || supplier.gstin) && (
+                          <div className="flex items-center gap-2 min-w-0 pt-0.5">
+                            <FileText className="h-4 w-4 text-emerald-500 shrink-0" />
+                            <span className="truncate font-mono text-[11px] font-bold text-foreground bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 px-2 py-0.5 rounded border border-emerald-500/20">
+                              GSTIN: {supplier.taxId || supplier.gstNo || supplier.gstin}
+                            </span>
+                          </div>
+                        )}
                       </div>
                       <div className="flex justify-between items-center gap-2 border-t pt-4 border-border/50 text-xs">
                         <Link href="/suppliers/products" className="font-semibold text-primary hover:underline truncate">
