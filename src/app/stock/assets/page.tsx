@@ -33,7 +33,7 @@ export default function AssignedAssetsPage() {
   // Filters
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
-  const [branchFilter, setBranchFilter] = useState('All');
+  const [branchFilter, setBranchFilter] = useState(() => (activeBranch !== 'All' ? activeBranch : 'All'));
   const [departmentFilter, setDepartmentFilter] = useState('All');
 
   // Modals state
@@ -56,7 +56,6 @@ export default function AssignedAssetsPage() {
   const filteredAssignments = useMemo(() => {
     return assets.filter((a) => {
       if (branchFilter !== 'All' && a.branch !== branchFilter) return false;
-      if (activeBranch !== 'All' && a.branch !== activeBranch) return false;
       if (statusFilter !== 'All' && a.status !== statusFilter) return false;
       if (departmentFilter !== 'All' && a.department !== departmentFilter) return false;
 

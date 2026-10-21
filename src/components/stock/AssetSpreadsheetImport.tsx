@@ -78,14 +78,20 @@ export default function AssetSpreadsheetImport({ onSuccess }: AssetSpreadsheetIm
     fetchAssetSerials,
   } = useInventory();
 
-  // Filter asset products (products belonging to asset category)
+  // Filter asset products (products belonging to asset category or recognized hardware/equipment/assets)
   const assetProducts = useMemo(() => {
-    return products.filter((prod) => {
+    const matched = products.filter((prod) => {
       const category = categories.find(
         (c) => c.name.toLowerCase() === prod.category.toLowerCase()
       );
-      return category?.isAsset === true;
+      if (category?.isAsset) return true;
+      const catLower = (prod.category || '').toLowerCase();
+      const nameLower = (prod.name || '').toLowerCase();
+      const keywords = ['asset', 'hardware', 'equipment', 'machine', 'device', 'laptop', 'desktop', 'monitor', 'printer', 'scanner', 'server', 'x-ray', 'x ray', 'medical', 'camera'];
+      return keywords.some(k => catLower.includes(k) || nameLower.includes(k));
     });
+    // Fallback to all products so no valid product is blocked from import matching
+    return matched.length > 0 ? matched : products;
   }, [products, categories]);
 
   // Set of existing serial numbers in database (lowercase for fast case-insensitive check)
@@ -1540,9 +1546,9 @@ export default function AssetSpreadsheetImport({ onSuccess }: AssetSpreadsheetIm
             >
               Upload Another Batch
             </Button>
-            <Link href="/stock/assets">
+            <Link href="/stock/assets/all">
               <Button size="sm" className="gap-1.5 text-xs">
-                View Assets Catalog
+                View All Assets (Catalog)
                 <ArrowRight className="h-3.5 w-3.5" />
               </Button>
             </Link>

@@ -480,21 +480,47 @@ export default function NewProductPage() {
 
                 {/* Packaging & Stock Info */}
                 {isAssetCategory ? (
-                  <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/25 text-blue-900 dark:text-blue-200 flex items-start gap-3">
-                    <Laptop className="h-5 w-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
-                    <div className="space-y-1 text-xs">
-                      <p className="font-bold text-foreground flex items-center gap-2">
-                        Fixed Asset Category Active ({selectedCategoryObj?.name})
-                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-700 dark:text-blue-300 font-semibold">
-                          Asset Product
-                        </span>
-                      </p>
-                      <p className="text-muted-foreground leading-relaxed">
-                        This category is designated for physical hardware and fixed assets. Individual units (e.g. laptops, monitors, devices) and their serial numbers are added via{' '}
-                        <Link href="/stock/assets/in" className="text-primary font-semibold underline hover:text-primary/80">
-                          Stock In Assets
-                        </Link>
-                        . Initial opening stock entry is not required and will be initialized to 0.
+                  <div className="space-y-3">
+                    <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/25 text-blue-900 dark:text-blue-200 flex items-start gap-3">
+                      <Laptop className="h-5 w-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+                      <div className="space-y-1 text-xs">
+                        <p className="font-bold text-foreground flex items-center gap-2">
+                          Fixed Asset Category Active ({selectedCategoryObj?.name})
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-700 dark:text-blue-300 font-semibold">
+                            Asset Product
+                          </span>
+                        </p>
+                        <p className="text-muted-foreground leading-relaxed">
+                          This category is designated for physical hardware and fixed assets. Individual units (e.g. equipment, devices, machines) and their serial tags are managed via{' '}
+                          <Link href="/stock/assets/in" className="text-primary font-semibold underline hover:text-primary/80">
+                            Stock In Assets
+                          </Link>{' '}
+                          or the{' '}
+                          <Link href="/stock/assets/all" className="text-primary font-semibold underline hover:text-primary/80">
+                            Asset Catalog
+                          </Link>
+                          .
+                        </p>
+                      </div>
+                    </div>
+                    <div className="p-3.5 rounded-xl border border-border/60 bg-muted/20 space-y-2">
+                      <label className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-foreground">
+                        <Building2 className="h-3.5 w-3.5 text-primary" />
+                        Target / Primary Branch for Asset <span className="text-destructive">*</span>
+                      </label>
+                      <select
+                        value={initialBranch}
+                        onChange={(e) => setInitialBranch(e.target.value)}
+                        className="h-9 w-full sm:w-72 rounded-lg border-2 border-gray-300 bg-white/90 px-3 text-sm shadow-sm transition-all dark:border-gray-600 dark:bg-gray-900/90 font-medium cursor-pointer"
+                      >
+                        {BRANCHES.map((b: string) => (
+                          <option key={b} value={b}>
+                            🏢 {b} Branch
+                          </option>
+                        ))}
+                      </select>
+                      <p className="text-[11px] text-muted-foreground">
+                        Specify which branch this asset belongs to (e.g. Delhi Branch).
                       </p>
                     </div>
                   </div>
