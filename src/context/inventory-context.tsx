@@ -378,7 +378,7 @@ interface InventoryContextType {
   updateOrder: (id: string, orderData: Partial<Order>) => Promise<void>;
   updateOrderStatus: (id: string, status: Order["status"]) => Promise<void>;
   deleteOrder: (id: string) => Promise<void>;
-  addProduct: (product: Omit<Product, "id">) => Promise<void>;
+  addProduct: (product: Omit<Product, "id">) => Promise<Product | null>;
   addCategory: (category: Category) => Promise<void>;
   addSupplier: (supplier: Supplier) => Promise<void>;
   recordTransaction: (
@@ -432,6 +432,7 @@ interface InventoryContextType {
     success: boolean;
     insertedCount: number;
     duplicates?: string[];
+    uncreatedProducts?: { productId: string; productName?: string }[];
     message?: string;
   }>;
 
@@ -748,12 +749,15 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
             invalidateCache();
             await fetchData(true);
             toast.success("Product added successfully!");
+            return data.data || null;
           } else {
             toast.error(data.message || "Failed to add product.");
+            return null;
           }
         } catch (error) {
           console.error("Failed to add product:", error);
           toast.error("Network error while adding product.");
+          return null;
         }
       },
       undefined,
@@ -1436,6 +1440,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
     success: boolean;
     insertedCount: number;
     duplicates?: string[];
+    uncreatedProducts?: { productId: string; productName?: string }[];
     message?: string;
   }> => {
     try {
@@ -1454,11 +1459,12 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
         };
       }
 
-      if (res.status === 400 && data.duplicates) {
+      if (res.status === 400) {
         return {
           success: false,
           insertedCount: 0,
           duplicates: data.duplicates,
+          uncreatedProducts: data.uncreatedProducts,
           message: data.message,
         };
       }
