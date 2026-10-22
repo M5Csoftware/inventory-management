@@ -4,9 +4,11 @@
  * mapped via next.config.ts and automatically normalizes endpoints.
  */
 
+const DEFAULT_PRODUCTION_URL = "https://inventory-node-server.onrender.com";
+
 function getRawBaseUrl(): string {
   if (typeof process === "undefined" || !process.env) {
-    return "";
+    return DEFAULT_PRODUCTION_URL;
   }
 
   const raw =
@@ -14,7 +16,7 @@ function getRawBaseUrl(): string {
     process.env.API_URL ||
     process.env.SERVER_URL ||
     process.env.APP_API_URL ||
-    "";
+    DEFAULT_PRODUCTION_URL;
 
   return raw.trim().replace(/\/+$/, "");
 }
@@ -26,7 +28,7 @@ function getRawBaseUrl(): string {
 export function getInventoryApiUrl(): string {
   const raw = getRawBaseUrl();
   if (!raw) {
-    return "http://localhost:5000/api/inventory";
+    return `${DEFAULT_PRODUCTION_URL}/api/inventory`;
   }
 
   if (raw.endsWith("/api/inventory")) {
@@ -59,7 +61,7 @@ export function getInvoiceApiUrl(): string {
 
   const raw = getRawBaseUrl();
   if (!raw) {
-    return "http://localhost:5000/api/invoice-registration";
+    return `${DEFAULT_PRODUCTION_URL}/api/invoice-registration`;
   }
 
   const root = raw
