@@ -49,11 +49,19 @@ jobs:
           BACKEND_URL: https://inventory-node-server.onrender.com
           API_URL: https://inventory-node-server.onrender.com
 
+      - name: Sanitize Tauri Signing Key
+        shell: pwsh
+        env:
+          RAW_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        run: |
+          $cleanKey = ($env:RAW_KEY).Trim()
+          "TAURI_SIGNING_PRIVATE_KEY=$cleanKey" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
       - name: Build and Publish Tauri Desktop App
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ env.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: v__VERSION__
