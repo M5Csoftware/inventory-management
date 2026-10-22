@@ -379,7 +379,7 @@ export default function AllQuotationsPage() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => router.push(`/quotations/${q.id}/edit`)}
+                            onClick={() => router.push(`/quotations/edit?id=${q.id}`)}
                             title="Edit Quotation"
                           >
                             <Pencil className="h-4 w-4 text-amber-500" />
@@ -391,7 +391,7 @@ export default function AllQuotationsPage() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem
-                                onClick={() => router.push(`/quotations/${q.id}/edit`)}
+                                onClick={() => router.push(`/quotations/edit?id=${q.id}`)}
                               >
                                 <Pencil className="h-4 w-4 mr-2" />
                                 Edit Quotation
@@ -513,7 +513,7 @@ export default function AllQuotationsPage() {
                 <Button size="sm" onClick={() => {
                   const qId = selectedQuotation.id;
                   setSelectedQuotation(null);
-                  router.push(`/quotations/${qId}/edit`);
+                  router.push(`/quotations/edit?id=${qId}`);
                 }}>
                   <Pencil className="h-4 w-4 mr-2" /> Edit Quotation
                 </Button>

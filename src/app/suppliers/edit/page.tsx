@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import Link from 'next/link';
-import { useRouter, useParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { PageLoading } from '@/components/ui/loading';
 import {
   ArrowLeft,
   UserPlus,
@@ -27,11 +28,11 @@ import { useInventory } from '@/context/inventory-context';
 import { ConfirmModal } from '@/components/confirm-modal';
 import { toast } from 'react-toastify';
 
-export default function EditSupplierPage() {
+function EditSupplierContent() {
   const { suppliers, updateSupplier } = useInventory();
   const router = useRouter();
-  const params = useParams();
-  const decodedName = decodeURIComponent((params?.name as string) || '');
+  const searchParams = useSearchParams();
+  const decodedName = decodeURIComponent(searchParams.get('name') || '');
 
   const [name, setName] = useState('');
   const [contact, setContact] = useState('');
@@ -336,5 +337,13 @@ export default function EditSupplierPage() {
         }
       />
     </div>
+  );
+}
+
+export default function EditSupplierPage() {
+  return (
+    <Suspense fallback={<PageLoading title="Loading Supplier Details..." />}>
+      <EditSupplierContent />
+    </Suspense>
   );
 }

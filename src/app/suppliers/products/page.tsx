@@ -481,7 +481,7 @@ export default function SupplierProductsPage() {
                         </div>
 
                         <div className="flex items-center gap-1">
-                          <Link href={`/suppliers/edit/${encodeURIComponent(group.supplierName)}`}>
+                          <Link href={`/suppliers/edit?name=${encodeURIComponent(group.supplierName)}`}>
                             <Button variant="ghost" size="icon" title="Edit Supplier" className="h-8 w-8 text-muted-foreground hover:text-foreground">
                               <Edit2 className="h-4 w-4" />
                             </Button>
@@ -574,7 +574,7 @@ export default function SupplierProductsPage() {
                                     </td>
                                     <td className="px-4 py-3 text-right">
                                       <div className="flex items-center justify-end gap-1 shrink-0">
-                                        <Link href={`/products/edit/${item.product.id}`}>
+                                        <Link href={`/products/edit?id=${item.product.id}`}>
                                           <Button variant="outline" size="sm" className="h-7 text-xs gap-1 border-border/60">
                                             <Edit2 className="h-3 w-3" /> Edit
                                           </Button>
@@ -677,7 +677,7 @@ export default function SupplierProductsPage() {
                         </td>
                         <td className="p-4 align-middle text-right">
                           <div className="flex items-center justify-end gap-1 shrink-0">
-                            <Link href={`/products/edit/${row.product.id}`}>
+                            <Link href={`/products/edit?id=${row.product.id}`}>
                               <Button variant="outline" size="sm" className="h-8 text-xs gap-1.5 border-border/60">
                                 <Edit2 className="h-3.5 w-3.5" /> Edit
                               </Button>
