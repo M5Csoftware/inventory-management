@@ -6,6 +6,7 @@ import {
   useInventory,
   AssetSerialItem,
   BRANCHES,
+  Product,
 } from '@/context/inventory-context';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -28,6 +29,10 @@ import {
   X,
   IndianRupee,
   List,
+  AlertTriangle,
+  Sparkles,
+  Plus,
+  AlertCircle,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { ConfirmModal } from '@/components/confirm-modal';
@@ -35,19 +40,59 @@ import { toast } from 'react-toastify';
 
 export default function AllAssetsPage() {
   const {
+    products,
+    categories,
     assetSerials,
     updateAssetSerial,
     deleteAssetSerial,
+    addAssetSerial,
+    fetchAssetSerials,
     activeBranch,
   } = useInventory();
 
   // Filters
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
-  const [branchFilter, setBranchFilter] = useState('All');
+  const [branchFilter, setBranchFilter] = useState(() =>
+    activeBranch !== 'All' ? activeBranch : 'All',
+  );
 
   // Modals state
   const [selectedViewSerial, setSelectedViewSerial] = useState<AssetSerialItem | null>(null);
+
+  // Unregistered Stock Reconciliation Modal State
+  const [registeringStock, setRegisteringStock] = useState<{
+    product: Product;
+    branch: string;
+    stockCount: number;
+    missingCount: number;
+  } | null>(null);
+  const [registerSerialForm, setRegisterSerialForm] = useState({
+    serialNumber: '',
+    model: '',
+    amount: '0',
+    branch: 'Delhi',
+    status: 'In Stock' as AssetSerialItem['status'],
+    supplier: '',
+    invoiceNumber: '',
+    notes: '',
+  });
+  const [isRegistering, setIsRegistering] = useState(false);
+
+  // Quick New Asset Registration Modal State
+  const [quickRegisterOpen, setQuickRegisterOpen] = useState(false);
+  const [quickForm, setQuickForm] = useState({
+    productId: '',
+    serialNumber: '',
+    model: '',
+    amount: '0',
+    branch: activeBranch !== 'All' ? activeBranch : 'Delhi',
+    status: 'In Stock' as AssetSerialItem['status'],
+    supplier: '',
+    invoiceNumber: '',
+    notes: '',
+  });
+  const [isQuickRegistering, setIsQuickRegistering] = useState(false);
 
   // Edit Serial Modal State
   const [editingSerial, setEditingSerial] = useState<AssetSerialItem | null>(null);
@@ -80,13 +125,140 @@ export default function AllAssetsPage() {
     setTimeout(() => setCopiedSerial(null), 2000);
   };
 
-  // Filtered Asset Serials
+  // Detect products with inventory stock in branches that have fewer registered serials
+  const unregisteredAssetStock = useMemo(() => {
+    const list: Array<{
+      product: Product;
+      branch: string;
+      stockCount: number;
+      registeredCount: number;
+      missingCount: number;
+    }> = [];
+
+    (products || []).forEach((prod) => {
+      const cat = (categories || []).find(
+        (c) => (c.name || '').trim().toLowerCase() === (prod.category || '').trim().toLowerCase(),
+      );
+      const isAsset =
+        cat?.isAsset === true ||
+        (prod.category || '').toLowerCase().includes('asset') ||
+        (prod.name || '').toLowerCase().includes('asset') ||
+        (prod.category || '').toLowerCase().includes('machine') ||
+        (prod.category || '').toLowerCase().includes('equipment') ||
+        (prod.category || '').toLowerCase().includes('hardware') ||
+        (prod.category || '').toLowerCase().includes('device');
+
+      if (!isAsset) return;
+
+      if (prod.stock && typeof prod.stock === 'object') {
+        Object.entries(prod.stock as Record<string, number>).forEach(([bName, count]) => {
+          const numCount = Number(count) || 0;
+          if (numCount > 0) {
+            const registered = assetSerials.filter(
+              (s) =>
+                (s.productId === prod.id || s.productName?.toLowerCase() === prod.name.toLowerCase()) &&
+                s.branch === bName,
+            ).length;
+
+            if (registered < numCount) {
+              list.push({
+                product: prod,
+                branch: bName,
+                stockCount: numCount,
+                registeredCount: registered,
+                missingCount: numCount - registered,
+              });
+            }
+          }
+        });
+      }
+    });
+
+    return list;
+  }, [products, categories, assetSerials]);
+
+  // Open modal to assign asset serial tag to existing inventory stock
+  const handleOpenRegisterModal = (product: Product, branch: string) => {
+    const cleanPrefix = (product.name || 'AST')
+      .replace(/[^a-zA-Z0-9]/g, '')
+      .slice(0, 4)
+      .toUpperCase() || 'AST';
+    const branchCode = (branch || 'DEL').slice(0, 3).toUpperCase();
+    const autoSerial = `${cleanPrefix}-${branchCode}-${Date.now().toString().slice(-4)}1`;
+
+    setRegisterSerialForm({
+      serialNumber: autoSerial,
+      model: 'Standard',
+      amount: (product.price || 0).toString(),
+      branch,
+      status: 'In Stock',
+      supplier: product.supplier || '',
+      invoiceNumber: '',
+      notes: `Registered from existing inventory stock in ${branch}`,
+    });
+
+    const missing = unregisteredAssetStock.find(
+      (u) => u.product.id === product.id && u.branch === branch,
+    );
+
+    setRegisteringStock({
+      product,
+      branch,
+      stockCount: missing ? missing.stockCount : 1,
+      missingCount: missing ? missing.missingCount : 1,
+    });
+  };
+
+  const handleGenerateRegistrationTag = () => {
+    if (!registeringStock) return;
+    const cleanPrefix = (registeringStock.product.name || 'AST')
+      .replace(/[^a-zA-Z0-9]/g, '')
+      .slice(0, 4)
+      .toUpperCase() || 'AST';
+    const branchCode = (registerSerialForm.branch || 'DEL').slice(0, 3).toUpperCase();
+    const autoSerial = `${cleanPrefix}-${branchCode}-${Date.now().toString().slice(-4)}${Math.floor(Math.random() * 90 + 10)}`;
+    setRegisterSerialForm((p) => ({ ...p, serialNumber: autoSerial }));
+  };
+
+  const handleExecuteStockRegistration = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!registeringStock || isRegistering) return;
+    if (!registerSerialForm.serialNumber.trim()) {
+      toast.error('Serial Number / Asset Tag is required');
+      return;
+    }
+
+    setIsRegistering(true);
+    try {
+      const success = await addAssetSerial({
+        productId: registeringStock.product.id,
+        productName: registeringStock.product.name,
+        serialNumber: registerSerialForm.serialNumber.trim(),
+        model: registerSerialForm.model.trim() || undefined,
+        amount: parseFloat(registerSerialForm.amount) || 0,
+        branch: registerSerialForm.branch,
+        status: registerSerialForm.status,
+        supplier: registerSerialForm.supplier.trim() || undefined,
+        invoiceNumber: registerSerialForm.invoiceNumber.trim() || undefined,
+        notes: registerSerialForm.notes.trim() || undefined,
+        purchaseDate: new Date().toISOString().slice(0, 10),
+      });
+
+      if (success) {
+        toast.success(`Registered asset tag ${registerSerialForm.serialNumber} for ${registeringStock.branch} branch!`);
+        setRegisteringStock(null);
+        await fetchAssetSerials(true);
+      }
+    } finally {
+      setIsRegistering(false);
+    }
+  };
+
+  // Filtered Asset Serials (Authority: branchFilter on this page)
   const filteredSerials = useMemo(() => {
     return assetSerials.filter((s) => {
-      // Branch filter
+      // Branch filter on page
       if (branchFilter !== 'All' && s.branch !== branchFilter) return false;
-      // Active global branch from context
-      if (activeBranch !== 'All' && s.branch !== activeBranch) return false;
       // Status filter
       if (statusFilter !== 'All' && s.status !== statusFilter) return false;
 
@@ -107,7 +279,7 @@ export default function AllAssetsPage() {
       }
       return true;
     });
-  }, [assetSerials, branchFilter, activeBranch, statusFilter, searchTerm]);
+  }, [assetSerials, branchFilter, statusFilter, searchTerm]);
 
   // Stats calculation
   const stats = useMemo(() => {
@@ -258,6 +430,14 @@ export default function AllAssetsPage() {
               <Wrench className="h-3.5 w-3.5 text-amber-500" /> Maintenance
             </Button>
           </Link>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setQuickRegisterOpen(true)}
+            className="text-xs font-bold gap-1.5 border-primary/40 text-primary hover:bg-primary/10 cursor-pointer shadow-xs"
+          >
+            <Sparkles className="h-3.5 w-3.5" /> Quick Register
+          </Button>
           <Link href="/stock/assets/in">
             <Button size="sm" className="text-xs font-bold gap-1.5 shadow-md hover:shadow-lg cursor-pointer">
               <PlusCircle className="h-3.5 w-3.5" /> Stock In Assets
@@ -331,6 +511,71 @@ export default function AllAssetsPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Unregistered Asset Stock Alert Banner */}
+      {unregisteredAssetStock.length > 0 && (
+        <Card className="border-2 border-amber-500/40 bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-background shadow-md overflow-hidden animate-in fade-in slide-in-from-top-2">
+          <CardHeader className="p-4 sm:p-5 border-b border-amber-500/20 bg-amber-500/10 flex flex-row items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-xl bg-amber-500 text-white shadow-sm">
+                <AlertTriangle className="h-5 w-5" />
+              </div>
+              <div>
+                <CardTitle className="text-sm sm:text-base font-bold text-foreground flex items-center gap-2">
+                  Inventory Stock Pending Serial Registration
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300 font-extrabold">
+                    {unregisteredAssetStock.reduce((acc, u) => acc + u.missingCount, 0)} Units Awaiting Tags
+                  </span>
+                </CardTitle>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  The following physical asset units exist in inventory stock across branches (e.g. Delhi) but do not yet have individual serial numbers registered in the registry.
+                </p>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="p-4 space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {unregisteredAssetStock.map((item, idx) => (
+                <div
+                  key={`${item.product.id}-${item.branch}-${idx}`}
+                  className="p-3.5 rounded-xl border border-border/80 bg-background/80 hover:border-amber-500/50 transition-all flex flex-col justify-between gap-3 shadow-xs"
+                >
+                  <div className="space-y-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <h4 className="font-bold text-sm text-foreground truncate" title={item.product.name}>
+                        {item.product.name}
+                      </h4>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 shrink-0">
+                        🏢 {item.branch}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">
+                      Category: <span className="font-medium text-foreground">{item.product.category || 'Asset'}</span>
+                    </p>
+                    <div className="flex items-center gap-3 text-xs pt-1">
+                      <span className="text-muted-foreground">
+                        Total Stock: <strong className="text-foreground">{item.stockCount}</strong>
+                      </span>
+                      <span className="text-amber-600 dark:text-amber-400 font-semibold">
+                        Unregistered: <strong>{item.missingCount} unit{item.missingCount > 1 ? 's' : ''}</strong>
+                      </span>
+                    </div>
+                  </div>
+
+                  <Button
+                    size="sm"
+                    onClick={() => handleOpenRegisterModal(item.product, item.branch)}
+                    className="w-full text-xs font-bold gap-1.5 bg-amber-600 hover:bg-amber-700 text-white shadow-xs cursor-pointer h-8"
+                  >
+                    <Tag className="h-3.5 w-3.5" />
+                    Register Serial / Asset Tag
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Main Table Card */}
       <Card className="border-border/60 shadow-sm bg-card overflow-hidden">
@@ -939,6 +1184,394 @@ export default function AllAssetsPage() {
                 >
                   <Check className={`h-3.5 w-3.5 ${isSavingSerial ? 'animate-spin' : ''}`} />
                   {isSavingSerial ? 'Saving...' : 'Save Asset Changes'}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* REGISTRATION MODAL: ASSIGN SERIAL TO EXISTING INVENTORY STOCK */}
+      {/* ========================================================================= */}
+      {registeringStock && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-200">
+          <div className="bg-card w-full max-w-lg rounded-2xl shadow-2xl border border-border overflow-hidden">
+            <div className="p-4 sm:p-5 border-b border-border/60 bg-muted/20 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                  <Tag className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-foreground">
+                    Register Asset Tag for {registeringStock.product.name}
+                  </h3>
+                  <p className="text-xs text-muted-foreground">
+                    Assigning serial to existing unit in <strong>🏢 {registeringStock.branch} Branch</strong>
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setRegisteringStock(null)}
+                className="p-1 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleExecuteStockRegistration} className="p-5 space-y-4">
+              <div className="space-y-3">
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-bold text-foreground">
+                      Serial Number / Asset Tag <span className="text-destructive">*</span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={handleGenerateRegistrationTag}
+                      className="text-[11px] font-bold text-primary hover:underline flex items-center gap-1 cursor-pointer"
+                    >
+                      <Sparkles className="h-3 w-3" /> Auto-Generate Tag
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    required
+                    value={registerSerialForm.serialNumber}
+                    onChange={(e) => setRegisterSerialForm((p) => ({ ...p, serialNumber: e.target.value }))}
+                    placeholder="e.g. XRAY-DEL-001 or PF49A001"
+                    className="h-10 w-full rounded-xl border-2 border-border bg-background px-3 text-xs font-mono font-bold focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground block mb-1">
+                      Model / Specification
+                    </label>
+                    <input
+                      type="text"
+                      value={registerSerialForm.model}
+                      onChange={(e) => setRegisterSerialForm((p) => ({ ...p, model: e.target.value }))}
+                      placeholder="e.g. Standard Model"
+                      className="h-9 w-full rounded-lg border border-border bg-background px-3 text-xs focus:ring-1 focus:ring-primary"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground block mb-1">
+                      Unit Valuation (₹)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={registerSerialForm.amount}
+                      onChange={(e) => setRegisterSerialForm((p) => ({ ...p, amount: e.target.value }))}
+                      placeholder="0"
+                      className="h-9 w-full rounded-lg border border-border bg-background px-3 text-xs font-mono focus:ring-1 focus:ring-primary"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground block mb-1">
+                      Branch Warehouse
+                    </label>
+                    <select
+                      value={registerSerialForm.branch}
+                      onChange={(e) => setRegisterSerialForm((p) => ({ ...p, branch: e.target.value }))}
+                      className="h-9 w-full rounded-lg border border-border bg-background px-2.5 text-xs font-bold focus:ring-1 focus:ring-primary cursor-pointer"
+                    >
+                      {BRANCHES.map((b) => (
+                        <option key={b} value={b}>
+                          🏢 {b} Branch
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground block mb-1">
+                      Status
+                    </label>
+                    <select
+                      value={registerSerialForm.status}
+                      onChange={(e) => setRegisterSerialForm((p) => ({ ...p, status: e.target.value as any }))}
+                      className="h-9 w-full rounded-lg border border-border bg-background px-2.5 text-xs font-semibold focus:ring-1 focus:ring-primary cursor-pointer"
+                    >
+                      <option value="In Stock">In Stock (Available)</option>
+                      <option value="Assigned">Assigned (In Use)</option>
+                      <option value="Maintenance">Maintenance</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground block mb-1">
+                    Notes
+                  </label>
+                  <input
+                    type="text"
+                    value={registerSerialForm.notes}
+                    onChange={(e) => setRegisterSerialForm((p) => ({ ...p, notes: e.target.value }))}
+                    placeholder="e.g. Registered into Delhi branch equipment registry"
+                    className="h-9 w-full rounded-lg border border-border bg-background px-3 text-xs focus:ring-1 focus:ring-primary"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-3 border-t border-border flex items-center justify-end gap-2.5">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setRegisteringStock(null)}
+                  className="text-xs cursor-pointer"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  size="sm"
+                  disabled={isRegistering}
+                  className="text-xs font-bold gap-1.5 shadow-md cursor-pointer"
+                >
+                  <Check className={`h-3.5 w-3.5 ${isRegistering ? 'animate-spin' : ''}`} />
+                  {isRegistering ? 'Registering...' : 'Register Asset Tag'}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* QUICK REGISTER MODAL: REGISTER NEW ASSET WITH BRANCH */}
+      {/* ========================================================================= */}
+      {quickRegisterOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 animate-in fade-in duration-200">
+          <div className="bg-card w-full max-w-lg rounded-2xl shadow-2xl border border-border overflow-hidden">
+            <div className="p-4 sm:p-5 border-b border-border/60 bg-muted/20 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-primary/10 text-primary">
+                  <Sparkles className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-foreground">
+                    Quick Register Asset Unit
+                  </h3>
+                  <p className="text-xs text-muted-foreground">
+                    Directly register a device or serial into a chosen branch
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setQuickRegisterOpen(false)}
+                className="p-1 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (!quickForm.productId || !quickForm.serialNumber.trim()) {
+                  toast.error("Please select a product and provide a serial number / tag");
+                  return;
+                }
+                setIsQuickRegistering(true);
+                try {
+                  const selProd = products.find((p) => p.id === quickForm.productId);
+                  const success = await addAssetSerial({
+                    productId: quickForm.productId,
+                    productName: selProd?.name || "Asset Item",
+                    serialNumber: quickForm.serialNumber.trim(),
+                    model: quickForm.model.trim() || undefined,
+                    amount: parseFloat(quickForm.amount) || 0,
+                    branch: quickForm.branch,
+                    status: quickForm.status,
+                    supplier: quickForm.supplier.trim() || undefined,
+                    invoiceNumber: quickForm.invoiceNumber.trim() || undefined,
+                    notes: quickForm.notes.trim() || undefined,
+                    purchaseDate: new Date().toISOString().slice(0, 10),
+                  });
+                  if (success) {
+                    toast.success(`Asset registered in ${quickForm.branch} branch!`);
+                    setQuickRegisterOpen(false);
+                    setQuickForm({
+                      productId: '',
+                      serialNumber: '',
+                      model: '',
+                      amount: '0',
+                      branch: 'Delhi',
+                      status: 'In Stock',
+                      supplier: '',
+                      invoiceNumber: '',
+                      notes: '',
+                    });
+                    await fetchAssetSerials(true);
+                  }
+                } finally {
+                  setIsQuickRegistering(false);
+                }
+              }}
+              className="p-5 space-y-4"
+            >
+              <div className="space-y-3">
+                {/* Product Select */}
+                <div>
+                  <label className="text-xs font-bold text-foreground block mb-1">
+                    Select Product Item <span className="text-destructive">*</span>
+                  </label>
+                  <select
+                    required
+                    value={quickForm.productId}
+                    onChange={(e) => {
+                      const pId = e.target.value;
+                      const p = products.find((x) => x.id === pId);
+                      const cleanPrefix = (p?.name || 'AST')
+                        .replace(/[^a-zA-Z0-9]/g, '')
+                        .slice(0, 4)
+                        .toUpperCase() || 'AST';
+                      const branchCode = (quickForm.branch || 'DEL').slice(0, 3).toUpperCase();
+                      setQuickForm((prev) => ({
+                        ...prev,
+                        productId: pId,
+                        amount: (p?.price || 0).toString(),
+                        supplier: p?.supplier || '',
+                        serialNumber: prev.serialNumber || `${cleanPrefix}-${branchCode}-${Date.now().toString().slice(-4)}`,
+                      }));
+                    }}
+                    className="h-10 w-full rounded-xl border-2 border-border bg-background px-3 text-xs font-medium focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer"
+                  >
+                    <option value="">-- Choose Product --</option>
+                    {products.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name} ({p.category})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Target Branch */}
+                <div>
+                  <label className="text-xs font-bold text-foreground block mb-1">
+                    Target Branch <span className="text-destructive">*</span>
+                  </label>
+                  <select
+                    value={quickForm.branch}
+                    onChange={(e) => {
+                      const newBranch = e.target.value;
+                      setQuickForm((prev) => ({ ...prev, branch: newBranch }));
+                    }}
+                    className="h-10 w-full rounded-xl border-2 border-primary/40 bg-background px-3 text-xs font-bold focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer"
+                  >
+                    {BRANCHES.map((b) => (
+                      <option key={b} value={b}>
+                        🏢 {b} Branch
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Serial Number */}
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-bold text-foreground">
+                      Serial Number / Asset Tag <span className="text-destructive">*</span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const selProd = products.find((p) => p.id === quickForm.productId);
+                        const cleanPrefix = (selProd?.name || 'AST')
+                          .replace(/[^a-zA-Z0-9]/g, '')
+                          .slice(0, 4)
+                          .toUpperCase() || 'AST';
+                        const branchCode = (quickForm.branch || 'DEL').slice(0, 3).toUpperCase();
+                        const genSerial = `${cleanPrefix}-${branchCode}-${Date.now().toString().slice(-4)}${Math.floor(Math.random() * 90 + 10)}`;
+                        setQuickForm((p) => ({ ...p, serialNumber: genSerial }));
+                      }}
+                      className="text-[11px] font-bold text-primary hover:underline flex items-center gap-1 cursor-pointer"
+                    >
+                      <Sparkles className="h-3 w-3" /> Auto-Generate Tag
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    required
+                    value={quickForm.serialNumber}
+                    onChange={(e) => setQuickForm((p) => ({ ...p, serialNumber: e.target.value }))}
+                    placeholder="e.g. XRAY-DEL-001 or PF49A001"
+                    className="h-10 w-full rounded-xl border-2 border-border bg-background px-3 text-xs font-mono font-bold focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground block mb-1">
+                      Model / Specs
+                    </label>
+                    <input
+                      type="text"
+                      value={quickForm.model}
+                      onChange={(e) => setQuickForm((p) => ({ ...p, model: e.target.value }))}
+                      placeholder="e.g. Standard Model"
+                      className="h-9 w-full rounded-lg border border-border bg-background px-3 text-xs focus:ring-1 focus:ring-primary"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground block mb-1">
+                      Unit Value (₹)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={quickForm.amount}
+                      onChange={(e) => setQuickForm((p) => ({ ...p, amount: e.target.value }))}
+                      placeholder="0"
+                      className="h-9 w-full rounded-lg border border-border bg-background px-3 text-xs font-mono focus:ring-1 focus:ring-primary"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-muted-foreground block mb-1">
+                    Notes
+                  </label>
+                  <input
+                    type="text"
+                    value={quickForm.notes}
+                    onChange={(e) => setQuickForm((p) => ({ ...p, notes: e.target.value }))}
+                    placeholder="e.g. Added directly to registry"
+                    className="h-9 w-full rounded-lg border border-border bg-background px-3 text-xs focus:ring-1 focus:ring-primary"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-3 border-t border-border flex items-center justify-end gap-2.5">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setQuickRegisterOpen(false)}
+                  className="text-xs cursor-pointer"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  size="sm"
+                  disabled={isQuickRegistering}
+                  className="text-xs font-bold gap-1.5 shadow-md cursor-pointer"
+                >
+                  <Check className={`h-3.5 w-3.5 ${isQuickRegistering ? 'animate-spin' : ''}`} />
+                  {isQuickRegistering ? 'Registering...' : 'Register Asset in Registry'}
                 </Button>
               </div>
             </form>

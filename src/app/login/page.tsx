@@ -56,8 +56,15 @@ export default function LoginPage() {
 
       toast.success(`Welcome back, ${result.data.user?.name || "User"}!`);
       login(result.data.token, result.data.user);
-    } catch (err) {
-      const msg = "Something went wrong. Please try again.";
+    } catch (err: any) {
+      console.error("Login request error:", err);
+      const isNetworkError =
+        err?.name === "TypeError" ||
+        err?.message?.toLowerCase().includes("fetch") ||
+        (typeof navigator !== "undefined" && !navigator.onLine);
+      const msg = isNetworkError
+        ? "Network error: Unable to connect to backend server. Please verify your internet connection."
+        : err?.message || "Something went wrong. Please try again.";
       setError(msg);
       toast.error(msg);
     } finally {

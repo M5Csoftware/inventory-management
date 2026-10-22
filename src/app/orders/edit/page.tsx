@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { useRouter, useParams } from 'next/navigation';
+import { useState, useEffect, useRef, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { PageLoading } from '@/components/ui/loading';
 import { useInventory } from '@/context/inventory-context';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,10 +13,10 @@ import Link from 'next/link';
 import { toast } from 'react-toastify';
 import { ConfirmModal } from '@/components/confirm-modal';
 
-export default function EditOrderPage() {
+function EditOrderContent() {
   const router = useRouter();
-  const params = useParams<{ id: string }>();
-  const id = params?.id;
+  const searchParams = useSearchParams();
+  const id = searchParams.get('id') || '';
   const { orders, suppliers, products, updateOrder, activeBranch } = useInventory();
   
   const [supplier, setSupplier] = useState('');
@@ -399,5 +400,13 @@ export default function EditOrderPage() {
         }
       />
     </div>
+  );
+}
+
+export default function EditOrderPage() {
+  return (
+    <Suspense fallback={<PageLoading title="Loading Order Details..." />}>
+      <EditOrderContent />
+    </Suspense>
   );
 }

@@ -71,6 +71,8 @@ export interface Supplier {
   location: string;
   branch?: string;
   taxId?: string;
+  gstNo?: string;
+  gstin?: string;
   website?: string;
   // Add bank details fields
   bankName?: string;
@@ -376,7 +378,7 @@ interface InventoryContextType {
   updateOrder: (id: string, orderData: Partial<Order>) => Promise<void>;
   updateOrderStatus: (id: string, status: Order["status"]) => Promise<void>;
   deleteOrder: (id: string) => Promise<void>;
-  addProduct: (product: Omit<Product, "id">) => Promise<void>;
+  addProduct: (product: Omit<Product, "id">) => Promise<Product | null>;
   addCategory: (category: Category) => Promise<void>;
   addSupplier: (supplier: Supplier) => Promise<void>;
   recordTransaction: (
@@ -424,6 +426,16 @@ interface InventoryContextType {
   addAssetSerial: (
     item: Omit<AssetSerialItem, "id" | "createdAt" | "updatedAt">,
   ) => Promise<boolean>;
+  addAssetSerialsBulk: (
+    items: Omit<AssetSerialItem, "id" | "createdAt" | "updatedAt">[],
+  ) => Promise<{
+    success: boolean;
+    insertedCount: number;
+    duplicates?: string[];
+    uncreatedProducts?: { productId: string; productName?: string }[];
+    message?: string;
+  }>;
+
   updateAssetSerial: (
     id: string,
     updates: Partial<AssetSerialItem>,
@@ -636,10 +648,10 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
         safeFetchJson(`${API_BASE}/orders${branchQuery}`, {
           headers: NO_BODY_HEADER,
         }),
-        safeFetchJson(`${API_BASE}/assets${branchQuery}`, {
+        safeFetchJson(`${API_BASE}/assets`, {
           headers: NO_BODY_HEADER,
         }),
-        safeFetchJson(`${API_BASE}/asset-serials${branchQuery}`, {
+        safeFetchJson(`${API_BASE}/asset-serials`, {
           headers: NO_BODY_HEADER,
         }),
       ]);
@@ -737,12 +749,15 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
             invalidateCache();
             await fetchData(true);
             toast.success("Product added successfully!");
+            return data.data || null;
           } else {
             toast.error(data.message || "Failed to add product.");
+            return null;
           }
         } catch (error) {
           console.error("Failed to add product:", error);
           toast.error("Network error while adding product.");
+          return null;
         }
       },
       undefined,
@@ -1376,9 +1391,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
 
   const fetchAssetSerials = async (forceRefresh = false) => {
     try {
-      const branchQuery =
-        activeBranch !== "All" ? `?branch=${activeBranch}` : "";
-      const url = `${API_BASE}/asset-serials${branchQuery}`;
+      const url = `${API_BASE}/asset-serials`;
       if (forceRefresh) invalidateCache(url);
       const data = await getCachedAsync(
         url,
@@ -1418,6 +1431,87 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
     } catch (error: any) {
       toast.error(error.message || "Error adding asset serial");
       return false;
+    }
+  };
+
+  const addAssetSerialsBulk = async (
+    items: Omit<AssetSerialItem, "id" | "createdAt" | "updatedAt">[],
+  ): Promise<{
+    success: boolean;
+    insertedCount: number;
+    duplicates?: string[];
+    uncreatedProducts?: { productId: string; productName?: string }[];
+    message?: string;
+  }> => {
+    try {
+      const res = await fetch(`${API_BASE}/asset-serials/bulk`, {
+        method: "POST",
+        headers: getDbHeader(),
+        body: JSON.stringify({ items }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        invalidateCache();
+        await fetchData(true);
+        return {
+          success: true,
+          insertedCount: data.count || items.length,
+        };
+      }
+
+      if (res.status === 400) {
+        return {
+          success: false,
+          insertedCount: 0,
+          duplicates: data.duplicates,
+          uncreatedProducts: data.uncreatedProducts,
+          message: data.message,
+        };
+      }
+
+      if (res.status === 404) {
+        let successCount = 0;
+        const failed: string[] = [];
+        for (const item of items) {
+          try {
+            const singleRes = await fetch(`${API_BASE}/asset-serials`, {
+              method: "POST",
+              headers: getDbHeader(),
+              body: JSON.stringify(item),
+            });
+            if (singleRes.ok) {
+              successCount++;
+            } else {
+              failed.push(item.serialNumber);
+            }
+          } catch {
+            failed.push(item.serialNumber);
+          }
+        }
+        invalidateCache();
+        await fetchData(true);
+        return {
+          success: successCount > 0,
+          insertedCount: successCount,
+          duplicates: failed,
+          message:
+            failed.length > 0 ? `Failed for: ${failed.join(", ")}` : undefined,
+        };
+      }
+
+      return {
+        success: false,
+        insertedCount: 0,
+        message: data.message || "Failed to bulk register asset serials",
+      };
+    } catch (error: any) {
+      console.error("Bulk asset serial creation error:", error);
+      return {
+        success: false,
+        insertedCount: 0,
+        message:
+          error.message || "Network error during bulk asset registration",
+      };
     }
   };
 
@@ -1531,6 +1625,7 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
       assetSerials,
       fetchAssetSerials,
       addAssetSerial,
+      addAssetSerialsBulk,
       updateAssetSerial,
       deleteAssetSerial,
       revertAuditLog,

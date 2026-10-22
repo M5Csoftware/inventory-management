@@ -137,7 +137,7 @@ export default function ProductsPage() {
                             : product.supplier || '-'}
                         </td>
                         <td className="p-4 align-middle text-right space-x-1">
-                          <Link href={`/products/edit/${product.id}`}>
+                          <Link href={`/products/edit?id=${product.id}`}>
                             <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
                               <Edit2 className="h-4 w-4" />
                             </Button>

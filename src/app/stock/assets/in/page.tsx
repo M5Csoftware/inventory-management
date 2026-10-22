@@ -31,8 +31,10 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useInventory, Product, BRANCHES } from "@/context/inventory-context";
+import { useInventory, Product, BRANCHES, AssetSerialItem } from "@/context/inventory-context";
 import { ConfirmModal } from "@/components/confirm-modal";
+import AssetSpreadsheetImport from "@/components/stock/AssetSpreadsheetImport";
+import { FileSpreadsheet } from "lucide-react";
 import { toast } from "react-toastify";
 
 export interface AssetModelGroup {
@@ -49,14 +51,23 @@ export interface AssetModelGroup {
 }
 
 export default function StockInAssetsPage() {
-  const { products, categories, suppliers, recordTransaction, activeBranch } =
-    useInventory();
+  const {
+    products,
+    categories,
+    suppliers,
+    recordTransaction,
+    activeBranch,
+    addAssetSerialsBulk,
+    fetchAssetSerials,
+    updateCategory,
+  } = useInventory();
   const router = useRouter();
+  const [activeTab, setActiveTab] = useState<"spreadsheet" | "manual">("spreadsheet");
 
   // General Intake Info
   const [productId, setProductId] = useState("");
   const [targetBranch, setTargetBranch] = useState(() =>
-    activeBranch === "All" ? "Ahmedabad" : activeBranch,
+    activeBranch === "All" ? "Delhi" : activeBranch,
   );
   const [supplier, setSupplier] = useState("");
   const [customSupplier, setCustomSupplier] = useState("");
@@ -67,15 +78,10 @@ export default function StockInAssetsPage() {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const submittingRef = useRef(false);
 
-  useEffect(() => {
-    if (activeBranch !== "All") {
-      setTargetBranch(activeBranch);
-    }
-  }, [activeBranch]);
-
   // Searchable Item Name dropdown states
   const [productSearchOpen, setProductSearchOpen] = useState(false);
   const [productSearchTerm, setProductSearchTerm] = useState("");
+  const [productCatalogTab, setProductCatalogTab] = useState<"asset" | "all">("asset");
   const productDropdownRef = useRef<HTMLDivElement>(null);
 
   // Model Groups State (Supports multiple models in 1 intake session)
@@ -94,28 +100,50 @@ export default function StockInAssetsPage() {
     },
   ]);
 
-  // Filter products that belong to an asset category
-  const assetProducts = products.filter((prod) => {
+  // Helper to determine if a product belongs to an asset category or represents equipment/asset
+  const isProductAnAsset = (prod: Product) => {
     const category = categories.find(
-      (c) => c.name.toLowerCase() === prod.category.toLowerCase(),
+      (c) => (c.name || "").trim().toLowerCase() === (prod.category || "").trim().toLowerCase(),
     );
-    return category?.isAsset === true;
-  });
+    if (category?.isAsset === true) return true;
+    const catName = (prod.category || "").toLowerCase();
+    const prodName = (prod.name || "").toLowerCase();
+    return (
+      catName.includes("asset") ||
+      prodName.includes("asset") ||
+      catName.includes("equipment") ||
+      catName.includes("machine") ||
+      catName.includes("device") ||
+      catName.includes("hardware")
+    );
+  };
 
-  const filteredAssetProducts = assetProducts.filter(
+  // Filter products that belong to an asset category
+  const assetProducts = products.filter(isProductAnAsset);
+
+  // Displayed products depending on catalog tab
+  const displayedCatalogProducts = productCatalogTab === "asset" && assetProducts.length > 0
+    ? assetProducts
+    : products;
+
+  const filteredProductsList = displayedCatalogProducts.filter(
     (prod) =>
       prod.name.toLowerCase().includes(productSearchTerm.toLowerCase()) ||
-      prod.category.toLowerCase().includes(productSearchTerm.toLowerCase()),
+      (prod.category || "").toLowerCase().includes(productSearchTerm.toLowerCase()),
   );
 
-  const selectedProduct = assetProducts.find((p) => p.id === productId);
+  const selectedProduct = products.find((p) => p.id === productId);
 
   // Set default product selection
   useEffect(() => {
-    if (assetProducts.length > 0 && !productId) {
-      setProductId(assetProducts[0].id);
+    if (!productId) {
+      if (assetProducts.length > 0) {
+        setProductId(assetProducts[0].id);
+      } else if (products.length > 0) {
+        setProductId(products[0].id);
+      }
     }
-  }, [assetProducts, productId]);
+  }, [assetProducts, products, productId]);
 
   // Auto-fill price in model group 1 if selectedProduct price exists
   useEffect(() => {
@@ -220,6 +248,52 @@ export default function StockInAssetsPage() {
     );
   };
 
+  const handleBulkPasteSerials = (groupId: string, text: string) => {
+    const lines = text
+      .split(/[\n,;]+/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (lines.length === 0) return;
+
+    setModelGroups((prev) =>
+      prev.map((g) => {
+        if (g.id !== groupId) return g;
+        return {
+          ...g,
+          quantity: lines.length,
+          serialNumbers: lines,
+          showBulkPaste: false,
+          bulkText: "",
+        };
+      })
+    );
+    toast.success(`Imported ${lines.length} serial numbers for model!`);
+  };
+
+  const handleAutoGenerateSerials = (groupId: string) => {
+    const cleanPrefix = (selectedProduct?.name || "AST")
+      .replace(/[^a-zA-Z0-9]/g, "")
+      .slice(0, 4)
+      .toUpperCase() || "AST";
+    const branchCode = (targetBranch || "DEL").slice(0, 3).toUpperCase();
+    const timePart = Date.now().toString().slice(-4);
+
+    setModelGroups((prev) =>
+      prev.map((g) => {
+        if (g.id !== groupId) return g;
+        const count = g.quantity || 1;
+        const generated = Array.from({ length: count }).map(
+          (_, idx) => `${cleanPrefix}-${branchCode}-${timePart}${idx + 1}`,
+        );
+        return {
+          ...g,
+          serialNumbers: generated,
+        };
+      }),
+    );
+    toast.success("Auto-generated unique asset serial tags!");
+  };
+
   // Totals calculations
   const totalUnits = modelGroups.reduce((acc, g) => acc + (g.quantity || 0), 0);
   const totalValuation = modelGroups.reduce(
@@ -229,7 +303,10 @@ export default function StockInAssetsPage() {
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!productId || totalUnits <= 0) return;
+    if (!productId || totalUnits <= 0) {
+      toast.error("Please select a product and specify quantity > 0");
+      return;
+    }
     setShowConfirmModal(true);
   };
 
@@ -244,12 +321,37 @@ export default function StockInAssetsPage() {
 
     try {
       let overallSuccess = true;
-      const failedSerials: string[] = [];
+      let totalRegisteredCount = 0;
+
+      // Auto-ensure product's category is marked as asset category
+      if (selectedProduct?.category) {
+        const cat = categories.find(
+          (c) => (c.name || "").trim().toLowerCase() === selectedProduct.category.trim().toLowerCase(),
+        );
+        if (cat && !cat.isAsset) {
+          try {
+            await updateCategory(cat.name, { ...cat, isAsset: true });
+          } catch (e) {
+            console.warn("Could not auto-mark category as asset:", e);
+          }
+        }
+      }
 
       for (const group of modelGroups) {
-        const serialsList = group.serialNumbers
-          .map((s) => s.trim())
-          .filter(Boolean);
+        const cleanPrefix = (selectedProduct?.name || "AST")
+          .replace(/[^a-zA-Z0-9]/g, "")
+          .slice(0, 4)
+          .toUpperCase() || "AST";
+        const branchCode = branchToUse.slice(0, 3).toUpperCase();
+        const timePart = Date.now().toString().slice(-4);
+
+        // Build list of all serial numbers for this group, auto-generating any that are empty
+        const serialsList: string[] = [];
+        for (let i = 0; i < (group.quantity || 1); i++) {
+          const userVal = group.serialNumbers[i]?.trim();
+          const finalVal = userVal || `${cleanPrefix}-${branchCode}-${timePart}${i + 1}`;
+          serialsList.push(finalVal);
+        }
 
         // Build warranty string from individual fields
         const warrantyParts = [];
@@ -288,7 +390,7 @@ export default function StockInAssetsPage() {
 
         const fullNotes = `[Asset Intake] ${summaryParts.join(" | ")}`;
 
-        // Record the transaction with the branch
+        // Record the transaction with the selected branch
         const success = await recordTransaction(
           productId,
           "Stock In",
@@ -310,65 +412,67 @@ export default function StockInAssetsPage() {
           continue;
         }
 
-        // Save each serial number to AssetSerial collection
-        if (serialsList.length > 0) {
-          const API_BASE = getInventoryApiUrl();
-          const token = localStorage.getItem("token");
-          const dbName = localStorage.getItem("dbName") || "m5c-inventory";
+        // Prepare serial items to register in asset-serials collection
+        const serialItemsToRegister: Omit<AssetSerialItem, "id" | "createdAt" | "updatedAt">[] =
+          serialsList.map((serial) => ({
+            productId: productId,
+            productName: selectedProduct?.name || "Asset Item",
+            serialNumber: serial,
+            model: group.model || "Standard",
+            warranty: warrantyString,
+            supplier: effectiveSupplier,
+            purchaseDate: new Date().toISOString().slice(0, 10),
+            invoiceNumber: invoiceNumber || "",
+            branch: branchToUse,
+            amount: parseFloat(group.amount) || 0,
+            status: "In Stock",
+            notes: notes || "",
+          }));
 
-          for (const serial of serialsList) {
-            try {
-              const response = await fetch(`${API_BASE}/asset-serials`, {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  "x-database": dbName,
-                  ...(token ? { Authorization: `Bearer ${token}` } : {}),
-                },
-                body: JSON.stringify({
-                  productId: productId,
-                  productName: selectedProduct?.name || "Unknown",
-                  serialNumber: serial,
-                  model: group.model || "",
-                  warranty: warrantyString,
-                  supplier: effectiveSupplier,
-                  purchaseDate: new Date().toISOString().slice(0, 10),
-                  invoiceNumber: invoiceNumber || "",
-                  branch: branchToUse,
-                  amount: parseFloat(group.amount) || 0,
-                  status: "In Stock",
-                  notes: notes || "",
-                }),
-              });
+        // Register serials using bulk API
+        if (serialItemsToRegister.length > 0) {
+          try {
+            const bulkRes = await addAssetSerialsBulk?.(serialItemsToRegister);
+            if (bulkRes?.success) {
+              totalRegisteredCount += bulkRes.insertedCount;
+            } else {
+              // Fallback direct register if bulk returns false
+              const API_BASE = getInventoryApiUrl();
+              const token = localStorage.getItem("token");
+              const dbName = localStorage.getItem("dbName") || "m5c-inventory";
 
-              const result = await response.json();
-
-              if (!response.ok) {
-                console.error(`Failed to save serial ${serial}:`, result);
-                failedSerials.push(serial);
+              for (const item of serialItemsToRegister) {
+                try {
+                  await fetch(`${API_BASE}/asset-serials`, {
+                    method: "POST",
+                    headers: {
+                      "Content-Type": "application/json",
+                      "x-database": dbName,
+                      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                    },
+                    body: JSON.stringify(item),
+                  });
+                  totalRegisteredCount++;
+                } catch (e) {
+                  console.error("Failed to register single serial:", e);
+                }
               }
-            } catch (err) {
-              console.error(`Failed to save serial ${serial}:`, err);
-              failedSerials.push(serial);
             }
+          } catch (e) {
+            console.error("Bulk serial registration error:", e);
           }
         }
       }
 
       if (overallSuccess) {
-        if (failedSerials.length > 0) {
-          toast.warning(
-            `Successfully registered ${totalUnits} asset units, but failed to save serial numbers: ${failedSerials.join(", ")}`,
-          );
-        } else {
-          toast.success(
-            `Successfully registered ${totalUnits} asset units into inventory!`,
-          );
-        }
+        toast.success(
+          `Successfully registered ${totalUnits} asset units in ${branchToUse} Branch!`,
+        );
         setShowConfirmModal(false);
-        router.push("/stock/assets");
+        await fetchAssetSerials(true);
+        router.push("/stock/assets/all");
       } else {
-        toast.error("Failed to complete asset intake. Please try again.");
+        toast.error("Failed to complete asset intake. Please check branch and details.");
       }
     } catch (err) {
       console.error("Asset intake error:", err);
@@ -402,14 +506,47 @@ export default function StockInAssetsPage() {
         </div>
       </div>
 
-      {assetProducts.length === 0 ? (
+      {/* Mode Switcher Tabs */}
+      <div className="inline-flex items-center gap-2 p-1.5 rounded-2xl bg-muted/60 border border-border/70 shadow-inner w-full sm:w-auto overflow-x-auto">
+        <button
+          type="button"
+          onClick={() => setActiveTab("manual")}
+          className={`flex items-center justify-center gap-2.5 py-2.5 px-5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+            activeTab === "manual"
+              ? "bg-background text-foreground shadow-md shadow-black/5 border border-border/40"
+              : "text-muted-foreground hover:text-foreground hover:bg-background/40"
+          }`}
+        >
+          <Laptop className="h-4 w-4 text-primary shrink-0" />
+          <span className="whitespace-nowrap">Standard Batch Intake Form</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("spreadsheet")}
+          className={`flex items-center justify-center gap-2.5 py-2.5 px-5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+            activeTab === "spreadsheet"
+              ? "bg-background text-foreground shadow-md shadow-black/5 border border-border/40"
+              : "text-muted-foreground hover:text-foreground hover:bg-background/40"
+          }`}
+        >
+          <FileSpreadsheet className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+          <span className="whitespace-nowrap">Spreadsheet Bulk Import</span>
+          <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 font-extrabold whitespace-nowrap shrink-0">
+            Excel / CSV
+          </span>
+        </button>
+      </div>
+
+      {activeTab === "spreadsheet" ? (
+        <AssetSpreadsheetImport onSuccess={() => router.push("/stock/assets/all")} />
+      ) : products.length === 0 ? (
         <Card className="border border-border/50 bg-background/60 backdrop-blur-sm p-8 text-center space-y-4 max-w-lg mx-auto shadow-xl">
           <p className="text-sm text-muted-foreground">
-            You must have at least one asset product created (under an asset
-            category) before recording stock in for assets.
+            You must have at least one product created in the inventory catalog before recording stock in for assets.
           </p>
           <Link href="/products/new">
-            <Button size="sm">Create Asset Product</Button>
+            <Button size="sm">Create Product</Button>
           </Link>
         </Card>
       ) : (
@@ -427,8 +564,7 @@ export default function StockInAssetsPage() {
                       General Shipment & Vendor Setup
                     </CardTitle>
                     <CardDescription className="text-xs mt-0.5">
-                      Select item type, invoice reference, and
-                      warehouse storage location
+                      Select item type, target branch warehouse, invoice reference, and storage location
                     </CardDescription>
                   </div>
                 </div>
@@ -442,11 +578,24 @@ export default function StockInAssetsPage() {
               <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
                 {/* Item Name Dropdown */}
                 <div className="space-y-1.5 md:col-span-2 xl:col-span-2 relative z-30">
-                  <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    <Package className="h-3.5 w-3.5 text-primary" />
-                    Asset Item Name / Product{" "}
-                    <span className="text-destructive">*</span>
-                  </label>
+                  <div className="flex items-center justify-between">
+                    <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      <Package className="h-3.5 w-3.5 text-primary" />
+                      Asset Item Name / Product{" "}
+                      <span className="text-destructive">*</span>
+                    </label>
+                    {selectedProduct && (
+                      <span
+                        className={`text-[9px] px-2 py-0.2 rounded-full font-bold ${
+                          isProductAnAsset(selectedProduct)
+                            ? "bg-blue-500/15 text-blue-700 dark:text-blue-300"
+                            : "bg-amber-500/15 text-amber-700 dark:text-amber-300"
+                        }`}
+                      >
+                        {isProductAnAsset(selectedProduct) ? "Fixed Asset" : "General Catalog Item"}
+                      </span>
+                    )}
+                  </div>
 
                   <div className="relative" ref={productDropdownRef}>
                     <button
@@ -456,14 +605,40 @@ export default function StockInAssetsPage() {
                     >
                       <span className="truncate font-medium">
                         {selectedProduct
-                          ? `${selectedProduct.name} (${selectedProduct.category}) — Current Stock: ${getStockLabel(selectedProduct)} units`
+                          ? `${selectedProduct.name} (${selectedProduct.category || "Uncategorized"}) — Stock: ${getStockLabel(selectedProduct)} units`
                           : "Select an asset product"}
                       </span>
                       <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0 ml-2" />
                     </button>
 
                     {productSearchOpen && (
-                      <div className="absolute left-0 right-0 top-full mt-1.5 z-50 rounded-xl border border-border bg-background shadow-2xl overflow-hidden p-2 space-y-2 max-h-64 overflow-y-auto">
+                      <div className="absolute left-0 right-0 top-full mt-1.5 z-50 rounded-xl border border-border bg-background shadow-2xl overflow-hidden p-2 space-y-2 max-h-72 overflow-y-auto">
+                        {/* Catalog Type Switcher Tabs */}
+                        <div className="flex items-center gap-1 p-1 bg-muted/60 rounded-lg text-[11px] font-semibold">
+                          <button
+                            type="button"
+                            onClick={() => setProductCatalogTab("asset")}
+                            className={`flex-1 py-1 rounded-md transition-all ${
+                              productCatalogTab === "asset"
+                                ? "bg-background text-foreground shadow-xs font-bold"
+                                : "text-muted-foreground hover:text-foreground"
+                            }`}
+                          >
+                            Assets &amp; Hardware ({assetProducts.length})
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setProductCatalogTab("all")}
+                            className={`flex-1 py-1 rounded-md transition-all ${
+                              productCatalogTab === "all"
+                                ? "bg-background text-foreground shadow-xs font-bold"
+                                : "text-muted-foreground hover:text-foreground"
+                            }`}
+                          >
+                            All Products ({products.length})
+                          </button>
+                        </div>
+
                         <div className="relative">
                           <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                           <input
@@ -473,41 +648,49 @@ export default function StockInAssetsPage() {
                             onChange={(e) =>
                               setProductSearchTerm(e.target.value)
                             }
-                            placeholder="Search asset items..."
+                            placeholder="Search by product name or category..."
                             className="h-9 w-full rounded-lg border border-input bg-muted/40 pl-9 pr-3 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
                           />
                         </div>
 
-                        <div className="divide-y divide-border/50">
-                          {filteredAssetProducts.length === 0 ? (
+                        <div className="divide-y divide-border/50 max-h-48 overflow-y-auto">
+                          {filteredProductsList.length === 0 ? (
                             <p className="text-xs text-muted-foreground text-center py-3">
-                              No asset products found.
+                              No products found.
                             </p>
                           ) : (
-                            filteredAssetProducts.map((prod) => (
-                              <button
-                                type="button"
-                                key={prod.id}
-                                onClick={() => {
-                                  setProductId(prod.id);
-                                  setProductSearchOpen(false);
-                                  setProductSearchTerm("");
-                                }}
-                                className="w-full text-left px-3 py-2.5 text-xs hover:bg-muted/60 transition-colors flex items-center justify-between rounded-lg"
-                              >
-                                <div>
-                                  <p className="font-semibold text-foreground">
-                                    {prod.name}
-                                  </p>
-                                  <p className="text-[10px] text-muted-foreground">
-                                    {prod.category}
-                                  </p>
-                                </div>
-                                {prod.id === productId && (
-                                  <Check className="h-4 w-4 text-primary shrink-0" />
-                                )}
-                              </button>
-                            ))
+                            filteredProductsList.map((prod) => {
+                              const isAsset = isProductAnAsset(prod);
+                              return (
+                                <button
+                                  type="button"
+                                  key={prod.id}
+                                  onClick={() => {
+                                    setProductId(prod.id);
+                                    setProductSearchOpen(false);
+                                    setProductSearchTerm("");
+                                  }}
+                                  className="w-full text-left px-3 py-2.5 text-xs hover:bg-muted/60 transition-colors flex items-center justify-between rounded-lg"
+                                >
+                                  <div>
+                                    <p className="font-semibold text-foreground flex items-center gap-1.5">
+                                      {prod.name}
+                                      {isAsset && (
+                                        <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-400 font-bold">
+                                          Asset
+                                        </span>
+                                      )}
+                                    </p>
+                                    <p className="text-[10px] text-muted-foreground">
+                                      {prod.category} • Total Stock: {getStockLabel(prod)}
+                                    </p>
+                                  </div>
+                                  {prod.id === productId && (
+                                    <Check className="h-4 w-4 text-primary shrink-0" />
+                                  )}
+                                </button>
+                              );
+                            })
                           )}
                         </div>
                       </div>
@@ -562,27 +745,26 @@ export default function StockInAssetsPage() {
 
                 {/* Target Branch */}
                 <div className="space-y-1.5">
-                  <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    <Building2 className="h-3.5 w-3.5 text-primary" />
-                    Target Branch <span className="text-destructive">*</span>
-                  </label>
-                  {activeBranch === "All" ? (
-                    <select
-                      value={targetBranch}
-                      onChange={(e) => setTargetBranch(e.target.value)}
-                      className="h-10 w-full rounded-xl border-2 border-gray-300 bg-white/90 px-3 text-xs font-semibold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 dark:border-gray-600 dark:bg-gray-900/90 cursor-pointer"
-                    >
-                      {BRANCHES.map((b: string) => (
-                        <option key={b} value={b}>
-                          🏢 {b} Branch
-                        </option>
-                      ))}
-                    </select>
-                  ) : (
-                    <div className="h-10 w-full rounded-xl border-2 border-gray-200 bg-muted/40 px-3 text-xs flex items-center font-semibold text-foreground">
-                      🏢 {activeBranch} Branch
-                    </div>
-                  )}
+                  <div className="flex items-center justify-between">
+                    <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      <Building2 className="h-3.5 w-3.5 text-primary" />
+                      Target Branch <span className="text-destructive">*</span>
+                    </label>
+                    <span className="text-[10px] font-bold text-primary px-1.5 py-0.2 rounded bg-primary/10">
+                      Destination
+                    </span>
+                  </div>
+                  <select
+                    value={targetBranch}
+                    onChange={(e) => setTargetBranch(e.target.value)}
+                    className="h-10 w-full rounded-xl border-2 border-primary/40 bg-white/95 px-3 text-xs font-bold shadow-sm transition-all focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 dark:border-primary/50 dark:bg-gray-900/95 cursor-pointer"
+                  >
+                    {BRANCHES.map((b: string) => (
+                      <option key={b} value={b}>
+                        🏢 {b} Branch {b === targetBranch ? "✓" : ""}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 {/* Storage Location */}
@@ -810,12 +992,83 @@ export default function StockInAssetsPage() {
 
                   {/* Serial Numbers Section */}
                   <div className="pt-3 border-t border-border/40 space-y-3">
-                    <div className="flex items-center gap-2">
-                      <Barcode className="h-4 w-4 text-primary" />
-                      <h4 className="text-xs font-bold uppercase tracking-wider">
-                        Individual Serial Numbers ({group.quantity} Required)
-                      </h4>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <Barcode className="h-4 w-4 text-primary" />
+                        <h4 className="text-xs font-bold uppercase tracking-wider">
+                          Individual Serial Numbers ({group.quantity} Required)
+                        </h4>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleAutoGenerateSerials(group.id)}
+                          className="text-[11px] h-7 px-2.5 text-primary hover:bg-primary/10 gap-1 font-semibold border-primary/30"
+                        >
+                          <Sparkles className="h-3 w-3" />
+                          Auto-Generate Tags
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() =>
+                            updateModelGroup(group.id, {
+                              showBulkPaste: !group.showBulkPaste,
+                            })
+                          }
+                          className="text-[11px] h-7 px-2.5 text-primary hover:bg-primary/10 gap-1 font-semibold"
+                        >
+                          <FileText className="h-3 w-3" />
+                          {group.showBulkPaste ? "Hide Quick Paste" : "Quick Paste Serials"}
+                        </Button>
+                      </div>
                     </div>
+
+                    {group.showBulkPaste && (
+                      <div className="p-3.5 rounded-xl bg-muted/40 border border-primary/20 space-y-2">
+                        <p className="text-xs font-semibold text-foreground">
+                          Paste Serial Numbers (separated by newlines, commas, or spaces):
+                        </p>
+                        <textarea
+                          rows={3}
+                          value={group.bulkText || ""}
+                          onChange={(e) =>
+                            updateModelGroup(group.id, { bulkText: e.target.value })
+                          }
+                          placeholder="PF49A001&#10;PF49A002&#10;PF49A003"
+                          className="w-full text-xs font-mono p-2 rounded-lg border border-input bg-background focus:outline-none focus:ring-1 focus:ring-primary"
+                        />
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="secondary"
+                            onClick={() =>
+                              updateModelGroup(group.id, {
+                                showBulkPaste: false,
+                                bulkText: "",
+                              })
+                            }
+                            className="text-xs h-7"
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={() =>
+                              handleBulkPasteSerials(group.id, group.bulkText || "")
+                            }
+                            className="text-xs h-7 font-bold"
+                          >
+                            Populate Serials
+                          </Button>
+                        </div>
+                      </div>
+                    )}
 
                     {/* Individual Serial Input Grid */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
