@@ -1,0 +1,78 @@
+name: Release Desktop App
+
+on:
+  push:
+    branches:
+      - main
+      - features/tauri-app
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  release:
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: 'windows-latest'
+            args: ''
+
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: 'npm'
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust dependencies
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build Next.js Static Export
+        run: npm run build
+        env:
+          BACKEND_URL: https://inventory-node-server.onrender.com
+          API_URL: https://inventory-node-server.onrender.com
+
+      - name: Sanitize Tauri Signing Key
+        shell: pwsh
+        env:
+          RAW_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        run: |
+          $cleanKey = ($env:RAW_KEY).Trim()
+          "TAURI_SIGNING_PRIVATE_KEY=$cleanKey" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+      - name: Build and Publish Tauri Desktop App
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ env.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          tagName: v__VERSION__
+          releaseName: 'Inventory Management v__VERSION__'
+          releaseBody: |
+            ## Inventory Management Desktop App (v__VERSION__)
+            
+            ### Automatic Updates
+            If you already have this software installed, it will automatically detect and install this update upon launch.
+            
+            ### Direct Downloads
+            Download the installer below (.msi or .exe) to install or reinstall.
+          releaseDraft: false
+          prerelease: false

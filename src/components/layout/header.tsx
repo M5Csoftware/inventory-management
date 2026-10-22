@@ -11,6 +11,7 @@ import { MobileSidebar } from "./mobile-sidebar";
 import { TabBar } from "./tab-bar";
 
 import { HeaderLoadingBar } from "@/components/ui/loading";
+import { UpdateChecker } from "@/components/update-checker";
 
 export function Header() {
   const pathname = usePathname();
@@ -219,6 +220,9 @@ function HeaderInner() {
               </div>
             )}
           </div>
+ 
+          {/* In-App Software Update Checker */}
+          <UpdateChecker />
 
           {/* Avatar / User Initials / Login */}
           {user ? (

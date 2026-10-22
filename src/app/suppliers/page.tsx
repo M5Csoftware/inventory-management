@@ -202,7 +202,7 @@ export default function SuppliersPage() {
                           {linkedProducts.length} products linked →
                         </Link>
                         <div className="flex gap-1 shrink-0">
-                          <Link href={`/suppliers/edit/${encodeURIComponent(supplier.name)}`}>
+                          <Link href={`/suppliers/edit?name=${encodeURIComponent(supplier.name)}`}>
                             <Button
                               variant="ghost"
                               size="icon"

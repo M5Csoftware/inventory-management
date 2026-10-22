@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { PageLoading } from "@/components/ui/loading";
 import { useInventory, QuotationItem, Quotation } from "@/context/inventory-context";
 import {
   Card,
@@ -24,13 +25,10 @@ import {
 } from "lucide-react";
 import { toast } from "react-toastify";
 
-export default function EditQuotationPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const resolvedParams = use(params);
+function EditQuotationContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const id = searchParams.get("id") || "";
   const { quotations, suppliers, products, updateQuotation } = useInventory();
 
   const [existingQuotation, setExistingQuotation] = useState<Quotation | null>(null);
@@ -47,7 +45,8 @@ export default function EditQuotationPage({
   const [items, setItems] = useState<QuotationItem[]>([]);
 
   useEffect(() => {
-    const q = quotations.find((item) => item.id === resolvedParams.id);
+    if (!id) return;
+    const q = quotations.find((item) => item.id === id);
     if (q) {
       setExistingQuotation(q);
       setSupplier(q.supplier);
@@ -58,7 +57,7 @@ export default function EditQuotationPage({
       setStatus(q.status);
       setItems(q.items);
     }
-  }, [resolvedParams.id, quotations]);
+  }, [id, quotations]);
 
   if (!existingQuotation) {
     return (
@@ -441,5 +440,13 @@ export default function EditQuotationPage({
         </div>
       </form>
     </div>
+  );
+}
+
+export default function EditQuotationPage() {
+  return (
+    <Suspense fallback={<PageLoading title="Loading Quotation Details..." />}>
+      <EditQuotationContent />
+    </Suspense>
   );
 }
