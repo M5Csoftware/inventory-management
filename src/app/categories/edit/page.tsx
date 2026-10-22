@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import Link from 'next/link';
-import { useRouter, useParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { PageLoading } from '@/components/ui/loading';
 import {
   ArrowLeft,
   FolderPlus,
@@ -26,11 +27,11 @@ import { useInventory } from '@/context/inventory-context';
 import { ConfirmModal } from '@/components/confirm-modal';
 import { toast } from 'react-toastify';
 
-export default function EditCategoryPage() {
+function EditCategoryContent() {
   const { categories, updateCategory } = useInventory();
   const router = useRouter();
-  const params = useParams();
-  const decodedName = decodeURIComponent((params?.name as string) || '');
+  const searchParams = useSearchParams();
+  const decodedName = decodeURIComponent(searchParams.get('name') || '');
 
   const [categoryType, setCategoryType] = useState<'major' | 'sub'>('major');
   const [name, setName] = useState('');
@@ -357,5 +358,13 @@ export default function EditCategoryPage() {
         }
       />
     </div>
+  );
+}
+
+export default function EditCategoryPage() {
+  return (
+    <Suspense fallback={<PageLoading title="Loading Category Details..." />}>
+      <EditCategoryContent />
+    </Suspense>
   );
 }

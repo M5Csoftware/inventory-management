@@ -237,7 +237,7 @@ export default function ManageRolesPage() {
                       <td className="p-4 text-right">
                         <div className="flex items-center justify-end gap-2">
                           <Link
-                            href={`/manage-roles/edit/${u.id}`}
+                            href={`/manage-roles/edit?id=${u.id}`}
                             className="px-2.5 py-1.5 text-xs font-semibold text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg transition-colors inline-flex items-center gap-1.5 border border-border/40"
                             title="Edit User & Permissions"
                           >

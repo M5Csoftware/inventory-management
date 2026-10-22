@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useState, useEffect, useRef, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { PageLoading } from "@/components/ui/loading";
 import {
   Shield,
   ArrowLeft,
@@ -18,15 +19,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { ConfirmModal } from "@/components/confirm-modal";
 import { getInventoryApiUrl } from "@/lib/api-config";
-import { SIDEBAR_TABS_STRUCTURE, SidebarFolderGroup } from "../../new/page";
+import { SIDEBAR_TABS_STRUCTURE, SidebarFolderGroup } from "../new/page";
 
 const API_BASE = getInventoryApiUrl();
 const DB_HEADER = { "x-database": "m5c-inventory", "Content-Type": "application/json" };
 
-export default function EditUserPage() {
+function EditUserContent() {
   const router = useRouter();
-  const params = useParams();
-  const userId = params?.id as string;
+  const searchParams = useSearchParams();
+  const userId = (searchParams.get("id") as string) || "";
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -646,5 +647,13 @@ export default function EditUserPage() {
         </div>
       </form>
     </div>
+  );
+}
+
+export default function EditUserPage() {
+  return (
+    <Suspense fallback={<PageLoading title="Loading User Details..." />}>
+      <EditUserContent />
+    </Suspense>
   );
 }

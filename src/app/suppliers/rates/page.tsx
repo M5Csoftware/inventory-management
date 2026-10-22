@@ -585,7 +585,7 @@ export default function SupplierRatesPage() {
                               >
                                 <Edit2 className="h-3.5 w-3.5" /> Quick Edit
                               </Button>
-                              <Link href={`/products/edit/${rateItem.productId}`}>
+                              <Link href={`/products/edit?id=${rateItem.productId}`}>
                                 <Button variant="ghost" size="sm" className="h-8 text-xs text-muted-foreground hover:text-foreground">
                                   Full Edit
                                 </Button>

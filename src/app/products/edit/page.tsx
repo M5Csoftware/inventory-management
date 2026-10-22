@@ -1,9 +1,9 @@
-/* src/app/products/edit/[id]/page.tsx */
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import Link from "next/link";
-import { useRouter, useParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { PageLoading } from '@/components/ui/loading';
 import {
   ArrowLeft,
   Box,
@@ -38,11 +38,11 @@ interface SupplierRow {
   customName?: string;
 }
 
-export default function EditProductPage() {
+function EditProductContent() {
   const { products, updateProduct, categories, suppliers, activeBranch } = useInventory();
   const router = useRouter();
-  const params = useParams<{ id: string }>();
-  const id = params?.id;
+  const searchParams = useSearchParams();
+  const id = searchParams.get('id') || '';
 
   const product = products.find((p: Product) => p.id === id);
 
@@ -763,5 +763,13 @@ export default function EditProductPage() {
         }
       />
     </div>
+  );
+}
+
+export default function EditProductPage() {
+  return (
+    <Suspense fallback={<PageLoading title="Loading Product Details..." />}>
+      <EditProductContent />
+    </Suspense>
   );
 }

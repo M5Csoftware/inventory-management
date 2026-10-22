@@ -309,7 +309,7 @@ export default function CategoriesPage() {
                       </Link>
                     )}
                     <Link
-                      href={`/categories/edit/${encodeURIComponent(category.name)}`}
+                      href={`/categories/edit?name=${encodeURIComponent(category.name)}`}
                       onClick={(event) => event.stopPropagation()}
                     >
                       <Button

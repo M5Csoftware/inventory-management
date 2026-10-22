@@ -1039,7 +1039,7 @@ export default function OrdersPage() {
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 onClick={() =>
-                                  router.push(`/orders/${order.id}/edit`)
+                                  router.push(`/orders/edit?id=${order.id}`)
                                 }
                               >
                                 <Pencil className="mr-2 h-4 w-4" />
