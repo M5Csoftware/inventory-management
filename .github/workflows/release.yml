@@ -4,9 +4,6 @@ on:
   push:
     branches:
       - main
-      - features/tauri-app
-    tags:
-      - 'v*'
   workflow_dispatch:
 
 jobs:
