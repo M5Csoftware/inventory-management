@@ -152,7 +152,8 @@ export const navItems: NavItem[] = [
     icon: FileSpreadsheet,
     subItems: [
       { href: "/invoice", label: "Dashboard", icon: List },
-      { href: "/invoice/new", label: "New Invoice", icon: PlusCircle },
+      { href: "/invoice/tax-invoice", label: "Generate Tax Invoice", icon: FileText },
+      { href: "/invoice/new", label: "Inward Invoice", icon: PlusCircle },
       { href: "/invoice/approvals", label: "Approvals", icon: CheckCircle2 },
       { href: "/invoice/audit", label: "Invoice Log", icon: History },
     ],
