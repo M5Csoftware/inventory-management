@@ -16,18 +16,13 @@ import {
   Edit3,
   ZoomIn,
   ZoomOut,
-  Maximize2,
-  Sparkles,
-  RotateCcw,
-  CheckCircle2,
-  AlertCircle,
   Loader2,
 } from 'lucide-react';
 
 export default function TaxInvoicePage() {
   const [invoiceData, setInvoiceData] = useState<TaxInvoiceData>(INITIAL_SAMPLE_TAX_INVOICE);
   const [viewMode, setViewMode] = useState<'split' | 'form' | 'preview'>('split');
-  const [zoomScale, setZoomScale] = useState<number>(0.78);
+  const [zoomScale, setZoomScale] = useState<number>(0.72);
   const [isExporting, setIsExporting] = useState<boolean>(false);
   const printContainerRef = useRef<HTMLDivElement>(null);
 
@@ -81,12 +76,12 @@ export default function TaxInvoicePage() {
                 <h1 className="text-lg font-bold tracking-tight text-foreground">
                   Tax Invoice PDF Generator
                 </h1>
-                <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                <span className="rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                   Manual Entry
                 </span>
               </div>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Full manual inputs without database dependency &bull; Pixel-perfect A4 export
+                Full manual inputs &bull; Chargeable Weight &times; Rate auto-calculation &bull; Pixel-perfect A4 export
               </p>
             </div>
           </div>
@@ -181,18 +176,16 @@ export default function TaxInvoicePage() {
           className={`h-full grid ${
             viewMode === 'split'
               ? 'grid-cols-1 lg:grid-cols-12'
-              : viewMode === 'form'
-              ? 'grid-cols-1'
               : 'grid-cols-1'
           }`}
         >
-          {/* LEFT: Form Editor Panel */}
+          {/* LEFT: Form Editor Panel - Made WIDER (7 columns out of 12) */}
           {(viewMode === 'split' || viewMode === 'form') && (
             <div
-              className={`no-print p-4 sm:p-6 overflow-y-auto ${
+              className={`no-print p-4 sm:p-6 lg:p-8 overflow-y-auto ${
                 viewMode === 'split'
-                  ? 'lg:col-span-6 xl:col-span-5 border-r border-border/60 max-h-[calc(100vh-65px)]'
-                  : 'max-w-4xl mx-auto w-full'
+                  ? 'lg:col-span-7 xl:col-span-7 2xl:col-span-7 border-r border-border/60 max-h-[calc(100vh-65px)]'
+                  : 'max-w-6xl mx-auto w-full'
               }`}
             >
               <TaxInvoiceForm
@@ -204,14 +197,14 @@ export default function TaxInvoicePage() {
             </div>
           )}
 
-          {/* RIGHT: Live A4 PDF Preview Workspace */}
+          {/* RIGHT: Live A4 PDF Preview Workspace (5 columns out of 12) */}
           {(viewMode === 'split' || viewMode === 'preview') && (
             <div
               id="tax-invoice-print-container"
               ref={printContainerRef}
               className={`relative bg-neutral-900/10 dark:bg-neutral-950 p-4 sm:p-6 overflow-y-auto ${
                 viewMode === 'split'
-                  ? 'lg:col-span-6 xl:col-span-7 max-h-[calc(100vh-65px)]'
+                  ? 'lg:col-span-5 xl:col-span-5 2xl:col-span-5 max-h-[calc(100vh-65px)]'
                   : 'w-full min-h-[calc(100vh-65px)]'
               }`}
             >
@@ -240,7 +233,7 @@ export default function TaxInvoicePage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setZoomScale(viewMode === 'preview' ? 1.0 : 0.78)}
+                    onClick={() => setZoomScale(viewMode === 'preview' ? 1.0 : 0.72)}
                     className="ml-1 text-[11px] text-primary hover:underline font-medium cursor-pointer"
                   >
                     Reset

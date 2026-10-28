@@ -4,6 +4,7 @@ export interface TaxInvoiceItem {
   description: string;
   sacHsn: string;
   rate: number;
+  calculationBasis?: 'weight' | 'flat';
   amount: number;
   nonGstExempt: number;
   taxableValue: number;
@@ -160,6 +161,7 @@ export const INITIAL_SAMPLE_TAX_INVOICE: TaxInvoiceData = {
       description: "AIR FREIGHT",
       sacHsn: "52115120",
       rate: 280.00,
+      calculationBasis: 'weight',
       amount: 475720.00,
       nonGstExempt: 0.00,
       taxableValue: 475720.00,
@@ -177,6 +179,7 @@ export const INITIAL_SAMPLE_TAX_INVOICE: TaxInvoiceData = {
       description: "MAWB CHARGES",
       sacHsn: "0000001",
       rate: 400.00,
+      calculationBasis: 'flat',
       amount: 400.00,
       nonGstExempt: 0.00,
       taxableValue: 400.00,
@@ -279,6 +282,7 @@ export const BLANK_TAX_INVOICE: TaxInvoiceData = {
       description: "",
       sacHsn: "",
       rate: 0,
+      calculationBasis: 'weight',
       amount: 0,
       nonGstExempt: 0,
       taxableValue: 0,
