@@ -176,7 +176,8 @@
     width: 100% !important;
   }
 
-  #tax-invoice-print-container {
+  #tax-invoice-print-container,
+  #mawb-print-container {
     position: static !important;
     width: 100% !important;
     height: auto !important;
@@ -189,7 +190,9 @@
 
   /* Reset scale wrapper transform so print is strictly 100% unscaled */
   .tax-invoice-scale-wrapper,
-  #tax-invoice-print-container > div {
+  .mawb-scale-wrapper,
+  #tax-invoice-print-container > div,
+  #mawb-print-container > div {
     transform: none !important;
     width: 100% !important;
     height: auto !important;
@@ -197,7 +200,8 @@
     padding: 0 !important;
   }
 
-  #tax-invoice-printable-sheet {
+  #tax-invoice-printable-sheet,
+  .mawb-page-sheet {
     box-shadow: none !important;
     margin: 0 auto !important;
     padding: 0 !important;
@@ -208,6 +212,11 @@
     box-sizing: border-box !important;
     transform: none !important;
     page-break-inside: avoid !important;
+    page-break-after: always !important;
+    break-after: page !important;
+  }
+
+  .mawb-page-sheet:last-child {
     page-break-after: avoid !important;
     break-after: avoid !important;
   }
