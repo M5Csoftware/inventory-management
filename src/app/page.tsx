@@ -174,7 +174,7 @@ export default function Dashboard() {
         <div className="flex gap-2 sm:gap-3">
           <Link href="/reports">
             <Button variant="outline" size="sm" className="bg-background/50 backdrop-blur-sm border-dashed text-xs sm:text-sm">
-              View Reports
+              View Report
             </Button>
           </Link>
           <Link href="/products/new">
