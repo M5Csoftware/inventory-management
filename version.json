@@ -1,11 +1,11 @@
 {
-  "version": "0.1.3",
-  "notes": "Merge branch 'main' of https://github.com/M5Csoftware/inventory-management",
-  "pub_date": "2026-10-29T10:48:30Z",
+  "version": "0.1.4",
+  "notes": "update",
+  "pub_date": "2026-10-29T11:23:09Z",
   "platforms": {
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUbzZ0dVltcXBYZ0l5RitNSzUzZkxrL0F2Q09TOWpRYmJwTnVjTnBnR3NqbHRVNTVjTWVsUyt3ckFKa2dETkk0Sm80VUI0NjFMK0YvbHBTaHVCYXZFRUhwelREaFU0cUFnPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMjcwOTA5CWZpbGU6aW52ZW50b3J5LW1hbmFnZW1lbnRfMC4xLjNfeDY0X2VuLVVTLm1zaQl2ZXJzaW9uOjAuMS4zCmJUUHgxVnpkT2xJRnNKcXRYVXIwSTl3RlZKeS80Q2lQRzZYY2JjZGpwTC9pY0xkMTlDSm16MklWNm1yc2lrSTdSeFVnNjRDcFJMK2tWeU1UY0ZwekNBPT0K",
-      "url": "https://github.com/M5Csoftware/inventory-management/releases/download/v0.1.3/inventory-management_0.1.3_x64_en-US.msi"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUbzZ0dVltcXBYZ0JrSFBrMHlmNVEvbDNXazdFdFJ3a25BZldXczNISHMwNXJUS012NUJ3TUZZd1VYMjZ0bi92K00xdnVsOTRiM1dycWxwdFlsY3dIRVVxSTJZQWFxT1FRPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMjcyOTg5CWZpbGU6aW52ZW50b3J5LW1hbmFnZW1lbnRfMC4xLjRfeDY0X2VuLVVTLm1zaQl2ZXJzaW9uOjAuMS40ClNHNFN4bjExajRlam4zbStQSkd4OWhUeVJBRWVkTDNOQktBdVJTeUhsN3ZZVVNvbDFzRnZDWlFTZ2cweTRmS1JnNlFrRTZRaVVMUHFZRGNzdWVJUUF3PT0K",
+      "url": "https://github.com/M5Csoftware/inventory-management/releases/download/v0.1.4/inventory-management_0.1.4_x64_en-US.msi"
     }
   }
 }
