@@ -1,11 +1,11 @@
 {
-  "version": "0.1.1",
-  "notes": "Merge pull request #132 from M5Csoftware/Harman-M5C",
-  "pub_date": "2026-10-29T10:29:05Z",
+  "version": "0.1.2",
+  "notes": "Merge pull request #133 from M5Csoftware/Harman-M5C",
+  "pub_date": "2026-10-29T10:39:23Z",
   "platforms": {
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUbzZ0dVltcXBYZ0VTZHEyOGtFMFNBL2lUeGdna21IbFNlcWFOY2J0ajBxQzdndmdXbFkvdHdhVFpvQVZITGpxRzl3QmpPU3JoNEFCdDZBaHIwamhaNVBFUjhrdGMzVWdrPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMjY5NzQ1CWZpbGU6aW52ZW50b3J5LW1hbmFnZW1lbnRfMC4xLjFfeDY0X2VuLVVTLm1zaQl2ZXJzaW9uOjAuMS4xCmNjWitvbTZBVEtZdEdURllOaTFoZmNMWElKdlU1SS9hZmx1TldyQ1pwWCtCdnc2RXN3bE0zNjBFN1hLUFcyR2FlYVl4cllSdlppS3EyVEs5ME5MQkF3PT0K",
-      "url": "https://github.com/M5Csoftware/inventory-management/releases/download/v0.1.1/inventory-management_0.1.1_x64_en-US.msi"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUbzZ0dVltcXBYZ0xJUXFBL25FbEZSN0VEQ2dGZmtFL0xNNkNlSkttbkRQeXJjVFZnakt1NkJUTkdDSWRETHVBdkl5d3N5WmFQZTRUQWdONS9KVmlTMWE2bFRIOWplaWdzPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMjcwMzYzCWZpbGU6aW52ZW50b3J5LW1hbmFnZW1lbnRfMC4xLjJfeDY0X2VuLVVTLm1zaQl2ZXJzaW9uOjAuMS4yCjZEVXNHcmdzOFcvWmtpYVltRXJRODZoWVVZTkU0eFc5K1ZVSGtnbWpGUlV3OEtnM1o0ODk3SWh2bXQzWmxJUWJBT2Z1YjlQbHZ5SHZZSGxua1ZrcUFnPT0K",
+      "url": "https://github.com/M5Csoftware/inventory-management/releases/download/v0.1.2/inventory-management_0.1.2_x64_en-US.msi"
     }
   }
 }
