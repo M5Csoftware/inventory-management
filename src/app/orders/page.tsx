@@ -204,6 +204,22 @@ export default function OrdersPage() {
     }
   };
 
+  const cleanPdfText = (text: string | undefined | null): string => {
+    if (!text) return "";
+    return String(text)
+      .replace(/\u20B9/g, "Rs. ")
+      .replace(/[\u201C\u201D]/g, '"')
+      .replace(/[\u2018\u2019]/g, "'")
+      .replace(/[\u2013\u2014]/g, "-")
+      .replace(/[\u2022\u2023\u25E6\u2043\u2219]/g, "-")
+      .replace(/\u2026/g, "...")
+      .replace(/\u00A0/g, " ")
+      .replace(/\t/g, "  ")
+      .replace(/[\u200B-\u200D\uFEFF]/g, "")
+      .normalize("NFKD")
+      .replace(/[^\x00-\x7F]/g, "");
+  };
+
   const buildPDFDoc = (order: Order): jsPDF => {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
@@ -628,13 +644,15 @@ export default function OrdersPage() {
     doc.setFont("helvetica", "normal");
     doc.setTextColor(80, 80, 80);
 
+    const termMaxWidth = colWidth - 6;
     let termsY = currentY + 7;
     if (order.termsAndConditions && order.termsAndConditions.trim()) {
       const terms = order.termsAndConditions.split("\n").filter((t) => t.trim());
       terms.forEach((term: string) => {
-        const wrapped = doc.splitTextToSize(term.trim(), colWidth - 4);
+        const cleaned = cleanPdfText(term.trim());
+        const wrapped = doc.splitTextToSize(cleaned, termMaxWidth);
         doc.text(wrapped, margin, termsY);
-        termsY += wrapped.length * 3.2;
+        termsY += wrapped.length * 3.3 + 1.2;
       });
     } else {
       const defaultTerms = [
@@ -644,9 +662,10 @@ export default function OrdersPage() {
         "4. All disputes subject to Delhi jurisdiction.",
       ];
       defaultTerms.forEach((term: string) => {
-        const wrapped = doc.splitTextToSize(term, colWidth - 4);
+        const cleaned = cleanPdfText(term);
+        const wrapped = doc.splitTextToSize(cleaned, termMaxWidth);
         doc.text(wrapped, margin, termsY);
-        termsY += wrapped.length * 3.2;
+        termsY += wrapped.length * 3.3 + 1.2;
       });
     }
 
@@ -663,12 +682,13 @@ export default function OrdersPage() {
 
     let descY = currentY + 7;
     if (order.description && order.description.trim()) {
-      const descLines = doc.splitTextToSize(order.description, colWidth - 4);
+      const cleanedDesc = cleanPdfText(order.description.trim());
+      const descLines = doc.splitTextToSize(cleanedDesc, colWidth - 6);
       doc.text(descLines, descX, descY);
-      descY += descLines.length * 3.2;
+      descY += descLines.length * 3.3 + 1.2;
     } else {
       doc.text("No additional notes provided.", descX, descY);
-      descY += 3.2;
+      descY += 3.3 + 1.2;
     }
 
     // --- 6. AUTHORIZED SIGNATORY & FOOTER ---

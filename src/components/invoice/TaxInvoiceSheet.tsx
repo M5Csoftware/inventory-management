@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { TaxInvoiceData } from '@/types/tax-invoice';
+import { DEFAULT_M5C_LOGO_BASE64 } from '@/lib/logo-data';
 
 interface TaxInvoiceSheetProps {
   data: TaxInvoiceData;
@@ -35,21 +36,23 @@ export function TaxInvoiceSheet({ data, scale = 1 }: TaxInvoiceSheetProps) {
     return num.toFixed(2);
   };
 
+  const emptyRowHeight = Math.max(30, (5 - data.items.length) * 35 + 25);
+
   return (
     <div
       style={{
         transform: scale !== 1 ? `scale(${scale})` : undefined,
         transformOrigin: 'top center',
       }}
-      className="transition-transform duration-200"
+      className="tax-invoice-scale-wrapper transition-transform duration-200 print:transform-none"
     >
       <div
         id="tax-invoice-printable-sheet"
-        className="bg-white text-black font-sans mx-auto shadow-2xl print:shadow-none print:m-0"
+        className="bg-white text-black font-sans mx-auto shadow-2xl print:shadow-none print:m-0 print:p-0 flex flex-col"
         style={{
           width: '210mm',
-          minHeight: '297mm',
-          padding: '8mm 10mm',
+          minHeight: '275mm',
+          padding: '8mm 10mm 6mm 10mm',
           boxSizing: 'border-box',
           fontSize: '10px',
           lineHeight: '1.25',
@@ -58,20 +61,23 @@ export function TaxInvoiceSheet({ data, scale = 1 }: TaxInvoiceSheetProps) {
         }}
       >
         {/* Document Title Header */}
-        <div className="text-center font-bold text-sm tracking-widest mb-1.5 uppercase">
+        <div className="text-center font-bold text-sm tracking-widest mb-1.5 uppercase shrink-0">
           TAX INVOICE
         </div>
 
-        {/* Outer Document Border Enclosure */}
-        <div className="border-[1.5px] border-black">
+        {/* Outer Document Border Enclosure - One solid continuous column */}
+        <div className="border-[1.5px] border-black flex flex-col">
           {/* Header Row: Logo & Company Information */}
           <div className="border-b border-black p-2 flex items-center gap-3">
             <div className="w-16 h-16 shrink-0 flex items-center justify-center p-1">
               <img
-                src={data.company.logoUrl || '/m5c-logo.png'}
+                src={
+                  data.company.logoUrl && data.company.logoUrl !== '/m5c-logo.png'
+                    ? data.company.logoUrl
+                    : DEFAULT_M5C_LOGO_BASE64
+                }
                 alt="Company Logo"
                 className="max-h-full max-w-full object-contain"
-                crossOrigin="anonymous"
               />
             </div>
 
@@ -265,7 +271,7 @@ export function TaxInvoiceSheet({ data, scale = 1 }: TaxInvoiceSheetProps) {
 
                 {/* Empty rows filler to ensure clean height proportion like the original PDF */}
                 {data.items.length < 5 && (
-                  <tr style={{ height: `${Math.max(120, (5 - data.items.length) * 40)}px` }}>
+                  <tr style={{ height: `${emptyRowHeight}px` }}>
                     <td className="border-r border-black"></td>
                     <td className="border-r border-black"></td>
                     <td className="border-r border-black"></td>
@@ -296,7 +302,7 @@ export function TaxInvoiceSheet({ data, scale = 1 }: TaxInvoiceSheetProps) {
             </table>
           </div>
 
-          {/* Section 5: Bank Details (Left) and Financial Totals (Right) */}
+          {/* Section 5: Bank Details (Left) and Financial Totals (Right) - Connects directly with zero gap */}
           <div className="grid grid-cols-12 border-b border-black text-[8.5px]">
             {/* Bank Details */}
             <div className="col-span-6 border-r border-black p-1.5 space-y-1">
@@ -405,7 +411,7 @@ export function TaxInvoiceSheet({ data, scale = 1 }: TaxInvoiceSheetProps) {
         </div>
 
         {/* Page Footer */}
-        <div className="text-right text-[8px] mt-1 pr-1 text-neutral-600">
+        <div className="text-right text-[8px] mt-1 pr-1 text-neutral-600 shrink-0">
           Page 1 of 1
         </div>
       </div>
