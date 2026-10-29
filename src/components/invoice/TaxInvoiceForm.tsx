@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'react-toastify';
+import { DatePickerInput } from '@/components/ui/date-picker-input';
 
 interface TaxInvoiceFormProps {
   data: TaxInvoiceData;
@@ -273,7 +274,7 @@ export function TaxInvoiceForm({
       </div>
 
       {/* SECTION 1: Recipient (Client Details) - Balanced 4-Column Grid */}
-      <div className="bg-card rounded-2xl border border-border/80 shadow-xs overflow-hidden">
+      <div className="bg-card rounded-2xl border border-border/80 shadow-xs">
         <button
           type="button"
           onClick={() => toggleSection('recipient')}
@@ -367,7 +368,7 @@ export function TaxInvoiceForm({
       </div>
 
       {/* SECTION 2: Invoice Details & Place of Supply - Balanced 3-Column Grid */}
-      <div className="bg-card rounded-2xl border border-border/80 shadow-xs overflow-hidden">
+      <div className="bg-card rounded-2xl border border-border/80 shadow-xs">
         <button
           type="button"
           onClick={() => toggleSection('invoiceMeta')}
@@ -406,12 +407,10 @@ export function TaxInvoiceForm({
                 <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
                   Invoice Date
                 </label>
-                <input
-                  type="text"
+                <DatePickerInput
                   value={data.invoice.invoiceDate}
-                  onChange={(e) => updateField('invoice.invoiceDate', e.target.value)}
-                  placeholder="e.g. 28-Oct-2026"
-                  className="h-10 w-full rounded-xl border-2 border-border/80 bg-background px-3.5 text-sm font-medium focus:border-primary focus:outline-none transition-all"
+                  onChange={(val) => updateField('invoice.invoiceDate', val)}
+                  placeholder="Select invoice date"
                 />
               </div>
 
@@ -419,12 +418,10 @@ export function TaxInvoiceForm({
                 <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
                   Due Date
                 </label>
-                <input
-                  type="text"
+                <DatePickerInput
                   value={data.invoice.dueDate}
-                  onChange={(e) => updateField('invoice.dueDate', e.target.value)}
-                  placeholder="e.g. 28-Oct-2026"
-                  className="h-10 w-full rounded-xl border-2 border-border/80 bg-background px-3.5 text-sm font-medium focus:border-primary focus:outline-none transition-all"
+                  onChange={(val) => updateField('invoice.dueDate', val)}
+                  placeholder="Select due date"
                 />
               </div>
 
@@ -482,7 +479,7 @@ export function TaxInvoiceForm({
       </div>
 
       {/* SECTION 3: Logistics, Waybills & Port Specifications - Highly Symmetrical */}
-      <div className="bg-card rounded-2xl border border-border/80 shadow-xs overflow-hidden">
+      <div className="bg-card rounded-2xl border border-border/80 shadow-xs">
         <button
           type="button"
           onClick={() => toggleSection('logistics')}
@@ -529,12 +526,11 @@ export function TaxInvoiceForm({
                       placeholder="MAWB No."
                       className="h-9 w-full rounded-lg border border-border px-2.5 text-xs font-mono font-bold focus:border-primary focus:outline-none"
                     />
-                    <input
-                      type="text"
+                    <DatePickerInput
+                      size="sm"
                       value={data.logistics.mawbDate}
-                      onChange={(e) => updateField('logistics.mawbDate', e.target.value)}
-                      placeholder="Date (e.g. 25-Sep-2026)"
-                      className="h-9 w-full rounded-lg border border-border px-2.5 text-xs focus:border-primary focus:outline-none"
+                      onChange={(val) => updateField('logistics.mawbDate', val)}
+                      placeholder="MAWB Date"
                     />
                   </div>
                 </div>
@@ -550,12 +546,11 @@ export function TaxInvoiceForm({
                       placeholder="HAWB No."
                       className="h-9 w-full rounded-lg border border-border px-2.5 text-xs font-mono focus:border-primary focus:outline-none"
                     />
-                    <input
-                      type="text"
+                    <DatePickerInput
+                      size="sm"
                       value={data.logistics.hawbDate}
-                      onChange={(e) => updateField('logistics.hawbDate', e.target.value)}
-                      placeholder="Date"
-                      className="h-9 w-full rounded-lg border border-border px-2.5 text-xs focus:border-primary focus:outline-none"
+                      onChange={(val) => updateField('logistics.hawbDate', val)}
+                      placeholder="HAWB Date"
                     />
                   </div>
                 </div>
@@ -571,12 +566,11 @@ export function TaxInvoiceForm({
                       placeholder="SB No."
                       className="h-9 w-full rounded-lg border border-border px-2.5 text-xs font-mono focus:border-primary focus:outline-none"
                     />
-                    <input
-                      type="text"
+                    <DatePickerInput
+                      size="sm"
                       value={data.logistics.sbDate}
-                      onChange={(e) => updateField('logistics.sbDate', e.target.value)}
-                      placeholder="Date"
-                      className="h-9 w-full rounded-lg border border-border px-2.5 text-xs focus:border-primary focus:outline-none"
+                      onChange={(val) => updateField('logistics.sbDate', val)}
+                      placeholder="SB Date"
                     />
                   </div>
                 </div>
@@ -592,12 +586,11 @@ export function TaxInvoiceForm({
                       placeholder="BOE No."
                       className="h-9 w-full rounded-lg border border-border px-2.5 text-xs font-mono focus:border-primary focus:outline-none"
                     />
-                    <input
-                      type="text"
+                    <DatePickerInput
+                      size="sm"
                       value={data.logistics.boeDate}
-                      onChange={(e) => updateField('logistics.boeDate', e.target.value)}
-                      placeholder="Date"
-                      className="h-9 w-full rounded-lg border border-border px-2.5 text-xs focus:border-primary focus:outline-none"
+                      onChange={(val) => updateField('logistics.boeDate', val)}
+                      placeholder="BOE Date"
                     />
                   </div>
                 </div>
@@ -613,12 +606,11 @@ export function TaxInvoiceForm({
                       placeholder="Exporter Inv No."
                       className="h-9 w-full rounded-lg border border-border px-2.5 text-xs font-mono focus:border-primary focus:outline-none"
                     />
-                    <input
-                      type="text"
+                    <DatePickerInput
+                      size="sm"
                       value={data.logistics.exporterInvDate}
-                      onChange={(e) => updateField('logistics.exporterInvDate', e.target.value)}
+                      onChange={(val) => updateField('logistics.exporterInvDate', val)}
                       placeholder="Date"
-                      className="h-9 w-full rounded-lg border border-border px-2.5 text-xs focus:border-primary focus:outline-none"
                     />
                   </div>
                 </div>
@@ -745,12 +737,10 @@ export function TaxInvoiceForm({
                   <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
                     Flight Date
                   </label>
-                  <input
-                    type="text"
+                  <DatePickerInput
                     value={data.logistics.flightDate}
-                    onChange={(e) => updateField('logistics.flightDate', e.target.value)}
-                    placeholder="e.g. 28-Oct-2026"
-                    className="h-10 w-full rounded-xl border-2 border-border/80 bg-background px-3.5 text-sm focus:border-primary focus:outline-none transition-all"
+                    onChange={(val) => updateField('logistics.flightDate', val)}
+                    placeholder="Select flight date"
                   />
                 </div>
 
@@ -903,7 +893,7 @@ export function TaxInvoiceForm({
       </div>
 
       {/* SECTION 4: Line Items & Charges Table - Beautifully Structured Cards */}
-      <div className="bg-card rounded-2xl border border-border/80 shadow-xs overflow-hidden">
+      <div className="bg-card rounded-2xl border border-border/80 shadow-xs">
         <button
           type="button"
           onClick={() => toggleSection('items')}
@@ -1190,7 +1180,7 @@ export function TaxInvoiceForm({
       </div>
 
       {/* SECTION 5: Bank Details & Summary Adjustments - Balanced Symmetrical Layout */}
-      <div className="bg-card rounded-2xl border border-border/80 shadow-xs overflow-hidden">
+      <div className="bg-card rounded-2xl border border-border/80 shadow-xs">
         <button
           type="button"
           onClick={() => toggleSection('bankTotals')}
@@ -1392,7 +1382,7 @@ export function TaxInvoiceForm({
       </div>
 
       {/* SECTION 6: Company Header & Terms (Collapsible) */}
-      <div className="bg-card rounded-2xl border border-border/80 shadow-xs overflow-hidden">
+      <div className="bg-card rounded-2xl border border-border/80 shadow-xs">
         <button
           type="button"
           onClick={() => toggleSection('companyTerms')}
