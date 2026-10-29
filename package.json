@@ -21,6 +21,7 @@
     "clsx": "^2.1.1",
     "file-saver": "^2.0.5",
     "framer-motion": "^12.42.2",
+    "html2canvas-pro": "^2.5.2",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.8",
     "lru-cache": "^11.5.2",
