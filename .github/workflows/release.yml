@@ -1,54 +1,116 @@
-name: Release Desktop App
+name: Bump Version & Release Desktop App
 
 on:
   push:
     branches:
       - main
+    paths-ignore:
+      - "version.json"
+      - "src-tauri/Cargo.lock"
   workflow_dispatch:
 
+concurrency:
+  group: release-main
+  cancel-in-progress: false
+
 jobs:
-  release:
+  bump-and-release:
+    runs-on: windows-latest
     permissions:
       contents: write
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - platform: 'windows-latest'
-            args: ''
 
-    runs-on: ${{ matrix.platform }}
     env:
       BACKEND_URL: https://inventory-node-server.onrender.com
       API_URL: https://inventory-node-server.onrender.com
 
     steps:
-      - name: Checkout repository
+      # ── 1. Checkout ───────────────────────────────────────────────────
+      - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          token: ${{ secrets.GITHUB_TOKEN }}
 
+      # ── 2. Bump version numbers ───────────────────────────────────────
+      - name: Read current version
+        id: read
+        shell: bash
+        run: |
+          if [ -f version.json ]; then
+            CURRENT=$(jq -r '.version' version.json)
+          else
+            # First run: fall back to the version in tauri.conf.json
+            CURRENT=$(jq -r '.package.version // .version' src-tauri/tauri.conf.json)
+          fi
+          echo "current=$CURRENT" >> $GITHUB_OUTPUT
+          echo "Current: $CURRENT"
+
+      - name: Bump patch version
+        id: bump
+        shell: bash
+        run: |
+          CURRENT="${{ steps.read.outputs.current }}"
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
+          NEW_PATCH=$((PATCH + 1))
+          NEW_VERSION="$MAJOR.$MINOR.$NEW_PATCH"
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "Bumped: $CURRENT → $NEW_VERSION"
+
+      - name: Get commit message
+        id: msg
+        shell: bash
+        run: |
+          # Multiline-safe output; stored raw, escaped later via jq
+          MSG=$(git log -1 --pretty=%s)
+          {
+            echo "notes<<NOTES_EOF"
+            echo "$MSG"
+            echo "NOTES_EOF"
+          } >> $GITHUB_OUTPUT
+
+      - name: Update Cargo.toml and tauri.conf.json versions
+        shell: bash
+        run: |
+          NEW_VERSION="${{ steps.bump.outputs.new_version }}"
+
+          # Cargo.toml — only first occurrence (package version, not deps)
+          sed -i "0,/^version = \".*\"/{s/^version = \".*\"/version = \"$NEW_VERSION\"/}" src-tauri/Cargo.toml
+          echo "Cargo version:"; grep '^version' src-tauri/Cargo.toml | head -1
+
+          # tauri.conf.json — supports both Tauri v1 (.package.version) and v2 (.version)
+          if jq -e '.package.version' src-tauri/tauri.conf.json > /dev/null 2>&1; then
+            jq --arg v "$NEW_VERSION" '.package.version = $v' src-tauri/tauri.conf.json > tmp.json
+          else
+            jq --arg v "$NEW_VERSION" '.version = $v' src-tauri/tauri.conf.json > tmp.json
+          fi
+          mv tmp.json src-tauri/tauri.conf.json
+          echo "tauri.conf version:"; jq '.package.version // .version' src-tauri/tauri.conf.json
+
+      # ── 3. Setup build environment ────────────────────────────────────
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: 'npm'
+          cache: npm
 
-      - name: Install Rust stable
+      - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Cache Rust dependencies
+      - name: Rust cache
         uses: swatinem/rust-cache@v2
         with:
-          workspaces: './src-tauri -> target'
+          workspaces: src-tauri
 
-      - name: Install dependencies
+      - name: Install Node dependencies
         run: npm install
 
-      - name: Build Next.js Static Export
+      # ── 4. Build Next.js static export ───────────────────────────────
+      - name: Build Next.js app
         run: npm run build
-        env:
-          BACKEND_URL: https://inventory-node-server.onrender.com
-          API_URL: https://inventory-node-server.onrender.com
 
+      # ── 5. Build signed Tauri app ────────────────────────────────────
+      # Strip stray whitespace/newlines from the pasted secret (this step existed in the
+      # original inventory workflow; a trailing newline breaks signing).
       - name: Sanitize Tauri Signing Key
         shell: pwsh
         env:
@@ -57,24 +119,107 @@ jobs:
           $cleanKey = ($env:RAW_KEY).Trim()
           "TAURI_SIGNING_PRIVATE_KEY=$cleanKey" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
-      - name: Build and Publish Tauri Desktop App
-        uses: tauri-apps/tauri-action@v0
+      - name: Build Tauri app
+        shell: pwsh
+        env:
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: npm run tauri build
+
+      # ── 6. Find built files ──────────────────────────────────────────
+      - name: Find installer files
+        id: files
+        shell: bash
+        run: |
+          BUNDLE=src-tauri/target/release/bundle
+          MSI=$(find $BUNDLE/msi -name "*.msi" | head -1)
+
+          # Tauri v1 → .msi.zip + .msi.zip.sig ; Tauri v2 → .msi + .msi.sig
+          ZIP=$(find $BUNDLE/msi -name "*.msi.zip" | head -1)
+          SIG=$(find $BUNDLE/msi -name "*.msi.zip.sig" | head -1)
+          if [ -z "$ZIP" ] || [ -z "$SIG" ]; then
+            ZIP="$MSI"
+            SIG=$(find $BUNDLE/msi -name "*.msi.sig" | head -1)
+          fi
+
+          echo "msi=$MSI" >> $GITHUB_OUTPUT
+          echo "sig=$SIG" >> $GITHUB_OUTPUT
+          echo "zip=$ZIP" >> $GITHUB_OUTPUT
+          # On Tauri v2 the update package IS the .msi; only upload it separately if it differs
+          if [ "$ZIP" != "$MSI" ]; then echo "zip_extra=$ZIP" >> $GITHUB_OUTPUT; else echo "zip_extra=" >> $GITHUB_OUTPUT; fi
+          echo "MSI: $MSI"
+          echo "SIG: $SIG"
+          echo "UPDATE PKG: $ZIP"
+          if [ -z "$MSI" ]; then echo "ERROR: MSI not found! Is 'msi' in bundle targets?"; exit 1; fi
+          if [ -z "$SIG" ]; then echo "ERROR: SIG not found! Check TAURI_SIGNING_PRIVATE_KEY secret and updater artifacts setting"; exit 1; fi
+          if [ -z "$ZIP" ]; then echo "ERROR: update package not found!"; exit 1; fi
+
+      # ── 7. Write version.json with signature for silent updater ──────
+      - name: Write version.json
+        shell: bash
+        env:
+          NOTES: ${{ steps.msg.outputs.notes }}
+          NEW_VERSION: ${{ steps.bump.outputs.new_version }}
+          SIG_FILE: ${{ steps.files.outputs.sig }}
+          ZIP_FILE: ${{ steps.files.outputs.zip }}
+          REPO: ${{ github.repository }}
+        run: |
+          PUB_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          SIGNATURE=$(cat "$SIG_FILE")
+
+          # GitHub replaces spaces with dots in release asset names
+          ZIP_NAME=$(basename "$ZIP_FILE" | sed 's/ /./g')
+          URL="https://github.com/$REPO/releases/download/v$NEW_VERSION/$ZIP_NAME"
+
+          # jq handles all JSON escaping (quotes, newlines) safely
+          jq -n \
+            --arg version "$NEW_VERSION" \
+            --arg notes "$NOTES" \
+            --arg pub_date "$PUB_DATE" \
+            --arg signature "$SIGNATURE" \
+            --arg url "$URL" \
+            '{
+              version: $version,
+              notes: $notes,
+              pub_date: $pub_date,
+              platforms: {
+                "windows-x86_64": { signature: $signature, url: $url }
+              }
+            }' > version.json
+
+          echo "version.json:"; cat version.json
+
+      # ── 8. Commit version files back to main ─────────────────────────
+      - name: Commit and push
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add version.json src-tauri/Cargo.toml src-tauri/tauri.conf.json
+          git diff --staged --quiet && echo "Nothing to commit" && exit 0
+          git commit -m "chore: bump version to ${{ steps.bump.outputs.new_version }} [skip ci]"
+          git pull --rebase --autostash origin main
+          git push origin main
+
+      # ── 9. Create GitHub Release ─────────────────────────────────────
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.bump.outputs.new_version }}
+          name: Inventory Management v${{ steps.bump.outputs.new_version }}
+          body: |
+            ## Inventory Management Desktop App (v${{ steps.bump.outputs.new_version }})
+
+            ${{ steps.msg.outputs.notes }}
+
+            ### Automatic Updates
+            If you already have the app installed, it will detect and install this update on launch.
+
+            ### Direct Downloads
+            Download the `.msi` installer below to install or reinstall.
+          files: |
+            ${{ steps.files.outputs.msi }}
+            ${{ steps.files.outputs.zip_extra }}
+            ${{ steps.files.outputs.sig }}
+          make_latest: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{ env.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-          BACKEND_URL: https://inventory-node-server.onrender.com
-          API_URL: https://inventory-node-server.onrender.com
-        with:
-          tagName: v__VERSION__
-          releaseName: 'Inventory Management v__VERSION__'
-          releaseBody: |
-            ## Inventory Management Desktop App (v__VERSION__)
-            
-            ### Automatic Updates
-            If you already have this software installed, it will automatically detect and install this update upon launch.
-            
-            ### Direct Downloads
-            Download the installer below (.msi or .exe) to install or reinstall.
-          releaseDraft: false
-          prerelease: false
