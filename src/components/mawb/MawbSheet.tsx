@@ -24,6 +24,72 @@ function DiagonalSlash() {
   );
 }
 
+/**
+ * Authentic IATA Upside-down (Inverted) Trapezoid Header Component
+ * Creates an inverted trapezoid notch with slanted left & right sides
+ * and a horizontal bottom border holding the label text.
+ */
+interface TrapezoidHeaderProps {
+  label: React.ReactNode;
+  height?: number;
+  slant?: number;
+  leftLine?: boolean;
+  rightLine?: boolean;
+  className?: string;
+  textClassName?: string;
+  width?: string | number;
+}
+
+function TrapezoidHeader({
+  label,
+  height = 11,
+  slant = 8,
+  leftLine = true,
+  rightLine = true,
+  className = '',
+  textClassName = 'text-[6.5px] leading-none font-normal text-black text-center whitespace-nowrap',
+  width,
+}: TrapezoidHeaderProps) {
+  return (
+    <div
+      className={`flex items-start w-full relative ${className}`}
+      style={width ? { width } : undefined}
+    >
+      {leftLine && <div className="border-t border-black flex-1 min-w-[2px]" />}
+      <div className="flex items-stretch shrink-0">
+        {/* Left slant line going down-right */}
+        <svg
+          width={slant}
+          height={height}
+          viewBox={`0 0 ${slant} ${height}`}
+          className="shrink-0 block"
+        >
+          <line x1="0" y1="0" x2={slant} y2={height} stroke="#000000" strokeWidth="0.9" />
+        </svg>
+
+        {/* Center label box with bottom border */}
+        <div
+          className="border-b border-black flex items-center justify-center px-1.5 bg-white whitespace-nowrap"
+          style={{ height }}
+        >
+          <span className={textClassName}>{label}</span>
+        </div>
+
+        {/* Right slant line going up-right */}
+        <svg
+          width={slant}
+          height={height}
+          viewBox={`0 0 ${slant} ${height}`}
+          className="shrink-0 block"
+        >
+          <line x1="0" y1={height} x2={slant} y2="0" stroke="#000000" strokeWidth="0.9" />
+        </svg>
+      </div>
+      {rightLine && <div className="border-t border-black flex-1 min-w-[2px]" />}
+    </div>
+  );
+}
+
 export function MawbSheet({ data, scale = 1, activePage = 'both' }: MawbSheetProps) {
   // Format numbers to 2 decimal places if valid numeric
   const fmt = (val: number | string | undefined | null) => {
@@ -49,6 +115,19 @@ export function MawbSheet({ data, scale = 1, activePage = 'both' }: MawbSheetPro
 
   const showPage1 = activePage === 'both' || activePage === 'face';
   const showPage2 = activePage === 'both' || activePage === 'conditions';
+
+  // Primary rating item (first item)
+  const item = data.items[0] || {
+    pieces: '',
+    grossWeight: '',
+    weightUnit: 'K',
+    rateClass: 'Q',
+    commodityItemNo: '',
+    chargeableWeight: '',
+    rate: '',
+    total: '',
+    natureAndQuantity: '',
+  };
 
   return (
     <div
@@ -96,17 +175,26 @@ export function MawbSheet({ data, scale = 1, activePage = 'both' }: MawbSheetPro
 
             {/* MAIN OUTER FRAME */}
             <div className="border border-black flex flex-col">
-              {/* ROW 1: Shipper (Left) & Carrier / Air Waybill Notice (Right) */}
+              {/* SECTION: SHIPPER & CONSIGNEE WITH SIDE NOTICES */}
+              {/* ROW 1: Shipper (Left) & Air Waybill Notice + Airline Name (Right) */}
               <div className="flex border-b border-black">
-                {/* Left: Shipper */}
-                <div className="w-[48%] border-r border-black flex flex-col justify-between p-1.5 min-h-[92px]">
-                  <div className="flex justify-between items-start text-[7px] text-neutral-800 leading-none">
-                    <span>Shipper&apos;s Name and Address</span>
-                    <span>Shipper&apos;s Account Number</span>
+                {/* Left: Shipper Box with Corner Account Number Box */}
+                <div className="w-[45.2%] border-r border-black flex flex-col justify-between p-1.5 min-h-[92px] relative">
+                  {/* Top Header line with Shipper's Account Number Sub-Box */}
+                  <div className="flex justify-between items-start -mt-1.5 -mx-1.5">
+                    <span className="text-[7px] text-neutral-800 pt-1 pl-1.5">
+                      Shipper&apos;s Name and Address
+                    </span>
+                    <div className="border-b border-l border-black pl-1.5 pr-2 py-0.5 text-[6.5px] text-neutral-800 bg-white">
+                      Shipper&apos;s Account Number
+                    </div>
                   </div>
-                  <div className="font-bold text-[8.5px] uppercase whitespace-pre-line leading-[1.3] mt-1 pl-1">
+
+                  {/* Shipper Address Content */}
+                  <div className="font-bold text-[8.5px] uppercase whitespace-pre-line leading-[1.3] mt-1 pl-0.5">
                     {data.shipper.nameAndAddress}
                   </div>
+
                   {data.shipper.accountNumber && (
                     <div className="text-[8px] font-mono text-right pr-1">
                       {data.shipper.accountNumber}
@@ -114,46 +202,53 @@ export function MawbSheet({ data, scale = 1, activePage = 'both' }: MawbSheetPro
                   )}
                 </div>
 
-                {/* Right: Air Waybill Title & Notice */}
-                <div className="w-[52%] flex flex-col justify-between">
-                  {/* Top sub-box: Not negotiable AIR WAYBILL issued by + Airline */}
-                  <div className="p-1.5 border-b border-black flex justify-between items-start">
-                    <div>
-                      <div className="text-[7.5px] leading-tight">Not negotiable</div>
-                      <div className="font-bold text-[11px] tracking-wider leading-tight">
-                        AIR WAYBILL
-                      </div>
-                      <div className="text-[7.5px] leading-tight">issued by</div>
+                {/* Right: Air Waybill Title & Copies Notice */}
+                <div className="w-[54.8%] flex flex-col justify-between">
+                  {/* Sub-box 1: Not negotiable / AIR WAYBILL [spaces] CARRIER / issued by */}
+                  <div className="p-1.5 pb-2 border-b border-black">
+                    <div className="text-[7.5px] leading-tight text-neutral-800">
+                      Not negotiable
                     </div>
-                    <div className="font-bold text-[13px] tracking-wide uppercase pr-2 pt-0.5">
-                      {data.carrierName || 'EGYPT AIR'}
+                    <div className="flex items-center gap-6 mt-0.5">
+                      <span className="font-bold text-[11px] tracking-wider leading-none">
+                        AIR WAYBILL
+                      </span>
+                      <span className="font-bold text-[12px] tracking-wider uppercase leading-none">
+                        {data.carrierName || 'EGYPT AIR'}
+                      </span>
+                    </div>
+                    <div className="text-[7.5px] leading-tight text-neutral-800 mt-0.5">
+                      issued by
                     </div>
                   </div>
 
-                  {/* Middle sub-box: Copies validity notice */}
-                  <div className="px-1.5 py-1 text-[6.5px] border-b border-black text-neutral-800 leading-tight">
+                  {/* Sub-box 2: Copies validity notice (ends at bottom of Shipper border) */}
+                  <div className="p-1.5 text-[6.5px] text-neutral-800 leading-tight">
                     {data.copiesNotice ||
                       'Copies 1,2 and 3 of this House Air Waybill are originals and have the same validity'}
-                  </div>
-
-                  {/* Bottom sub-box: Contract condition agreement text */}
-                  <div className="p-1.5 text-[6px] text-neutral-900 leading-[1.18] text-justify">
-                    {data.contractNotice ||
-                      'It is agreed that the goods described herein are accepted in apparent good order and condition (except as noted) for carriage SUBJECT TO THE CONDITIONS OF CONTRACT ON THE REVERSE HEREOF. All goods may be carried by any other means including road or any other carrier unless specific contrary instructions are given herein by the shipper and shipper agrees that the shipment may be carried via intermediate stopping places which the carrier deems appropriate.'}
                   </div>
                 </div>
               </div>
 
-              {/* ROW 2: Consignee (Left) */}
+              {/* ROW 2: Consignee (Left) & Conditions of Contract Notice (Right) */}
               <div className="flex border-b border-black">
-                <div className="w-[48%] border-r border-black flex flex-col justify-between p-1.5 min-h-[92px]">
-                  <div className="flex justify-between items-start text-[7px] text-neutral-800 leading-none">
-                    <span>Consignee&apos;s Name and Address</span>
-                    <span>Consignee&apos;s Account Number</span>
+                {/* Left: Consignee Box with Corner Account Number Box */}
+                <div className="w-[45.2%] border-r border-black flex flex-col justify-between p-1.5 min-h-[92px] relative">
+                  {/* Top Header line with Consignee's Account Number Sub-Box */}
+                  <div className="flex justify-between items-start -mt-1.5 -mx-1.5">
+                    <span className="text-[7px] text-neutral-800 pt-1 pl-1.5">
+                      Consignee&apos;s Name and Address
+                    </span>
+                    <div className="border-b border-l border-black pl-1.5 pr-2 py-0.5 text-[6.5px] text-neutral-800 bg-white">
+                      Consignee&apos;s Account Number
+                    </div>
                   </div>
-                  <div className="font-bold text-[8.5px] uppercase whitespace-pre-line leading-[1.3] mt-1 pl-1">
+
+                  {/* Consignee Address Content */}
+                  <div className="font-bold text-[8.5px] uppercase whitespace-pre-line leading-[1.3] mt-1 pl-0.5">
                     {data.consignee.nameAndAddress}
                   </div>
+
                   {data.consignee.accountNumber && (
                     <div className="text-[8px] font-mono text-right pr-1">
                       {data.consignee.accountNumber}
@@ -161,161 +256,181 @@ export function MawbSheet({ data, scale = 1, activePage = 'both' }: MawbSheetPro
                   )}
                 </div>
 
-                {/* Right: Accounting Information (Extended space or Freight Prepaid) */}
-                <div className="w-[52%] flex flex-col justify-start p-2">
-                  <div className="font-bold text-[10px] tracking-wider uppercase text-neutral-900 pl-1 pt-1">
+                {/* Right: Full Conditions of Contract paragraph (spans height of Consignee) */}
+                <div className="w-[54.8%] p-1.5 flex items-center">
+                  <p className="text-[6px] text-neutral-900 leading-[1.2] text-justify">
+                    {data.contractNotice ||
+                      'It is agreed that the goods described herein are accepted in apparent good order and condition (except as noted) for carriage SUBJECT TO THE CONDITIONS OF CONTRACT ON THE REVERSE HEREOF. All goods may be carried by any other means including road or any other carrier unless specific contrary instructions are given herein by the shipper and shipper agrees that the shipment may be carried via intermediate stopping places which the carrier deems appropriate.'}
+                  </p>
+                </div>
+              </div>
+
+              {/* ROW 3 & 4: Issuing Carrier's Agent (Left) & ONE TALL FREIGHT PREPAID BOX (Right) */}
+              <div className="flex border-b border-black">
+                {/* Left Column: Stacked Agent Details + IATA/Account No */}
+                <div className="w-[45.2%] border-r border-black flex flex-col">
+                  {/* Sub-row 1: Issuing Agent Name & City */}
+                  <div className="p-1.5 border-b border-black min-h-[44px]">
+                    <div className="text-[7px] text-neutral-800 leading-none">
+                      Issuing Carrier&apos;s Agent Name and City
+                    </div>
+                    <div className="font-bold text-[8.5px] uppercase whitespace-pre-line leading-tight mt-1 pl-0.5">
+                      {data.issuingAgent.nameAndCity}
+                    </div>
+                  </div>
+
+                  {/* Sub-row 2: Agent's IATA Code & Account No */}
+                  <div className="flex min-h-[30px]">
+                    <div className="w-1/2 border-r border-black p-1.5">
+                      <div className="text-[7px] text-neutral-800 leading-none">
+                        Agent&apos;s IATA Code
+                      </div>
+                      <div className="font-bold text-[8.5px] tracking-wider mt-1 pl-0.5">
+                        {data.issuingAgent.iataCode || '14-0-26840004'}
+                      </div>
+                    </div>
+                    <div className="w-1/2 p-1.5">
+                      <div className="text-[7px] text-neutral-800 leading-none">Account No.</div>
+                      <div className="font-bold text-[8.5px] tracking-wider mt-1 pl-0.5">
+                        {data.issuingAgent.accountNo}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right Column: ONE SINGLE TALL BOX FOR FREIGHT PREPAID (No middle horizontal line) */}
+                <div className="w-[54.8%] p-2 flex flex-col justify-start">
+                  <div className="font-bold text-[10px] tracking-wider uppercase text-neutral-900 pl-0.5 pt-0.5">
                     {data.accountingInfo || 'FREIGHT PREPAID'}
                   </div>
                 </div>
               </div>
 
-              {/* ROW 3: Issuing Carrier's Agent (Left) */}
-              <div className="flex border-b border-black">
-                <div className="w-[48%] border-r border-black p-1.5 min-h-[44px]">
-                  <div className="text-[7px] text-neutral-800 leading-none">
-                    Issuing Carrier&apos;s Agent Name and City
-                  </div>
-                  <div className="font-bold text-[8.5px] uppercase whitespace-pre-line leading-tight mt-1 pl-1">
-                    {data.issuingAgent.nameAndCity}
-                  </div>
-                </div>
-                <div className="w-[52%] p-1.5">
-                  {/* Empty right box for accounting/reference */}
-                </div>
-              </div>
-
-              {/* ROW 4: Agent's IATA Code & Account No */}
-              <div className="flex border-b border-black">
-                <div className="w-[48%] border-r border-black flex">
-                  <div className="w-1/2 border-r border-black p-1.5">
-                    <div className="text-[7px] text-neutral-800 leading-none">
-                      Agent&apos;s IATA Code
-                    </div>
-                    <div className="font-bold text-[8.5px] tracking-wider mt-1 pl-1">
-                      {data.issuingAgent.iataCode || '14-0-26840004'}
-                    </div>
-                  </div>
-                  <div className="w-1/2 p-1.5">
-                    <div className="text-[7px] text-neutral-800 leading-none">Account No.</div>
-                    <div className="font-bold text-[8.5px] tracking-wider mt-1 pl-1">
-                      {data.issuingAgent.accountNo}
-                    </div>
-                  </div>
-                </div>
-                <div className="w-[52%] p-1.5"></div>
-              </div>
-
-              {/* ROW 5: Airport of Departure */}
-              <div className="flex border-b border-black">
-                <div className="w-[48%] border-r border-black p-1.5">
+              {/* ROW 5: Airport of Departure (Addr. Of First Carrier) - FULL WIDTH */}
+              <div className="flex border-b border-black p-1.5 min-h-[30px]">
+                <div className="flex flex-col">
                   <div className="text-[7px] text-neutral-800 leading-none">
                     Airport of Departure (Addr. Of First Carrier) and requested Routing
                   </div>
-                  <div className="font-bold text-[9px] uppercase tracking-wide mt-1 pl-1">
+                  <div className="font-bold text-[9px] uppercase tracking-wide mt-1 pl-0.5">
                     {data.routing.departureAirport || 'DELHI'}
                   </div>
                 </div>
-                <div className="w-[52%] p-1.5"></div>
               </div>
 
-              {/* ROW 6: Routing & Destination / Currency / Valuation / Charges Matrix */}
+              {/* ROW 6: ROUTING ROW WITH EXACT PROPORTIONS & UPSIDE-DOWN TRAPEZOID */}
               <div className="flex border-b border-black text-[7px] leading-tight min-h-[34px]">
-                {/* To */}
-                <div className="w-[4.5%] border-r border-black p-1 flex flex-col justify-between">
+                {/* 1. To */}
+                <div className="w-[4.25%] border-r border-black p-1 flex flex-col justify-between">
                   <span className="text-neutral-700">To</span>
                   <span className="font-bold text-[9px] uppercase">{data.routing.to1}</span>
                 </div>
 
-                {/* By First Carrier / Routing and Destination */}
-                <div className="w-[20%] border-r border-black p-1 flex flex-col justify-between">
-                  <div className="flex justify-between text-[6.5px] text-neutral-700">
-                    <span>By First Carrier</span>
-                    <span className="font-semibold">Routing and Destination</span>
+                {/* 2. By First Carrier + Routing and Destination TRAPEZOID */}
+                <div className="w-[24.71%] border-r border-black flex flex-col justify-between">
+                  <div className="flex items-start w-full">
+                    <span className="text-[6.5px] text-neutral-700 pl-1 pt-0.5 whitespace-nowrap shrink-0 pr-1">
+                      By First Carrier
+                    </span>
+                    {/* The Upside-down Trapezoid for Routing and Destination */}
+                    <div className="flex-1 flex items-stretch">
+                      <svg width="6" height="11" viewBox="0 0 6 11" className="shrink-0 block">
+                        <line x1="0" y1="0" x2="6" y2="11" stroke="#000000" strokeWidth="0.9" />
+                      </svg>
+                      <div className="flex-1 border-b border-black flex items-center justify-center px-0.5 bg-white h-[11px] whitespace-nowrap">
+                        <span className="text-[6px] font-normal text-black">
+                          Routing and Destination
+                        </span>
+                      </div>
+                      <svg width="6" height="11" viewBox="0 0 6 11" className="shrink-0 block">
+                        <line x1="0" y1="11" x2="6" y2="0" stroke="#000000" strokeWidth="0.9" />
+                      </svg>
+                    </div>
                   </div>
-                  <span className="font-bold text-[9px] uppercase">
+                  <div className="pl-1 pb-0.5 font-bold text-[9px] uppercase">
                     {data.routing.byFirstCarrier}
-                  </span>
+                  </div>
                 </div>
 
-                {/* To */}
-                <div className="w-[4.5%] border-r border-black p-1 flex flex-col justify-between">
+                {/* 3. To */}
+                <div className="w-[4.41%] border-r border-black p-1 flex flex-col justify-between">
                   <span className="text-neutral-700">To</span>
                   <span className="font-bold text-[8.5px] uppercase">{data.routing.to2}</span>
                 </div>
 
-                {/* by */}
-                <div className="w-[4%] border-r border-black p-1 flex flex-col justify-between">
+                {/* 4. by */}
+                <div className="w-[3.70%] border-r border-black p-1 flex flex-col justify-between">
                   <span className="text-neutral-700">by</span>
                   <span className="font-bold text-[8.5px] uppercase">{data.routing.by2}</span>
                 </div>
 
-                {/* To */}
-                <div className="w-[4.5%] border-r border-black p-1 flex flex-col justify-between">
+                {/* 5. To */}
+                <div className="w-[4.25%] border-r border-black p-1 flex flex-col justify-between">
                   <span className="text-neutral-700">To</span>
                   <span className="font-bold text-[8.5px] uppercase">{data.routing.to3}</span>
                 </div>
 
-                {/* by */}
-                <div className="w-[4%] border-r border-black p-1 flex flex-col justify-between">
+                {/* 6. by */}
+                <div className="w-[3.86%] border-r border-black p-1 flex flex-col justify-between">
                   <span className="text-neutral-700">by</span>
                   <span className="font-bold text-[8.5px] uppercase">{data.routing.by3}</span>
                 </div>
 
-                {/* Currency */}
-                <div className="w-[6.5%] border-r border-black p-1 flex flex-col justify-between">
-                  <span className="text-neutral-700">Currency</span>
+                {/* 7. Currency */}
+                <div className="w-[5.41%] border-r border-black p-1 flex flex-col justify-between">
+                  <span className="text-neutral-700 text-[6.5px]">Currency</span>
                   <span className="font-bold text-[8.5px] uppercase">
                     {data.routing.currency || 'INR'}
                   </span>
                 </div>
 
-                {/* CHGS Code */}
-                <div className="w-[5%] border-r border-black p-1 flex flex-col justify-between text-center">
-                  <div className="text-[6px] text-neutral-700 leading-none">
+                {/* 8. CHGS Code */}
+                <div className="w-[3.47%] border-r border-black p-0.5 flex flex-col justify-between text-center">
+                  <div className="text-[5.5px] text-neutral-700 leading-none">
                     CHGS
                     <br />
                     Code
                   </div>
-                  <span className="font-bold text-[8px] uppercase">{data.routing.chgsCode}</span>
+                  <span className="font-bold text-[7.5px] uppercase">{data.routing.chgsCode}</span>
                 </div>
 
-                {/* WT/VAL */}
-                <div className="w-[8.5%] border-r border-black flex flex-col">
-                  <div className="text-center text-[6.5px] border-b border-black py-0.5 text-neutral-700">
+                {/* 9. WT/VAL with continuous vertical divider */}
+                <div className="w-[5.79%] border-r border-black flex flex-col">
+                  <div className="text-center text-[6px] border-b border-black py-0.5 text-neutral-700">
                     WT/VAL
                   </div>
                   <div className="flex flex-1">
-                    <div className="w-1/2 border-r border-black text-center text-[5.5px] p-0.5 flex flex-col justify-between">
+                    <div className="w-1/2 border-r border-black text-center text-[5px] p-0.5 flex flex-col justify-between">
                       <span>PPD</span>
-                      <span className="font-bold text-[7.5px]">{data.routing.wtValPpd}</span>
+                      <span className="font-bold text-[7px]">{data.routing.wtValPpd}</span>
                     </div>
-                    <div className="w-1/2 text-center text-[5.5px] p-0.5 flex flex-col justify-between">
+                    <div className="w-1/2 text-center text-[5px] p-0.5 flex flex-col justify-between">
                       <span>COLL</span>
-                      <span className="font-bold text-[7.5px]">{data.routing.wtValColl}</span>
+                      <span className="font-bold text-[7px]">{data.routing.wtValColl}</span>
                     </div>
                   </div>
                 </div>
 
-                {/* Other */}
-                <div className="w-[8.5%] border-r border-black flex flex-col">
-                  <div className="text-center text-[6.5px] border-b border-black py-0.5 text-neutral-700">
+                {/* 10. Other with continuous vertical divider */}
+                <div className="w-[5.41%] border-r border-black flex flex-col">
+                  <div className="text-center text-[6px] border-b border-black py-0.5 text-neutral-700">
                     Other
                   </div>
                   <div className="flex flex-1">
-                    <div className="w-1/2 border-r border-black text-center text-[5.5px] p-0.5 flex flex-col justify-between">
+                    <div className="w-1/2 border-r border-black text-center text-[5px] p-0.5 flex flex-col justify-between">
                       <span>PPD</span>
-                      <span className="font-bold text-[7.5px]">{data.routing.otherPpd}</span>
+                      <span className="font-bold text-[7px]">{data.routing.otherPpd}</span>
                     </div>
-                    <div className="w-1/2 text-center text-[5.5px] p-0.5 flex flex-col justify-between">
+                    <div className="w-1/2 text-center text-[5px] p-0.5 flex flex-col justify-between">
                       <span>COLL</span>
-                      <span className="font-bold text-[7.5px]">{data.routing.otherColl}</span>
+                      <span className="font-bold text-[7px]">{data.routing.otherColl}</span>
                     </div>
                   </div>
                 </div>
 
-                {/* Declared Value for Carriage */}
-                <div className="w-[15%] border-r border-black p-1 flex flex-col justify-between">
-                  <div className="text-[6.5px] text-neutral-700 leading-none">
+                {/* 11. Declared Value for Carriage */}
+                <div className="w-[16.60%] border-r border-black p-1 flex flex-col justify-between">
+                  <div className="text-[6px] text-neutral-700 leading-none">
                     Declared Value for
                     <br />
                     Carriage
@@ -325,9 +440,9 @@ export function MawbSheet({ data, scale = 1, activePage = 'both' }: MawbSheetPro
                   </span>
                 </div>
 
-                {/* Declared Value for Customs */}
-                <div className="w-[15%] p-1 flex flex-col justify-between">
-                  <div className="text-[6.5px] text-neutral-700 leading-none">
+                {/* 12. Declared Value for Customs */}
+                <div className="w-[18.15%] p-1 flex flex-col justify-between">
+                  <div className="text-[6px] text-neutral-700 leading-none">
                     Declared Value for
                     <br />
                     Customs
@@ -338,20 +453,26 @@ export function MawbSheet({ data, scale = 1, activePage = 'both' }: MawbSheetPro
                 </div>
               </div>
 
-              {/* ROW 7: Airport of Destination, Flight details, Insurance */}
+              {/* ROW 7: DESTINATION & FLIGHTS WITH UPSIDE-DOWN TRAPEZOID */}
               <div className="flex border-b border-black text-[7px] leading-tight min-h-[34px]">
-                {/* Destination */}
-                <div className="w-[22%] border-r border-black p-1.5 flex flex-col justify-between">
-                  <span className="text-neutral-700">Airport of Destination</span>
-                  <span className="font-bold text-[9px] uppercase">
+                {/* 1. Airport of Destination */}
+                <div className="w-[20.08%] border-r border-black p-1.5 flex flex-col justify-between">
+                  <span className="text-neutral-700 text-[6.5px]">Airport of Destination</span>
+                  <span className="font-bold text-[10px] uppercase">
                     {data.routing.destinationAirport || 'LONDON'}
                   </span>
                 </div>
 
-                {/* Requested Flight No/Date */}
-                <div className="w-[28%] border-r border-black p-1 flex flex-col justify-between">
-                  <span className="text-neutral-700 text-[6.5px]">Requested Flight No/Date</span>
-                  <div className="font-bold text-[8.5px] flex flex-col gap-0.5 pl-1">
+                {/* 2. Requested Flight No/Date WITH INVERTED TRAPEZOID */}
+                <div className="w-[25.10%] border-r border-black flex flex-col justify-between">
+                  <TrapezoidHeader
+                    label="Requested Flight No/Date"
+                    height={10}
+                    slant={7}
+                    className="w-full"
+                    textClassName="text-[6px] font-semibold text-black px-1"
+                  />
+                  <div className="font-bold text-[8.5px] flex flex-col gap-0.5 p-1 pl-2">
                     {data.routing.flights?.map((f, i) => (
                       <div key={i} className="flex justify-between pr-4">
                         <span>{f.flightNo}</span>
@@ -361,8 +482,8 @@ export function MawbSheet({ data, scale = 1, activePage = 'both' }: MawbSheetPro
                   </div>
                 </div>
 
-                {/* Amount of Insurance */}
-                <div className="w-[12%] border-r border-black p-1 flex flex-col justify-between">
+                {/* 3. Amount of Insurance */}
+                <div className="w-[15.83%] border-r border-black p-1.5 flex flex-col justify-between">
                   <span className="text-[6.5px] text-neutral-700 leading-none">
                     Amount of Insurance
                   </span>
@@ -371,241 +492,331 @@ export function MawbSheet({ data, scale = 1, activePage = 'both' }: MawbSheetPro
                   </span>
                 </div>
 
-                {/* Insurance Notice */}
-                <div className="w-[38%] p-1 text-[5.8px] leading-[1.15] text-neutral-800 flex items-center">
+                {/* 4. INSURANCE Disclaimer Text */}
+                <div className="w-[38.99%] p-1.5 text-[5.5px] leading-[1.18] text-neutral-800 flex items-center">
                   {data.routing.insuranceNotice ||
                     'INSURANCE- - if carrier offers insurance and such insurance is requested in accordance with conditions on reverse hereof indicate amount to be insured in figures in box marked Amount of Insurance.'}
                 </div>
               </div>
 
-              {/* ROW 8: Handling Information & SCI */}
-              <div className="flex border-b border-black min-h-[28px]">
-                <div className="w-[92%] border-r border-black p-1.5 flex flex-col justify-between">
-                  <div className="text-[7px] text-neutral-800 leading-none">
+              {/* ROW 8: Handling Information & SCI Sub-Box in Bottom-Right */}
+              <div className="flex border-b border-black h-[68px] relative bg-white">
+                <div className="flex-1 pt-1.5 px-2 flex flex-col justify-start">
+                  <div className="text-[6.5px] font-normal text-black leading-none">
                     Handling Information
                   </div>
-                  <div className="font-bold text-[8px] uppercase leading-tight mt-1 pl-1">
+                  <div className="font-bold text-[7.5px] uppercase tracking-normal mt-1 leading-snug text-black">
                     {data.routing.handlingInfo}
                   </div>
                 </div>
 
-                <div className="w-[8%] p-1 flex flex-col justify-between text-center">
-                  <div className="text-[7px] text-neutral-800">SCI</div>
-                  <div className="font-bold text-[8px]">{data.routing.sci}</div>
+                {/* SCI Sub-Box in Bottom-Right Corner (Exact PDF: 47.07pt wide, 14.4pt tall) */}
+                <div className="absolute bottom-0 right-0 border-t border-l border-black w-[60px] h-[18px] flex items-center justify-center bg-white text-[7px] font-normal text-black">
+                  {data.routing.sci || 'SCI'}
                 </div>
               </div>
 
-              {/* ROW 9: RATING / GOODS TABLE */}
+              {/* ROW 9: RATING / GOODS TABLE WITH AUTHENTIC IATA GRAY COLUMN BARS & EXACT LAYOUT */}
               <div className="flex flex-col border-b border-black">
-                {/* Table Column Headers */}
-                <div className="flex border-b border-black text-[6.5px] font-semibold text-center leading-tight py-1 bg-neutral-50/50">
-                  <div className="w-[7%] border-r border-black px-0.5">
-                    No.of
-                    <br />
-                    Pieces
-                    <br />
-                    RCP
-                  </div>
-                  <div className="w-[10%] border-r border-black px-0.5">
-                    Gross
-                    <br />
-                    Weight
-                  </div>
-                  <div className="w-[3.5%] border-r border-black px-0.5">
-                    kg
-                    <br />
-                    lb
-                  </div>
-                  <div className="w-[9.5%] border-r border-black px-0.5">
-                    Rate Class
-                    <br />
-                    <span className="text-[5.5px] font-normal">Commodity Item No</span>
-                  </div>
-                  <div className="w-[11%] border-r border-black px-0.5">
-                    Chargeable
-                    <br />
-                    Weight
-                  </div>
-                  <div className="w-[10.5%] border-r border-black px-0.5">
-                    Rate
-                    <br />
-                    Class
-                  </div>
-                  <div className="w-[18.5%] border-r border-black px-0.5">Total</div>
-                  <div className="w-[30%] px-1 text-left">
-                    Nature and Quantity of Goods
-                    <br />
-                    <span className="text-[5.5px] font-normal">(incl. Dimensions or Volume)</span>
-                  </div>
-                </div>
-
-                {/* Rating Rows Body */}
-                <div className="flex flex-col min-h-[175px] relative">
-                  {data.items.map((item, idx) => (
-                    <div key={item.id || idx} className="flex text-[8px] py-1">
-                      {/* Pieces */}
-                      <div className="w-[7%] border-r border-black px-1 text-center font-bold">
+                {/* Table Container holding the entire Goods Table (Exact PDF height: 164.16pt = 218px) */}
+                <div className="flex h-[218px]">
+                  {/* Col 1: No.of Pieces RCP (30.24pt = 5.41%) */}
+                  <div className="w-[5.41%] border-r border-black flex flex-col justify-between">
+                    <div>
+                      <div className="h-[35px] border-b border-black flex flex-col justify-center items-center text-[6px] font-normal leading-[1.1]">
+                        <span>No.of</span>
+                        <span>Pieces</span>
+                        <span>RCP</span>
+                      </div>
+                      <div className="pt-2 text-center font-bold text-[9.5px]">
                         {item.pieces}
                       </div>
-
-                      {/* Gross Weight */}
-                      <div className="w-[10%] border-r border-black px-1 text-right font-bold">
-                        {fmt(item.grossWeight)}
-                      </div>
-
-                      {/* kg/lb */}
-                      <div className="w-[3.5%] border-r border-black px-0.5 text-center font-bold">
-                        {item.weightUnit || 'K'}
-                      </div>
-
-                      {/* Rate Class */}
-                      <div className="w-[9.5%] border-r border-black px-1 text-center font-bold">
-                        {item.rateClass}
-                      </div>
-
-                      {/* Chargeable Weight */}
-                      <div className="w-[11%] border-r border-black px-1 text-right font-bold">
-                        {fmt(item.chargeableWeight)}
-                      </div>
-
-                      {/* Rate */}
-                      <div className="w-[10.5%] border-r border-black px-1 text-right font-bold">
-                        {fmt(item.rate)}
-                      </div>
-
-                      {/* Total */}
-                      <div className="w-[18.5%] border-r border-black px-2 text-right font-bold">
-                        {fmt(item.total)}
-                      </div>
-
-                      {/* Nature & Quantity of Goods */}
-                      <div className="w-[30%] px-2 text-[7px] font-bold leading-[1.28] whitespace-pre-line uppercase">
-                        {item.natureAndQuantity}
-                      </div>
                     </div>
-                  ))}
-
-                  {/* Empty spacer to push totals row to bottom if items are short */}
-                  <div className="flex-1 min-h-[20px]" />
-
-                  {/* Bottom Totals Row inside Goods Table */}
-                  <div className="flex border-t border-black text-[8px] font-bold py-1 bg-white">
-                    <div className="w-[7%] border-r border-black px-1 text-center">
+                    {/* Bottom Totals */}
+                    <div className="h-[24px] border-t border-black flex items-center justify-center font-bold text-[9.5px] bg-white">
                       {totalPieces || ''}
                     </div>
-                    <div className="w-[10%] border-r border-black px-1 text-right">
+                  </div>
+
+                  {/* Col 2: Gross Weight (47.52pt = 8.49%) */}
+                  <div className="w-[8.49%] border-r border-black flex flex-col justify-between">
+                    <div>
+                      <div className="h-[35px] border-b border-black flex flex-col justify-center items-center text-[6.5px] font-normal leading-[1.1]">
+                        <span>Gross</span>
+                        <span>Weight</span>
+                      </div>
+                      <div className="pt-2 pr-1.5 text-right font-bold text-[9.5px]">
+                        {fmt(item.grossWeight)}
+                      </div>
+                    </div>
+                    {/* Bottom Totals */}
+                    <div className="h-[24px] border-t border-black flex items-center justify-end pr-1.5 font-bold text-[9.5px] bg-white">
                       {totalGrossWeight ? fmt(totalGrossWeight) : ''}
                     </div>
-                    <div className="w-[3.5%] border-r border-black" />
-                    <div className="w-[9.5%] border-r border-black" />
-                    <div className="w-[11%] border-r border-black" />
-                    <div className="w-[10.5%] border-r border-black" />
-                    <div className="w-[18.5%] border-r border-black px-2 text-right">
+                  </div>
+
+                  {/* Col 3: kg lb (10.80pt = 1.93%) */}
+                  <div className="w-[1.93%] border-r border-black flex flex-col justify-between">
+                    <div>
+                      <div className="h-[35px] border-b border-black flex flex-col justify-center items-center text-[5.5px] font-normal leading-[1.1]">
+                        <span>kg</span>
+                        <span>lb</span>
+                      </div>
+                      <div className="pt-2 text-center font-bold text-[9px]">
+                        {item.weightUnit || 'K'}
+                      </div>
+                    </div>
+                    {/* Bottom border line aligning with totals */}
+                    <div className="h-[24px] border-t border-black bg-white" />
+                  </div>
+
+                  {/* GRAY VERTICAL STRIP 1 (6.48pt = 1.16%) */}
+                  <div className="w-[1.16%] bg-[#c0c0c0] border-r border-black shrink-0" />
+
+                  {/* Col 4: Rate Class / Commodity Item No with Q channel on left (56.16pt = 10.04%) */}
+                  <div className="w-[10.04%] border-r border-black flex flex-col">
+                    {/* Header: Rate Class top spanning (17px), Commodity Item No below right (18px) */}
+                    <div className="h-[35px] flex flex-col">
+                      <div className="h-[17px] border-b border-black text-center text-[5.5px] font-normal leading-none flex items-center justify-center">
+                        Rate Class
+                      </div>
+                      <div className="h-[18px] flex">
+                        <div className="w-[19.23%] border-r border-black" />
+                        <div className="w-[80.77%] border-b border-black flex flex-col justify-center items-center text-[5px] font-normal leading-[1.05]">
+                          <span>Commodity</span>
+                          <span>Item No</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Body under header: Q in narrow channel, right empty */}
+                    <div className="flex flex-1">
+                      <div className="w-[19.23%] border-r border-black text-center pt-2 font-bold text-[9.5px]">
+                        {item.rateClass}
+                      </div>
+                      <div className="w-[80.77%]" />
+                    </div>
+                  </div>
+
+                  {/* GRAY VERTICAL STRIP 2 (8.64pt = 1.54%) */}
+                  <div className="w-[1.54%] bg-[#c0c0c0] border-r border-black shrink-0" />
+
+                  {/* Col 5: Chargeable Weight (47.52pt = 8.49%) */}
+                  <div className="w-[8.49%] border-r border-black flex flex-col">
+                    <div className="h-[35px] border-b border-black flex flex-col justify-center items-center text-[6px] font-normal leading-[1.1]">
+                      <span>Chargeable</span>
+                      <span>Weight</span>
+                    </div>
+                    <div className="pt-2 pr-1.5 text-right font-bold text-[9.5px]">
+                      {fmt(item.chargeableWeight)}
+                    </div>
+                  </div>
+
+                  {/* GRAY VERTICAL STRIP 3 (8.64pt = 1.54%) */}
+                  <div className="w-[1.54%] bg-[#c0c0c0] border-r border-black shrink-0" />
+
+                  {/* Col 6: Rate / Class WITH DIAGONAL SPLIT LINE (49.68pt = 8.88%) */}
+                  <div className="w-[8.88%] border-r border-black flex flex-col">
+                    <div className="h-[35px] border-b border-black relative bg-white overflow-hidden">
+                      <svg
+                        className="absolute inset-0 w-full h-full pointer-events-none"
+                        preserveAspectRatio="none"
+                      >
+                        <line x1="18%" y1="80%" x2="82%" y2="20%" stroke="#000000" strokeWidth="0.8" />
+                      </svg>
+                      <span className="absolute top-1 left-2 text-[6.5px] leading-none font-normal">
+                        Rate
+                      </span>
+                      <span className="absolute bottom-1 right-2 text-[6.5px] leading-none font-normal">
+                        Class
+                      </span>
+                    </div>
+                    <div className="pt-2 pr-2 text-right font-bold text-[9.5px]">
+                      {fmt(item.rate)}
+                    </div>
+                  </div>
+
+                  {/* GRAY VERTICAL STRIP 4 (8.64pt = 1.54%) */}
+                  <div className="w-[1.54%] bg-[#c0c0c0] border-r border-black shrink-0" />
+
+                  {/* Col 7: Total with top value and bottom totals value (112.32pt = 20.08%) */}
+                  <div className="w-[20.08%] border-r border-black flex flex-col justify-between">
+                    <div>
+                      <div className="h-[35px] border-b border-black flex items-center justify-center text-[6.5px] font-normal">
+                        Total
+                      </div>
+                      <div className="pt-2 pr-2.5 text-right font-bold text-[10px]">
+                        {fmt(item.total)}
+                      </div>
+                    </div>
+                    {/* Bottom Totals */}
+                    <div className="h-[24px] border-t border-black flex items-center justify-end pr-2.5 font-bold text-[10px] bg-white">
                       {data.charges.prepaidWeightCharge
                         ? fmt(data.charges.prepaidWeightCharge)
                         : ''}
                     </div>
-                    <div className="w-[30%]" />
+                  </div>
+
+                  {/* GRAY VERTICAL STRIP 5 (8.64pt = 1.54%) */}
+                  <div className="w-[1.54%] bg-[#c0c0c0] border-r border-black shrink-0" />
+
+                  {/* Col 8: Nature and Quantity of Goods (incl. Dimensions or Volume) (164.16pt = 29.34%) */}
+                  <div className="w-[29.34%] flex flex-col">
+                    <div className="h-[35px] border-b border-black flex flex-col justify-center pl-2 text-[6px] font-normal leading-[1.1]">
+                      <span>Nature and Quantity of Goods</span>
+                      <span className="text-[5px] text-neutral-800">(incl. Dimensions or Volume)</span>
+                    </div>
+                    <div className="pt-2 pl-2 pr-1 text-[6.5px] font-bold leading-[1.28] whitespace-pre-line uppercase text-black">
+                      {item.natureAndQuantity}
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* ROW 10: CHARGES / CERTIFICATION / EXECUTION */}
+              {/* ROW 10: CHARGES / CERTIFICATION / EXECUTION WITH ALL 9 INVERTED TRAPEZOIDS */}
               <div className="flex">
                 {/* LEFT COLUMN: Charges Grid (~38% width) */}
                 <div className="w-[38%] border-r border-black flex flex-col text-[7px]">
-                  {/* Weight Charge */}
-                  <div className="flex border-b border-black min-h-[24px]">
-                    <div className="w-1/2 border-r border-black p-1 flex flex-col justify-between">
-                      <span className="text-neutral-700 text-[6.5px]">Prepaid</span>
-                      <span className="font-bold text-[8.5px] text-right">
-                        {fmt(data.charges.prepaidWeightCharge)}
-                      </span>
-                    </div>
-                    <div className="w-1/2 p-1 flex flex-col justify-between">
-                      <div className="flex justify-between text-[6.5px] text-neutral-700">
-                        <span>Weight Charge</span>
-                        <span>Collect</span>
+                  {/* Row 1: Connected 3-Trapezoid Header for [Prepaid] [Weight Charge] [Collect] */}
+                  <div className="flex flex-col border-b border-black">
+                    {/* The 3 Trapezoids Sequence across top */}
+                    <div className="flex items-start w-full">
+                      <div className="w-[6px] border-t border-black shrink-0" />
+
+                      {/* Trapezoid 1: Prepaid */}
+                      <div className="flex items-stretch flex-1">
+                        <svg width="8" height="12" viewBox="0 0 8 12" className="shrink-0 block">
+                          <line x1="0" y1="0" x2="8" y2="12" stroke="#000000" strokeWidth="0.9" />
+                        </svg>
+                        <div className="flex-1 border-b border-black flex items-center justify-center px-1 bg-white">
+                          <span className="text-[6.5px] font-normal">Prepaid</span>
+                        </div>
+                        <svg width="8" height="12" viewBox="0 0 8 12" className="shrink-0 block">
+                          <line x1="0" y1="12" x2="8" y2="0" stroke="#000000" strokeWidth="0.9" />
+                        </svg>
                       </div>
-                      <span className="font-bold text-[8.5px] text-right">
-                        {fmt(data.charges.collectWeightCharge)}
-                      </span>
+
+                      {/* Trapezoid 2: Weight Charge (centered across middle divider) */}
+                      <div className="flex items-stretch flex-[1.4]">
+                        <svg width="8" height="12" viewBox="0 0 8 12" className="shrink-0 block">
+                          <line x1="0" y1="0" x2="8" y2="12" stroke="#000000" strokeWidth="0.9" />
+                        </svg>
+                        <div className="flex-1 border-b border-black flex items-center justify-center px-1 bg-white">
+                          <span className="text-[6.5px] font-normal">Weight Charge</span>
+                        </div>
+                        <svg width="8" height="12" viewBox="0 0 8 12" className="shrink-0 block">
+                          <line x1="0" y1="12" x2="8" y2="0" stroke="#000000" strokeWidth="0.9" />
+                        </svg>
+                      </div>
+
+                      {/* Trapezoid 3: Collect */}
+                      <div className="flex items-stretch flex-1">
+                        <svg width="8" height="12" viewBox="0 0 8 12" className="shrink-0 block">
+                          <line x1="0" y1="0" x2="8" y2="12" stroke="#000000" strokeWidth="0.9" />
+                        </svg>
+                        <div className="flex-1 border-b border-black flex items-center justify-center px-1 bg-white">
+                          <span className="text-[6.5px] font-normal">Collect</span>
+                        </div>
+                        <svg width="8" height="12" viewBox="0 0 8 12" className="shrink-0 block">
+                          <line x1="0" y1="12" x2="8" y2="0" stroke="#000000" strokeWidth="0.9" />
+                        </svg>
+                      </div>
+
+                      <div className="w-[6px] border-t border-black shrink-0" />
+                    </div>
+
+                    {/* Numerical Values below trapezoid */}
+                    <div className="flex min-h-[16px]">
+                      <div className="w-1/2 border-r border-black p-1 flex items-end justify-end">
+                        <span className="font-bold text-[8.5px]">
+                          {fmt(data.charges.prepaidWeightCharge)}
+                        </span>
+                      </div>
+                      <div className="w-1/2 p-1 flex items-end justify-end">
+                        <span className="font-bold text-[8.5px]">
+                          {fmt(data.charges.collectWeightCharge)}
+                        </span>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Valuation Charge */}
-                  <div className="flex border-b border-black min-h-[22px] relative">
-                    <div className="w-1/2 border-r border-black p-1 flex flex-col justify-between relative">
-                      <span className="text-neutral-700 text-[6.5px]">Valuation Charge</span>
-                      <span className="font-bold text-[8px] text-right">
-                        {fmt(data.charges.valuationChargePrepaid)}
-                      </span>
-                      {!data.charges.valuationChargePrepaid && <DiagonalSlash />}
-                    </div>
-                    <div className="w-1/2 p-1 flex flex-col justify-end relative">
-                      <span className="font-bold text-[8px] text-right">
-                        {fmt(data.charges.valuationChargeCollect)}
-                      </span>
-                      {!data.charges.valuationChargeCollect && <DiagonalSlash />}
-                    </div>
-                  </div>
-
-                  {/* Tax */}
-                  <div className="flex border-b border-black min-h-[22px] relative">
-                    <div className="w-1/2 border-r border-black p-1 flex flex-col justify-between relative">
-                      <span className="text-neutral-700 text-[6.5px]">Tax</span>
-                      <span className="font-bold text-[8px] text-right">
-                        {fmt(data.charges.taxPrepaid)}
-                      </span>
-                      {!data.charges.taxPrepaid && <DiagonalSlash />}
-                    </div>
-                    <div className="w-1/2 p-1 flex flex-col justify-end relative">
-                      <span className="font-bold text-[8px] text-right">
-                        {fmt(data.charges.taxCollect)}
-                      </span>
-                      {!data.charges.taxCollect && <DiagonalSlash />}
+                  {/* Row 2: Valuation Charge WITH INVERTED TRAPEZOID */}
+                  <div className="flex flex-col border-b border-black relative">
+                    <TrapezoidHeader label="Valuation Charge" height={12} slant={9} />
+                    <div className="flex min-h-[14px]">
+                      <div className="w-1/2 border-r border-black p-1 flex items-end justify-end relative">
+                        <span className="font-bold text-[8px]">
+                          {fmt(data.charges.valuationChargePrepaid)}
+                        </span>
+                        {!data.charges.valuationChargePrepaid && <DiagonalSlash />}
+                      </div>
+                      <div className="w-1/2 p-1 flex items-end justify-end relative">
+                        <span className="font-bold text-[8px]">
+                          {fmt(data.charges.valuationChargeCollect)}
+                        </span>
+                        {!data.charges.valuationChargeCollect && <DiagonalSlash />}
+                      </div>
                     </div>
                   </div>
 
-                  {/* Total other Charges Due Agent */}
-                  <div className="flex border-b border-black min-h-[22px] relative">
-                    <div className="w-1/2 border-r border-black p-1 flex flex-col justify-between relative">
-                      <span className="text-neutral-700 text-[6px] leading-tight">
-                        Total other Charges Due Agent
-                      </span>
-                      <span className="font-bold text-[8px] text-right">
-                        {fmt(data.charges.agentChargesPrepaid)}
-                      </span>
-                      {!data.charges.agentChargesPrepaid && <DiagonalSlash />}
-                    </div>
-                    <div className="w-1/2 p-1 flex flex-col justify-end relative">
-                      <span className="font-bold text-[8px] text-right">
-                        {fmt(data.charges.agentChargesCollect)}
-                      </span>
-                      {!data.charges.agentChargesCollect && <DiagonalSlash />}
-                    </div>
-                  </div>
-
-                  {/* Total other Charges Due Carrier */}
-                  <div className="flex border-b border-black min-h-[24px]">
-                    <div className="w-1/2 border-r border-black p-1 flex flex-col justify-between relative">
-                      <span className="text-neutral-700 text-[6px] leading-tight">
-                        Total other Charges Due Carrier
-                      </span>
-                      <span className="font-bold text-[8.5px] text-right">
-                        {fmt(data.charges.carrierChargesPrepaid)}
-                      </span>
-                    </div>
-                    <div className="w-1/2 p-1 flex flex-col justify-end relative">
-                      <span className="font-bold text-[8px] text-right">
-                        {fmt(data.charges.carrierChargesCollect)}
-                      </span>
-                      {!data.charges.carrierChargesCollect && <DiagonalSlash />}
+                  {/* Row 3: Tax WITH INVERTED TRAPEZOID */}
+                  <div className="flex flex-col border-b border-black relative">
+                    <TrapezoidHeader label="Tax" height={12} slant={8} />
+                    <div className="flex min-h-[14px]">
+                      <div className="w-1/2 border-r border-black p-1 flex items-end justify-end relative">
+                        <span className="font-bold text-[8px]">
+                          {fmt(data.charges.taxPrepaid)}
+                        </span>
+                        {!data.charges.taxPrepaid && <DiagonalSlash />}
+                      </div>
+                      <div className="w-1/2 p-1 flex items-end justify-end relative">
+                        <span className="font-bold text-[8px]">
+                          {fmt(data.charges.taxCollect)}
+                        </span>
+                        {!data.charges.taxCollect && <DiagonalSlash />}
+                      </div>
                     </div>
                   </div>
 
-                  {/* Blank crossed slot */}
-                  <div className="flex border-b border-black min-h-[16px] relative">
+                  {/* Row 4: Total other Charges Due Agent WITH INVERTED TRAPEZOID */}
+                  <div className="flex flex-col border-b border-black relative">
+                    <TrapezoidHeader label="Total other Charges Due Agent" height={12} slant={9} />
+                    <div className="flex min-h-[14px]">
+                      <div className="w-1/2 border-r border-black p-1 flex items-end justify-end relative">
+                        <span className="font-bold text-[8px]">
+                          {fmt(data.charges.agentChargesPrepaid)}
+                        </span>
+                        {!data.charges.agentChargesPrepaid && <DiagonalSlash />}
+                      </div>
+                      <div className="w-1/2 p-1 flex items-end justify-end relative">
+                        <span className="font-bold text-[8px]">
+                          {fmt(data.charges.agentChargesCollect)}
+                        </span>
+                        {!data.charges.agentChargesCollect && <DiagonalSlash />}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Row 5: Total other Charges Due Carrier WITH INVERTED TRAPEZOID */}
+                  <div className="flex flex-col border-b border-black relative">
+                    <TrapezoidHeader label="Total other Charges Due Carrier" height={12} slant={9} />
+                    <div className="flex min-h-[16px]">
+                      <div className="w-1/2 border-r border-black p-1 flex items-end justify-end relative">
+                        <span className="font-bold text-[8.5px]">
+                          {fmt(data.charges.carrierChargesPrepaid)}
+                        </span>
+                      </div>
+                      <div className="w-1/2 p-1 flex items-end justify-end relative">
+                        <span className="font-bold text-[8px]">
+                          {fmt(data.charges.carrierChargesCollect)}
+                        </span>
+                        {!data.charges.carrierChargesCollect && <DiagonalSlash />}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Row 6: AUTHENTIC SOLID GRAY BAR WITH DOUBLE DIAGONAL SLASHES */}
+                  <div className="flex border-b border-black min-h-[22px] bg-[#bfbfbf] relative">
                     <div className="w-1/2 border-r border-black relative">
                       <DiagonalSlash />
                     </div>
@@ -614,19 +825,30 @@ export function MawbSheet({ data, scale = 1, activePage = 'both' }: MawbSheetPro
                     </div>
                   </div>
 
-                  {/* Total Prepaid & Total Collect */}
-                  <div className="flex min-h-[24px]">
-                    <div className="w-1/2 border-r border-black p-1 flex flex-col justify-between">
-                      <span className="text-neutral-700 text-[6.5px]">Total prepaid</span>
-                      <span className="font-bold text-[9px] text-right">
-                        {fmt(data.charges.totalPrepaid)}
-                      </span>
+                  {/* Row 7: Total Prepaid & Total Collect WITH 2 INVERTED TRAPEZOIDS */}
+                  <div className="flex flex-col">
+                    <div className="flex items-start w-full">
+                      {/* Left: Total prepaid trapezoid */}
+                      <div className="w-1/2 border-r border-black flex">
+                        <TrapezoidHeader label="Total prepaid" height={11} slant={8} />
+                      </div>
+                      {/* Right: Total collect trapezoid */}
+                      <div className="w-1/2 flex">
+                        <TrapezoidHeader label="Total collect" height={11} slant={8} />
+                      </div>
                     </div>
-                    <div className="w-1/2 p-1 flex flex-col justify-between">
-                      <span className="text-neutral-700 text-[6.5px]">Total collect</span>
-                      <span className="font-bold text-[9px] text-right">
-                        {fmt(data.charges.totalCollect)}
-                      </span>
+
+                    <div className="flex min-h-[16px]">
+                      <div className="w-1/2 border-r border-black p-1 flex items-end justify-end">
+                        <span className="font-bold text-[9px]">
+                          {fmt(data.charges.totalPrepaid)}
+                        </span>
+                      </div>
+                      <div className="w-1/2 p-1 flex items-end justify-end">
+                        <span className="font-bold text-[9px]">
+                          {fmt(data.charges.totalCollect)}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -664,33 +886,63 @@ export function MawbSheet({ data, scale = 1, activePage = 'both' }: MawbSheetPro
                 </div>
               </div>
 
-              {/* ROW 11: DESTINATION & CARRIER EXECUTION */}
+              {/* ROW 11: DESTINATION & CARRIER EXECUTION WITH INVERTED TRAPEZOIDS */}
               <div className="flex border-t border-black">
                 {/* Left: Destination Charges Box (~38% width) */}
                 <div className="w-[38%] border-r border-black flex flex-col text-[6.5px]">
-                  <div className="flex border-b border-black min-h-[18px]">
-                    <div className="w-1/2 border-r border-black p-0.5 relative">
-                      <span>Currency Conversion Rates</span>
-                      <DiagonalSlash />
+                  {/* Row 1: Currency Conversion Rates & cc charges in Dest.Currency TRAPEZOIDS */}
+                  <div className="flex border-b border-black min-h-[20px]">
+                    <div className="w-1/2 border-r border-black flex flex-col relative">
+                      <TrapezoidHeader
+                        label="Currency Conversion Rates"
+                        height={10}
+                        slant={6}
+                        textClassName="text-[5.5px] text-black whitespace-nowrap"
+                      />
+                      <div className="flex-1 relative min-h-[10px]">
+                        <DiagonalSlash />
+                      </div>
                     </div>
-                    <div className="w-1/2 p-0.5 relative">
-                      <span>cc charges in Dest.Currency</span>
-                      <DiagonalSlash />
+                    <div className="w-1/2 flex flex-col relative">
+                      <TrapezoidHeader
+                        label="cc charges in Dest.Currency"
+                        height={10}
+                        slant={6}
+                        textClassName="text-[5.5px] text-black whitespace-nowrap"
+                      />
+                      <div className="flex-1 relative min-h-[10px]">
+                        <DiagonalSlash />
+                      </div>
                     </div>
                   </div>
 
+                  {/* Row 2: For Carrier's use only & Charges at Destination TRAPEZOIDS */}
                   <div className="flex min-h-[22px]">
                     <div className="w-2/5 border-r border-black p-0.5 text-[5.5px] leading-tight flex items-center">
                       For Carrier&apos;s use only at Destination
                     </div>
                     <div className="w-3/5 flex flex-col">
-                      <div className="border-b border-black p-0.5 relative flex-1">
-                        <span>Charges at Destination</span>
-                        <DiagonalSlash />
+                      <div className="border-b border-black relative flex-1 flex flex-col">
+                        <TrapezoidHeader
+                          label="Charges at Destination"
+                          height={10}
+                          slant={6}
+                          textClassName="text-[5.5px] text-black whitespace-nowrap"
+                        />
+                        <div className="flex-1 relative min-h-[8px]">
+                          <DiagonalSlash />
+                        </div>
                       </div>
-                      <div className="p-0.5 relative flex-1">
-                        <span>Total collect Charges</span>
-                        <DiagonalSlash />
+                      <div className="relative flex-1 flex flex-col">
+                        <TrapezoidHeader
+                          label="Total collect Charges"
+                          height={10}
+                          slant={6}
+                          textClassName="text-[5.5px] text-black whitespace-nowrap"
+                        />
+                        <div className="flex-1 relative min-h-[8px]">
+                          <DiagonalSlash />
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1013,4 +1265,3 @@ export function MawbSheet({ data, scale = 1, activePage = 'both' }: MawbSheetPro
     </div>
   );
 }
-
