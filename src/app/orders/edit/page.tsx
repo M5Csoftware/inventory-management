@@ -8,7 +8,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { PlusCircle, Trash2, ArrowLeft, Save } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
+import { PlusCircle, Trash2, ArrowLeft, Save, FileText, Info } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'react-toastify';
 import { ConfirmModal } from '@/components/confirm-modal';
@@ -17,7 +18,7 @@ function EditOrderContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const id = searchParams.get('id') || '';
-  const { orders, suppliers, products, updateOrder, activeBranch } = useInventory();
+  const { orders, suppliers, products, updateOrder } = useInventory();
   
   const [supplier, setSupplier] = useState('');
   const [branch, setBranch] = useState('Delhi');
@@ -25,6 +26,10 @@ function EditOrderContent() {
   const [taxSlab, setTaxSlab] = useState<string>('18');
   const [taxOption, setTaxOption] = useState<'IGST' | 'CGST_SGST' | 'NO_TAX'>('IGST');
   const [items, setItems] = useState([{ productId: '', name: '', quantity: 1, price: 0 }]);
+  const [termsAndConditions, setTermsAndConditions] = useState(
+    "1. Payment will be released after goods are received in fine condition.\n2. Payment terms: 15 days from invoice date.\n3. Delivery within 7 working days.\n4. All disputes subject to Delhi jurisdiction."
+  );
+  const [description, setDescription] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -44,6 +49,12 @@ function EditOrderContent() {
           setTaxOption(orderToEdit.taxOption);
         }
         setItems(orderToEdit.items.map(item => ({ ...item })));
+        if (orderToEdit.termsAndConditions !== undefined && orderToEdit.termsAndConditions !== null) {
+          setTermsAndConditions(orderToEdit.termsAndConditions);
+        }
+        if (orderToEdit.description) {
+          setDescription(orderToEdit.description);
+        }
         setIsLoaded(true);
       } else {
         toast.error("Order not found");
@@ -126,6 +137,8 @@ function EditOrderContent() {
         taxOption,
         taxAmount: gstAmount,
         totalAmount,
+        termsAndConditions,
+        description,
       });
       setShowConfirmModal(false);
       router.push('/orders');
@@ -149,7 +162,7 @@ function EditOrderContent() {
         </Link>
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Edit Order {id}</h1>
-          <p className="text-muted-foreground mt-1">Modify supplier, branch, items, or status for this purchase order.</p>
+          <p className="text-muted-foreground mt-1">Modify supplier, branch, items, terms, or status for this purchase order.</p>
         </div>
       </div>
 
@@ -157,7 +170,7 @@ function EditOrderContent() {
         <Card className="border-border/50 shadow-sm">
           <CardHeader className="border-b border-border/50 pb-4">
             <CardTitle>Order Details</CardTitle>
-            <CardDescription>Update the supplier, destination facility, and list the products required.</CardDescription>
+            <CardDescription>Update the supplier, destination facility, items, and terms &amp; conditions.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6 pt-6">
             
@@ -318,6 +331,43 @@ function EditOrderContent() {
               </div>
             </div>
 
+            {/* Two Column Layout: Terms & Conditions + Description */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-border/50">
+              {/* Terms & Conditions */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-muted-foreground" />
+                  <Label className="text-sm font-semibold">
+                    Terms &amp; Conditions
+                  </Label>
+                </div>
+                <Textarea
+                  value={termsAndConditions}
+                  onChange={(e) => setTermsAndConditions(e.target.value)}
+                  placeholder="Enter terms and conditions for this purchase order..."
+                  className="min-h-[120px] resize-none"
+                />
+              </div>
+
+              {/* Description */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Info className="w-4 h-4 text-muted-foreground" />
+                  <Label className="text-sm font-semibold">Description</Label>
+                </div>
+                <Textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Enter any additional description, notes, or special instructions for this order..."
+                  className="min-h-[120px] resize-none"
+                />
+                <p className="text-[11px] text-muted-foreground italic">
+                  ℹ️ Additional information about this purchase order.
+                </p>
+              </div>
+            </div>
+
+            {/* Totals Summary */}
             <div className="flex flex-col items-end pt-4 border-t border-border/50 gap-2">
               <div className="flex justify-between w-full sm:w-64 text-sm">
                 <span className="text-muted-foreground">Subtotal</span>

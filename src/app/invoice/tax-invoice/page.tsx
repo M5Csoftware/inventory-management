@@ -4,7 +4,7 @@ import React, { useState, useRef } from 'react';
 import { TaxInvoiceData, INITIAL_SAMPLE_TAX_INVOICE, BLANK_TAX_INVOICE } from '@/types/tax-invoice';
 import { TaxInvoiceForm } from '@/components/invoice/TaxInvoiceForm';
 import { TaxInvoiceSheet } from '@/components/invoice/TaxInvoiceSheet';
-import { downloadInvoicePdf } from '@/lib/pdf-export';
+import { downloadInvoicePdf, printInvoicePdf } from '@/lib/pdf-export';
 import { Button } from '@/components/ui/button';
 import { toast } from 'react-toastify';
 import {
@@ -26,8 +26,20 @@ export default function TaxInvoicePage() {
   const [isExporting, setIsExporting] = useState<boolean>(false);
   const printContainerRef = useRef<HTMLDivElement>(null);
 
-  const handlePrint = () => {
-    window.print();
+  const handlePrint = async () => {
+    if (isExporting) return;
+    setIsExporting(true);
+    const toastId = toast.info('Preparing print document...', { autoClose: 2000 });
+
+    try {
+      await printInvoicePdf('tax-invoice-printable-sheet');
+      toast.dismiss(toastId);
+    } catch {
+      toast.dismiss(toastId);
+      window.print();
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const handleDownloadPdf = async () => {
