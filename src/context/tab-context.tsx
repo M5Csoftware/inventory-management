@@ -39,7 +39,11 @@ const ROUTE_LABELS: Record<string, string> = {
   "/manage-roles/edit": "Edit User",
   "/products/edit": "Edit Product",
   "/categories/edit": "Edit Category",
-  "/suppliers/edit": "Edit Supplier",
+  "/invoice": "Invoice Dashboard",
+  "/invoice/tax-invoice": "Generate Tax Invoice",
+  "/invoice/new": "Inward Invoice",
+  "/invoice/approvals": "Invoice Approvals",
+  "/invoice/audit": "Invoice Log",
   "/orders/edit": "Edit Order",
   "/quotations/edit": "Edit Quotation",
 };
