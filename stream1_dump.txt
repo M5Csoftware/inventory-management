@@ -1,0 +1,1137 @@
+0.72 w
+0.75294 0.75294 0.75294 rg
+8.64 156.01003 203.03999 28.08 re
+f
+395.28 327 8.64 164.16 re
+f
+274.32001 327 8.64 164.16 re
+f
+216 327 8.64 164.16 re
+f
+159.84 327 8.64 164.16 re
+f
+97.2 327 4.32 164.16 re
+f
+0 0 0 rg
+8.64 99.45001 559.44 774.63 re
+S
+32.76 895.73999 m
+32.76 876.23999 l
+S
+57.96 895.65002 m
+57.96 876.23999 l
+S
+311.04001 99.45001 m
+311.04001 75.69 l
+S
+196.56 86.48999 m
+209.52 99.45001 l
+S
+120.96 99.45001 m
+129.60001 86.48999 l
+S
+129.60001 86.48999 m
+196.56 86.48999 l
+S
+295.92001 86.48999 m
+308.88 99.45001 l
+S
+226.8 99.45001 m
+235.44 86.48999 l
+S
+235.44 86.48999 m
+295.92001 86.48999 l
+S
+8.64 75.69 m
+311.04001 75.65997 l
+S
+211.67999 99.45001 m
+211.67999 75.69 l
+S
+110.16 156.01001 m
+110.16 99.45001 l
+S
+97.2 112.81 m
+110.16 125.77002 l
+S
+10.8 125.77002 m
+19.44 112.81 l
+S
+19.44 112.81 m
+97.2 112.81 l
+S
+8.64 807.08002 m
+261.35999 807.08002 l
+S
+8.64 731.47998 m
+261.35999 731.47998 l
+S
+8.64 671.07001 m
+261.35999 671.07001 l
+S
+261.35999 781.16003 m
+568.08002 781.16003 l
+S
+261.35999 796.28003 m
+568.08002 796.28003 l
+S
+261.35999 731.47998 m
+568.08002 731.47998 l
+S
+8.64 638.67004 m
+261.35999 638.67004 l
+S
+8.64 606.27002 m
+568.08002 606.27002 l
+S
+8.64 573.87 m
+568.08002 573.87 l
+S
+8.64 543.63 m
+568.08002 543.63 l
+S
+261.35999 874.08002 m
+261.35999 573.87 l
+S
+32.4 606.27002 m
+32.4 573.87 l
+S
+131.75999 671.07001 m
+131.75999 638.67004 l
+S
+170.64 606.27002 m
+170.64 573.87 l
+S
+195.3 606.27002 m
+195.3 573.87 l
+S
+216 606.27002 m
+216 573.87 l
+S
+239.75999 606.27002 m
+239.75999 573.87 l
+S
+291.60001 606.27002 m
+291.60001 573.87 l
+S
+311.04001 606.27002 m
+311.04001 573.87 l
+S
+327.23999 593.31 m
+327.23999 573.87 l
+S
+343.44 606.27002 m
+343.44 573.87 l
+S
+358.56 593.31 m
+358.56 573.87 l
+S
+373.67999 606.27002 m
+373.67999 573.87 l
+S
+311.04001 593.31 m
+373.67999 593.31 l
+S
+466.56 606.27002 m
+466.56 573.87 l
+S
+349.92001 573.87 m
+349.92001 543.63 l
+S
+8.64 491.16 m
+568.08002 491.16 l
+S
+520.71002 506.01001 m
+521.46002 491.16 l
+S
+521.01001 505.56 m
+568.08002 505.56 l
+S
+38.88 491.16 m
+38.88 327.65997 l
+S
+97.2 491.16 m
+97.2 327.65997 l
+S
+86.4 491.16 m
+86.4 327.65997 l
+S
+103.68 491.16 m
+103.68 327.65997 l
+S
+114.48 478.20001 m
+114.48 327 l
+S
+8.64 464.51999 m
+97.2 464.51999 l
+S
+114.48 464.51999 m
+568.08002 464.51999 l
+S
+159.84 491.16 m
+159.84 327 l
+S
+114.48 478.20001 m
+159.84 478.20001 l
+S
+168.48 491.16 m
+168.48 327.65997 l
+S
+216 491.16 m
+216 327.65997 l
+S
+224.64 491.16 m
+224.64 327.65997 l
+S
+274.32001 491.16 m
+274.32001 327.65997 l
+S
+282.95999 491.16 m
+282.95999 327.65997 l
+S
+395.28 491.16 m
+395.28 327.65997 l
+S
+403.92001 491.16 m
+403.92001 327.65997 l
+S
+8.64 324.48999 m
+568.08002 324.48999 l
+S
+282.95999 342.84998 m
+395.28 342.84998 l
+S
+8.64 340.69 m
+97.2 340.69 l
+S
+211.67999 324.48999 m
+211.67999 102.01001 l
+S
+8.64 298.57001 m
+211.67999 298.57001 l
+S
+8.64 270.48999 m
+211.08 270.48999 l
+S
+8.64 242.40997 m
+568.08002 242.40997 l
+S
+8.64 156.01001 m
+568.08002 156.01001 l
+S
+8.64 214.33002 m
+211.67999 214.33002 l
+S
+8.64 184.09003 m
+211.67999 184.09003 l
+S
+8.64 125.77002 m
+211.67999 125.77002 l
+S
+233.48 469.84 m
+265.48001 485.84 l
+S
+84.24 313.69 m
+138.24001 313.69 l
+S
+28.08 313.69 m
+62.64 313.69 l
+S
+15.12 324.48999 m
+28.08 313.69 l
+S
+62.64 313.69 m
+75.6 324.48999 l
+S
+75.6 324.48999 m
+84.24 313.69 l
+S
+138.24001 313.98999 m
+151.2 324.48999 l
+S
+164.16 313.69 m
+198.72 313.69 l
+S
+153.36 324.48999 m
+164.16 313.69 l
+S
+198.72 313.69 m
+211.67999 324.48999 l
+S
+47.52 298.57001 m
+58.32 285.60999 l
+S
+58.32 285.60999 m
+157.67999 285.60999 l
+S
+157.67999 285.60999 m
+166.32001 298.57001 l
+S
+84.24 257.53003 m
+129.60001 257.53003 l
+S
+77.76 270.48999 m
+84.24 257.53003 l
+S
+129.60001 257.53003 m
+138.24001 270.48999 l
+S
+15.12 242.40997 m
+25.92 229.45001 l
+S
+25.92 229.45001 m
+194.39999 229.45001 l
+S
+194.39999 229.45001 m
+203.03999 242.40997 l
+S
+15.12 214.33002 m
+25.92 201.37 l
+S
+25.92 201.37 m
+194.39999 201.37 l
+S
+194.39999 201.37 m
+203.03999 214.33002 l
+S
+28.08 145.21002 m
+88.56 145.21002 l
+S
+19.44 156.01001 m
+28.08 145.21002 l
+S
+88.56 145.51001 m
+101.52 156.01001 l
+S
+129.60001 145.21002 m
+190.08 145.21002 l
+S
+120.96 156.01001 m
+129.60001 145.21002 l
+S
+190.08 145.51001 m
+203.03999 156.01001 l
+S
+88.56 595.46997 m
+159.84 595.46997 l
+S
+82.08 606.27002 m
+88.56 595.46997 l
+S
+159.84 595.46997 m
+170.64 606.27002 l
+S
+[1.6 1.6] 0 d
+235.44 171.13 m
+557.94 171.13 l
+S
+[] 0 d
+[1.6 1.6] 0 d
+231.12 110.25 m
+553.62 110.25 l
+S
+[] 0 d
+261.35999 573.87 m
+261.35999 560.91003 l
+S
+142.56 565.22998 m
+237.60001 565.22998 l
+S
+138.24001 573.87 m
+142.56 565.22998 l
+S
+237.60001 565.22998 m
+241.92 573.87 l
+S
+129.47 873.83002 m
+261.35999 873.83002 l
+S
+129.60001 873.83002 m
+129.60001 864.26001 l
+S
+129.47 864.39001 m
+261.35999 864.39001 l
+S
+129.60001 807.08002 m
+129.60001 796.28003 l
+S
+129.60001 796.28003 m
+261.35999 796.28003 l
+S
+198.72 112.81 m
+211.67999 125.77002 l
+S
+112.32 125.77002 m
+120.96 112.81 l
+S
+120.96 112.81 m
+198.72 112.81 l
+S
+110.16 201.37 m
+110.16 184.09003 l
+S
+110.16 229.45001 m
+110.16 214.33002 l
+S
+110.16 257.59003 m
+110.16 242.40997 l
+S
+110.16 285.48999 m
+110.16 270.48999 l
+S
+110.16 313.69 m
+110.16 298.57001 l
+S
+261.35999 560.91003 m
+261.35999 543.28003 l
+S
+120.96 573.87 m
+120.96 543.63 l
+S
+8.64 99.45001 m
+8.64 76.20001 l
+S
+BT
+/F1 6.5 Tf
+13 865 Td
+(Shipper's Name and Address) Tj
+ET
+BT
+/F1 6.5 Tf
+129.60001 867 Td
+(Shipper's Account Number) Tj
+ET
+BT
+/F1 6.5 Tf
+265.70001 862.5 Td
+(Not negotiable) Tj
+ET
+BT
+/F2 8 Tf
+265.70001 851 Td
+(AIR WAYBILL) Tj
+ET
+BT
+/F1 6.5 Tf
+265.70001 836.5 Td
+(issued by) Tj
+ET
+BT
+/F1 6.5 Tf
+15.1 798.5 Td
+(Consignee's Name and Address) Tj
+ET
+BT
+/F1 6.5 Tf
+129.60001 800 Td
+(Consignee's Account Number) Tj
+ET
+BT
+/F1 5.1 Tf
+263.5 785.5 Td
+(Copies 1,2 and 3 of this House Air Waybill are originals and have the same validity) Tj
+ET
+BT
+/F1 5.05 Tf
+263.5 773 Td
+(It is agreed that the goods described herein are accepted in apparent good order and condition \(except) Tj
+ET
+BT
+/F1 5.05 Tf
+263.5 766.20001 Td
+(as noted\) for carriage SUBJECT TO THE CONDITIONS OF CONTRACT ON THE REVERSE HEREOF.) Tj
+ET
+BT
+/F1 5.05 Tf
+263.5 759.40002 Td
+(All goods may be carried by any other means including road or any other carrier unless specific contrary) Tj
+ET
+BT
+/F1 5.05 Tf
+263.5 752.59998 Td
+(instructions are given herein by the shipper and shipper agrees that the shipment may be carried via) Tj
+ET
+BT
+/F1 5.05 Tf
+263.5 745.79999 Td
+(intermediate stopping places which the carrier deems appropriate.) Tj
+ET
+BT
+/F1 6.5 Tf
+13 722.5 Td
+(Issuing Carrier's Agent Name and City) Tj
+ET
+BT
+/F1 6.5 Tf
+10.8 662 Td
+(Agent's IATA Code) Tj
+ET
+BT
+/F1 6.5 Tf
+138.2 662 Td
+(Account No.) Tj
+ET
+BT
+/F1 6.5 Tf
+13 630 Td
+(Airport of Departure \(Addr. Of First Carrier\) and requested Routing) Tj
+ET
+BT
+/F1 6.5 Tf
+15.1 599.5 Td
+(To) Tj
+ET
+BT
+/F1 6.5 Tf
+34.6 599.5 Td
+(By First Carrier) Tj
+ET
+BT
+/F1 6.5 Tf
+86.4 600 Td
+(Routing and Destination) Tj
+ET
+BT
+/F1 6.5 Tf
+175 599.5 Td
+(To) Tj
+ET
+BT
+/F1 6.5 Tf
+200.89999 599.5 Td
+(by) Tj
+ET
+BT
+/F1 6.5 Tf
+218.2 599.5 Td
+(To) Tj
+ET
+BT
+/F1 6.5 Tf
+244.10001 599.5 Td
+(by) Tj
+ET
+BT
+/F1 6.5 Tf
+263.5 599.5 Td
+(Currency) Tj
+ET
+BT
+/F1 5.4 Tf
+293.79999 600 Td
+(CHGS) Tj
+ET
+BT
+/F1 5.4 Tf
+293.79999 594.20001 Td
+(Code) Tj
+ET
+BT
+/F1 6.5 Tf
+315.39999 599.5 Td
+(WT/VAL) Tj
+ET
+BT
+/F1 6.5 Tf
+345.60001 599.5 Td
+(Other) Tj
+ET
+BT
+/F1 5.2 Tf
+380.20001 600 Td
+(Declared Value for) Tj
+ET
+BT
+/F1 5.2 Tf
+380.20001 594.40002 Td
+(Carriage) Tj
+ET
+BT
+/F1 5.2 Tf
+479.5 600 Td
+(Declared Value for) Tj
+ET
+BT
+/F1 5.2 Tf
+479.5 594.40002 Td
+(Customs) Tj
+ET
+BT
+/F1 6.5 Tf
+21.6 565 Td
+(Airport of Destination) Tj
+ET
+BT
+/F1 5.2 Tf
+160.16701 567.5 Td
+(Requested Flight No/Date) Tj
+ET
+BT
+/F1 5.2 Tf
+262 567 Td
+(Amount of Insurance) Tj
+ET
+BT
+/F1 5.1 Tf
+352.10001 565 Td
+(INSURANCE- - if carrier offers insurance and such insurance is) Tj
+ET
+BT
+/F1 5.1 Tf
+352.10001 558.5 Td
+(requested in accordance with conditions on reverse hereof indicate amount) Tj
+ET
+BT
+/F1 5.1 Tf
+352.10001 552 Td
+(to be insured in figures in box marked Amount of Insurance.) Tj
+ET
+BT
+/F1 6.5 Tf
+13 536.5 Td
+(Handling Information) Tj
+ET
+BT
+/F1 6.5 Tf
+539.90002 498 Td
+(SCI) Tj
+ET
+BT
+/F1 6.2 Tf
+13 483 Td
+(No.of) Tj
+ET
+BT
+/F1 6.2 Tf
+13 476.79999 Td
+(Pieces) Tj
+ET
+BT
+/F1 6.2 Tf
+13 470.60001 Td
+(RCP) Tj
+ET
+BT
+/F1 6.2 Tf
+49.7 483 Td
+(Gross) Tj
+ET
+BT
+/F1 6.2 Tf
+49.7 476.79999 Td
+(Weight) Tj
+ET
+BT
+/F1 6 Tf
+88.6 480 Td
+(kg) Tj
+ET
+BT
+/F1 6 Tf
+88.6 474 Td
+(lb) Tj
+ET
+BT
+/F1 5 Tf
+114.5 484 Td
+(Rate Class) Tj
+ET
+BT
+/F1 4.6 Tf
+116.6 473 Td
+(Commodity) Tj
+ET
+BT
+/F1 4.6 Tf
+116.6 467.20001 Td
+(Item No) Tj
+ET
+BT
+/F1 5.2 Tf
+178.8006 482 Td
+(Chargeable) Tj
+ET
+BT
+/F1 5.2 Tf
+184.1488 475.5 Td
+(Weight) Tj
+ET
+BT
+/F1 6.5 Tf
+226.8 480 Td
+(Rate) Tj
+ET
+BT
+/F1 6.5 Tf
+250.2 469 Td
+(Class) Tj
+ET
+BT
+/F1 6.5 Tf
+330.5 477 Td
+(Total) Tj
+ET
+BT
+/F1 6 Tf
+414.70001 480 Td
+(Nature and Quantity of Goods) Tj
+ET
+BT
+/F1 6 Tf
+414.70001 474 Td
+(\(incl. Dimensions or Volume\)) Tj
+ET
+BT
+/F1 6.5 Tf
+28.1 318 Td
+(Prepaid) Tj
+ET
+BT
+/F1 6.5 Tf
+86.4 318 Td
+(Weight Charge) Tj
+ET
+BT
+/F1 6.5 Tf
+168.5 318 Td
+(Collect) Tj
+ET
+BT
+/F1 6.5 Tf
+216 316 Td
+(Other Charges) Tj
+ET
+BT
+/F1 6.5 Tf
+82.1 289.5 Td
+(Valuation Charge) Tj
+ET
+BT
+/F1 6.5 Tf
+103.7 261.5 Td
+(Tax) Tj
+ET
+BT
+/F1 6.5 Tf
+56.2 233.5 Td
+(Total other Charges Due Agent) Tj
+ET
+BT
+/F1 6.5 Tf
+56.2 205.5 Td
+(Total other Charges Due Carrier) Tj
+ET
+BT
+/F1 5.15 Tf
+216 232 Td
+(Shipper certifies that the particulars on the face hereof are correct and that insofar as any part of the consignment) Tj
+ET
+BT
+/F1 5.15 Tf
+216 225.20001 Td
+(contains dangerous goods such part is properly described by name and is in proper condition for carriage by air) Tj
+ET
+BT
+/F1 5.15 Tf
+216 218.40002 Td
+(according to the applicable Dangerous Goods Regulations) Tj
+ET
+BT
+/F1 6.5 Tf
+348.82751 162 Td
+(Signature of Shipper or his Agent) Tj
+ET
+BT
+/F1 6.5 Tf
+38.9 148 Td
+(Total prepaid) Tj
+ET
+BT
+/F1 6.5 Tf
+138.2 148 Td
+(Total collect) Tj
+ET
+BT
+/F1 6.5 Tf
+15.1 119 Td
+(Currency Conversion Rates) Tj
+ET
+BT
+/F1 6.5 Tf
+116.6 119 Td
+(cc charges in Dest.Currency) Tj
+ET
+BT
+/F1 6.5 Tf
+216 104 Td
+(Executed on) Tj
+ET
+BT
+/F1 6.5 Tf
+299.10001 104 Td
+(\(Date\)) Tj
+ET
+BT
+/F1 6.5 Tf
+333.39999 104 Td
+(at) Tj
+ET
+BT
+/F1 6.5 Tf
+360.5 104 Td
+(\(Place\)) Tj
+ET
+BT
+/F1 6.5 Tf
+440.60001 104 Td
+(Signature of issuing carrier or Agent) Tj
+ET
+BT
+/F1 5.3 Tf
+21.6 87 Td
+(For Carrier's use) Tj
+ET
+BT
+/F1 5.3 Tf
+21.6 81.70001 Td
+(only at Destination) Tj
+ET
+BT
+/F1 6.5 Tf
+129.60001 90 Td
+(Charges at Destination) Tj
+ET
+BT
+/F1 6.5 Tf
+233.3 90 Td
+(Total collect Charges) Tj
+ET
+BT
+/F2 9.5 Tf
+16.6 881 Td
+(077) Tj
+ET
+BT
+/F2 9.5 Tf
+36.6 881 Td
+(DEL) Tj
+ET
+BT
+/F2 9.5 Tf
+59.6 881 Td
+(5906 6545) Tj
+ET
+BT
+/F2 9.5 Tf
+496.09351 882 Td
+(077-5906 6545) Tj
+ET
+BT
+/F2 7.2 Tf
+15 856 Td
+(HOLISTIC ENTERPRISES) Tj
+ET
+BT
+/F2 7.2 Tf
+15 848.20001 Td
+(GROUND FLOOR, 39, SHOP DDA JANTA FLAT) Tj
+ET
+BT
+/F2 7.2 Tf
+15 840.40002 Td
+(GROUP-II POCKET-C, HASTAL ROAD, UTTAM NAGAR) Tj
+ET
+BT
+/F2 7.2 Tf
+15 832.59998 Td
+(NEW DELHI, SOUTH WEST DELHI, DELHI, 110059) Tj
+ET
+BT
+/F2 7.2 Tf
+15 824.79999 Td
+(EMAIL - HOLISTICS@GMAIL.COM) Tj
+ET
+BT
+/F2 8.2 Tf
+340 849 Td
+(EGYPT AIR) Tj
+ET
+BT
+/F2 7.2 Tf
+12.8 787 Td
+(A.J WORLDWIDE SERVICES LTD) Tj
+ET
+BT
+/F2 7.2 Tf
+12.8 779.20001 Td
+(UNIT 2 HORTON INDUSTRIAL PARK) Tj
+ET
+BT
+/F2 7.2 Tf
+12.8 771.40002 Td
+(GB UB7 8JD HORTON ROAD WEST DRAYTON) Tj
+ET
+BT
+/F2 7.2 Tf
+12.8 763.59998 Td
+(EORI : GB745115840000) Tj
+ET
+BT
+/F2 7.2 Tf
+12.8 755.79999 Td
+(TEL.:+44275665502000) Tj
+ET
+BT
+/F2 7.2 Tf
+12.8 748 Td
+(UK) Tj
+ET
+BT
+/F2 7.6 Tf
+15 712 Td
+(M5 CONTINENT LOGISTICS SOLUTION PVT LTD) Tj
+ET
+BT
+/F2 7.6 Tf
+15 703.59998 Td
+(DELHI) Tj
+ET
+BT
+/F2 7.6 Tf
+265.70001 719 Td
+(FREIGHT PREPAID) Tj
+ET
+BT
+/F2 7.8 Tf
+12.8 651.5 Td
+(14-0-26840004) Tj
+ET
+BT
+/F2 7.8 Tf
+15 619 Td
+(DELHI) Tj
+ET
+BT
+/F2 7.5 Tf
+10.8 581.5 Td
+(LHR) Tj
+ET
+BT
+/F2 7.5 Tf
+34.6 581.5 Td
+(MS) Tj
+ET
+BT
+/F2 7.5 Tf
+263.5 581.5 Td
+(INR) Tj
+ET
+BT
+/F1 4.1 Tf
+314.9252 595.20001 Td
+(PPD) Tj
+ET
+BT
+/F1 4.1 Tf
+329.98541 595.20001 Td
+(COLL) Tj
+ET
+BT
+/F1 4.1 Tf
+346.78519 595.20001 Td
+(PPD) Tj
+ET
+BT
+/F1 4.1 Tf
+360.76538 595.20001 Td
+(COLL) Tj
+ET
+BT
+/F2 7.8 Tf
+10.8 555.5 Td
+(LONDON) Tj
+ET
+BT
+/F2 7.8 Tf
+126 555.5 Td
+(MS5518) Tj
+ET
+BT
+/F2 7.8 Tf
+212.9688 555.5 Td
+(28/10/2026) Tj
+ET
+BT
+/F2 7.8 Tf
+126 547 Td
+(MS777) Tj
+ET
+BT
+/F2 7.8 Tf
+212.9688 547 Td
+(30/10/2026) Tj
+ET
+BT
+/F2 7.2 Tf
+13 528 Td
+(PLEASE INFORM CONSIGNEE IMMEDIATELY ON ARRIVAL OF CARGO MARKS AND NOS ACC3 Number \(DE/ACC3/EGCAI-MS\)) Tj
+ET
+BT
+/F2 8 Tf
+19.352 456 Td
+(57) Tj
+ET
+BT
+/F2 8 Tf
+53.544 456 Td
+(1308.00) Tj
+ET
+BT
+/F2 8 Tf
+88.912 456 Td
+(K) Tj
+ET
+BT
+/F2 8 Tf
+105.888 456 Td
+(Q) Tj
+ET
+BT
+/F2 8 Tf
+173.54401 456 Td
+(1308.00) Tj
+ET
+BT
+/F2 7.2 Tf
+238.4912 456 Td
+(300.00) Tj
+ET
+BT
+/F2 8.2 Tf
+318.48361 456 Td
+(392,400.00) Tj
+ET
+BT
+/F2 6.2 Tf
+407.39999 456 Td
+(SAID TO CONTAIN) Tj
+ET
+BT
+/F2 6.2 Tf
+407.39999 448.79999 Td
+(ARTIFICIAL JEWELLERY, BAG, CERAMIC) Tj
+ET
+BT
+/F2 6.2 Tf
+407.39999 441.60001 Td
+(UTENSILS, COSMETIC,COTTON) Tj
+ET
+BT
+/F2 6.2 Tf
+407.39999 434.39999 Td
+(UNDERGARMENTS, COTTON PANT HS) Tj
+ET
+BT
+/F2 6.2 Tf
+407.39999 427.20001 Td
+(CODE: 71171100, 63053300, 69111029,) Tj
+ET
+BT
+/F2 6.2 Tf
+407.39999 420 Td
+(61071100, 62034290) Tj
+ET
+BT
+/F2 6.2 Tf
+407.39999 412.79999 Td
+(INVOICE NO - HL077/26-27 DT. 27/10/2026) Tj
+ET
+BT
+/F2 6.2 Tf
+407.39999 405.60001 Td
+(DIM:45X40X40/10 , 40X35X40/10 ,) Tj
+ET
+BT
+/F2 6.2 Tf
+407.39999 398.39999 Td
+(44X40X40/10) Tj
+ET
+BT
+/F2 6.2 Tf
+407.39999 391.20001 Td
+(60X55X50/10, 57X40X38/10, 57X40X38/7 CMT) Tj
+ET
+BT
+/F2 6.2 Tf
+407.39999 384 Td
+(VOL WT: 851 KGS) Tj
+ET
+BT
+/F2 7.2 Tf
+17.1 329.5 Td
+(57) Tj
+ET
+BT
+/F2 7.2 Tf
+47.7 329.5 Td
+(1308.00) Tj
+ET
+BT
+/F2 7.2 Tf
+320.9856 329.5 Td
+(392,400.00) Tj
+ET
+BT
+/F2 7.5 Tf
+46.235 307 Td
+(392,400.00) Tj
+ET
+BT
+/F2 7.2 Tf
+218 303 Td
+ET
+BT
+/F2 7.5 Tf
+48.32 193 Td
+(21,908.00) Tj
+ET
+BT
+/F2 7.5 Tf
+46.235 135 Td
+(414,308.00) Tj
+ET
+BT
+/F2 7.6 Tf
+309.07962 176 Td
+(M5 CONTINENT LOGISTICS SOLUTION PVT LTD) Tj
+ET
+BT
+/F2 7.5 Tf
+247.15375 120 Td
+(27 Oct 2026) Tj
+ET
+BT
+/F2 7.2 Tf
+354.20001 120 Td
+(DELHI) Tj
+ET
+BT
+/F2 7.6 Tf
+415 125 Td
+(M5 CONTINENT LOGISTICS) Tj
+ET
+BT
+/F2 7.6 Tf
+415 116.5 Td
+(SOLUTION PVT LTD) Tj
+ET
+BT
+/F2 8.2 Tf
+504.83859 87 Td
+(077-5906 6545) Tj
+ET
+BT
+/F2 6.2 Tf
+448.3938 58 Td
+(ORIGINAL 1 \(FOR ISSUING CARRIER\)) Tj
+ET
