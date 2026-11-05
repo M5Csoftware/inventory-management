@@ -1,90 +1,138 @@
-'use client';
+"use client";
 
-import React, { useEffect, useState, useCallback } from 'react';
-import { RefreshCw, DownloadCloud, CheckCircle2, ArrowUpCircle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { toast } from 'react-toastify';
+import React, {
+  useEffect,
+  useState,
+  useCallback,
+  useRef,
+  useSyncExternalStore,
+} from "react";
+import { RefreshCw, ArrowUpCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { toast } from "react-toastify";
+import type { Update } from "@tauri-apps/plugin-updater";
+
+const CHECK_INTERVAL_MS = 30 * 60 * 1000; // re-check every 30 minutes
+const INITIAL_DELAY_MS = 3000; // let the app finish loading first
+
+const subscribeToTauriEnvironment = () => () => {};
+const getTauriSnapshot = () =>
+  typeof window !== "undefined" &&
+  ("__TAURI_INTERNALS__" in window || "__TAURI__" in window);
+const getServerTauriSnapshot = () => false;
 
 export function UpdateChecker() {
-  const [isTauri, setIsTauri] = useState(false);
-  const [updateInfo, setUpdateInfo] = useState<any>(null);
+  const isTauri = useSyncExternalStore(
+    subscribeToTauriEnvironment,
+    getTauriSnapshot,
+    getServerTauriSnapshot,
+  );
+  const [updateInfo, setUpdateInfo] = useState<Update | null>(null);
   const [isChecking, setIsChecking] = useState(false);
   const [isInstalling, setIsInstalling] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState<number | null>(null);
 
-  useEffect(() => {
-    // Check if running inside Tauri environment
-    const inTauri = typeof window !== 'undefined' && ('__TAURI_INTERNALS__' in window || '__TAURI__' in window);
-    setIsTauri(inTauri);
-
-    if (inTauri) {
-      checkForUpdates(true);
-    }
-  }, []);
+  // Remember which version we already announced so the toast doesn't repeat every check
+  const announcedVersion = useRef<string | null>(null);
+  const installingRef = useRef(false);
 
   const checkForUpdates = useCallback(async (silent = false) => {
+    // Don't swap out the update object while one is downloading
+    if (installingRef.current) return;
+
     try {
       setIsChecking(true);
-      // Dynamically import Tauri updater so browser environments don't error out
-      const { check } = await import('@tauri-apps/plugin-updater');
+      // Dynamic import so plain-browser builds don't break
+      const { check } = await import("@tauri-apps/plugin-updater");
+
+      // Tauri v2: check() resolves to an Update object, or null when up to date.
+      // (There is no `.available` property in v2.)
       const update = await check();
 
-      if (update?.available) {
+      if (update) {
         setUpdateInfo(update);
-        toast.info(`🎉 Software update v${update.version} is available!`, {
-          autoClose: 5000,
-        });
+        if (announcedVersion.current !== update.version) {
+          announcedVersion.current = update.version;
+          toast.info(`🎉 Software update v${update.version} is available!`, {
+            autoClose: 5000,
+          });
+        }
       } else {
         setUpdateInfo(null);
         if (!silent) {
-          toast.success('Your software is up to date.');
+          toast.success("Your software is up to date.");
         }
       }
-    } catch (error) {
+    } catch (error: unknown) {
+      // Always log, even for silent checks, otherwise config problems are invisible
+      console.error("[updater] check failed:", error);
       if (!silent) {
-        console.error('Update check failed:', error);
-        toast.error('Could not check for updates.');
+        const message = error instanceof Error ? error.message : String(error);
+        toast.error(`Could not check for updates: ${message}`);
       }
     } finally {
       setIsChecking(false);
     }
   }, []);
 
+  useEffect(() => {
+    if (!isTauri) return;
+
+    const initial = setTimeout(() => checkForUpdates(true), INITIAL_DELAY_MS);
+    const interval = setInterval(
+      () => checkForUpdates(true),
+      CHECK_INTERVAL_MS,
+    );
+
+    return () => {
+      clearTimeout(initial);
+      clearInterval(interval);
+    };
+  }, [checkForUpdates, isTauri]);
+
   const handleInstallUpdate = async () => {
-    if (!updateInfo) return;
+    if (!updateInfo || installingRef.current) return;
 
     try {
+      installingRef.current = true;
       setIsInstalling(true);
-      toast.info('Downloading update package...');
+      setDownloadProgress(0);
+      toast.info("Downloading update package...");
 
       let downloaded = 0;
       let contentLength = 0;
 
-      await updateInfo.downloadAndInstall((event: any) => {
+      await updateInfo.downloadAndInstall((event) => {
         switch (event.event) {
-          case 'Started':
-            contentLength = event.data.contentLength || 0;
+          case "Started":
+            contentLength = event.data.contentLength ?? 0;
             break;
-          case 'Progress':
+          case "Progress":
             downloaded += event.data.chunkLength;
             if (contentLength > 0) {
-              setDownloadProgress(Math.round((downloaded / contentLength) * 100));
+              setDownloadProgress(
+                Math.min(100, Math.round((downloaded / contentLength) * 100)),
+              );
             }
             break;
-          case 'Finished':
+          case "Finished":
             setDownloadProgress(100);
             break;
         }
       });
 
-      toast.success('Update installed! Restarting application...');
-      
-      const { relaunch } = await import('@tauri-apps/plugin-process');
+      toast.success("Update installed! Restarting application...");
+
+      // On Windows the installer may close the app on its own; relaunch covers the other cases
+      const { relaunch } = await import("@tauri-apps/plugin-process");
       await relaunch();
-    } catch (error: any) {
-      console.error('Failed to install update:', error);
-      toast.error(error?.message || 'Failed to install update.');
+    } catch (error: unknown) {
+      console.error("[updater] install failed:", error);
+      const message = error instanceof Error ? error.message : String(error);
+      toast.error(message || "Failed to install update.");
+      installingRef.current = false;
       setIsInstalling(false);
+      setDownloadProgress(null);
     }
   };
 
@@ -105,7 +153,11 @@ export function UpdateChecker() {
           {isInstalling ? (
             <>
               <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-              <span>{downloadProgress !== null ? `${downloadProgress}%` : 'Installing...'}</span>
+              <span>
+                {downloadProgress !== null && downloadProgress > 0
+                  ? `${downloadProgress}%`
+                  : "Installing..."}
+              </span>
             </>
           ) : (
             <>
@@ -127,7 +179,9 @@ export function UpdateChecker() {
       className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
       title="Check for software updates"
     >
-      <RefreshCw className={`h-3.5 w-3.5 ${isChecking ? 'animate-spin text-primary' : ''}`} />
+      <RefreshCw
+        className={`h-3.5 w-3.5 ${isChecking ? "animate-spin text-primary" : ""}`}
+      />
     </Button>
   );
 }

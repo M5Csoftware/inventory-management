@@ -29,6 +29,7 @@ import {
   ClipboardCheck,
   History,
   GitCompare,
+  Plane,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -153,6 +154,7 @@ export const navItems: NavItem[] = [
     subItems: [
       { href: "/invoice", label: "Dashboard", icon: List },
       { href: "/invoice/tax-invoice", label: "Generate Tax Invoice", icon: FileText },
+      { href: "/invoice/air-waybill", label: "Master Air Waybill (MAWB)", icon: Plane },
       { href: "/invoice/new", label: "Inward Invoice", icon: PlusCircle },
       { href: "/invoice/approvals", label: "Approvals", icon: CheckCircle2 },
       { href: "/invoice/audit", label: "Invoice Log", icon: History },
