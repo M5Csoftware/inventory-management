@@ -42,7 +42,7 @@ export const CheckInView: React.FC<CheckInViewProps> = ({
   config,
   onSubmit,
 }) => {
-  const { suppliers, orders, recordTransaction, updateOrder, activeBranch } = useInventory();
+  const { suppliers, orders, products, recordTransaction, updateOrder, activeBranch } = useInventory();
   const [vendor, setVendor] = useState('');
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [invoiceDate, setInvoiceDate] = useState(() => new Date().toISOString().slice(0, 10));
@@ -135,7 +135,14 @@ export const CheckInView: React.FC<CheckInViewProps> = ({
           .map((item) => {
             const received = item.receivedQuantity || 0;
             const remaining = Math.max(0, item.quantity - received);
-            return `Product: ${item.name}\nPO Ordered: ${item.quantity} units${received > 0 ? ` | Already Received: ${received} | Leftover to Inward: ${remaining}` : ''}\nUnit Price: Rs. ${Number(item.price || 0).toFixed(2)}`;
+            const matchedProd = products?.find(
+              (p) =>
+                p.id === item.productId ||
+                p.name.trim().toLowerCase() === item.name.trim().toLowerCase()
+            );
+            const hsnCode = item.hsnCode || matchedProd?.hsnCode || "";
+            const hsnStr = hsnCode ? ` | HSN: ${hsnCode}` : '';
+            return `Product: ${item.name}${hsnStr}\nPO Ordered: ${item.quantity} units${received > 0 ? ` | Already Received: ${received} | Leftover to Inward: ${remaining}` : ''}\nUnit Price: Rs. ${Number(item.price || 0).toFixed(2)}`;
           })
           .join('\n\n');
         setDescription(
@@ -635,6 +642,38 @@ export const CheckInView: React.FC<CheckInViewProps> = ({
                 />
               </div>
             </div>
+
+            {/* Linked PO Line Items Preview with HSN Codes */}
+            {linkedOrder && linkedOrder.items && linkedOrder.items.length > 0 && (
+              <div className="p-3 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/50 space-y-1.5 text-xs text-emerald-800 dark:text-emerald-300">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
+                    Linked PO ({linkedOrder.id}) Line Items &amp; Non-Editable HSN Codes:
+                  </span>
+                  <span className="font-semibold text-[11px] text-emerald-700 dark:text-emerald-300">
+                    Total: ₹{linkedOrder.totalAmount?.toLocaleString('en-IN')}
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {linkedOrder.items.map((it, itIdx) => {
+                    const matched = (products || []).find(
+                      (p) => p.id === it.productId || p.name.trim().toLowerCase() === it.name.trim().toLowerCase()
+                    );
+                    const hsn = it.hsnCode || matched?.hsnCode || "—";
+                    return (
+                      <span
+                        key={itIdx}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-white dark:bg-zinc-900 border border-emerald-300 dark:border-emerald-700 font-mono text-[11px] text-foreground shadow-xs"
+                      >
+                        <span className="font-sans font-medium text-emerald-800 dark:text-emerald-200">{it.name}:</span>
+                        <span className="font-bold text-primary">HSN {hsn}</span>
+                        <span className="text-muted-foreground font-sans">({it.quantity} qty)</span>
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             <div className="space-y-1.5">
               <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">

@@ -44,7 +44,7 @@ function NewInvoiceFormContent() {
   const searchParams = useSearchParams();
   const { user } = useAuth();
   const { createInvoice } = useInvoice();
-  const { suppliers, orders, recordTransaction, updateOrder, activeBranch } = useInventory();
+  const { suppliers, orders, products, recordTransaction, updateOrder, activeBranch } = useInventory();
 
   const [vendor, setVendor] = useState('');
   const [invoiceNumber, setInvoiceNumber] = useState('');
@@ -139,7 +139,14 @@ function NewInvoiceFormContent() {
         .map((item) => {
           const received = item.receivedQuantity || 0;
           const remaining = Math.max(0, item.quantity - received);
-          return `Product: ${item.name}\nPO Ordered: ${item.quantity} units${received > 0 ? ` | Already Received: ${received} | Leftover to Inward: ${remaining}` : ''}\nUnit Price: Rs. ${Number(item.price || 0).toFixed(2)}`;
+          const matchedProd = products.find(
+            (p) =>
+              p.id === item.productId ||
+              p.name.trim().toLowerCase() === item.name.trim().toLowerCase()
+          );
+          const hsnCode = item.hsnCode || matchedProd?.hsnCode || "";
+          const hsnStr = hsnCode ? ` | HSN: ${hsnCode}` : '';
+          return `Product: ${item.name}${hsnStr}\nPO Ordered: ${item.quantity} units${received > 0 ? ` | Already Received: ${received} | Leftover to Inward: ${remaining}` : ''}\nUnit Price: Rs. ${Number(item.price || 0).toFixed(2)}`;
         })
         .join('\n\n');
       setDescription(
@@ -480,20 +487,48 @@ function NewInvoiceFormContent() {
 
               {/* Linked PO Notification Banner */}
               {linkedOrder && (
-                <div className="bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 p-3 rounded-lg flex items-center justify-between text-xs text-emerald-800 dark:text-emerald-300 animate-in fade-in">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                    <div>
-                      <span className="font-bold">Linked with {linkedOrder.id}:</span> {linkedOrder.supplier} · Total ₹{linkedOrder.totalAmount?.toLocaleString('en-IN')} ({linkedOrder.items?.length || 0} item lines)
+                <div className="bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 p-3.5 rounded-lg space-y-2.5 text-xs text-emerald-800 dark:text-emerald-300 animate-in fade-in">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                      <div>
+                        <span className="font-bold">Linked with PO {linkedOrder.id}:</span> {linkedOrder.supplier} · Total ₹{linkedOrder.totalAmount?.toLocaleString('en-IN')} ({linkedOrder.items?.length || 0} item lines)
+                      </div>
                     </div>
+                    <button
+                      type="button"
+                      onClick={clearPoLink}
+                      className="text-emerald-700 hover:text-emerald-900 dark:text-emerald-400 dark:hover:text-emerald-200 underline font-semibold ml-2 cursor-pointer"
+                    >
+                      Clear Link
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={clearPoLink}
-                    className="text-emerald-700 hover:text-emerald-900 dark:text-emerald-400 dark:hover:text-emerald-200 underline font-semibold ml-2 cursor-pointer"
-                  >
-                    Clear Link
-                  </button>
+
+                  {linkedOrder.items && linkedOrder.items.length > 0 && (
+                    <div className="pt-2 border-t border-emerald-200/60 dark:border-emerald-800/40">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 block mb-1.5">
+                        PO Line Items &amp; Non-Editable HSN Codes:
+                      </span>
+                      <div className="flex flex-wrap gap-2">
+                        {linkedOrder.items.map((it, itIdx) => {
+                          const matched = (products || []).find(
+                            (p) => p.id === it.productId || p.name.trim().toLowerCase() === it.name.trim().toLowerCase()
+                          );
+                          const hsn = it.hsnCode || matched?.hsnCode || "—";
+                          return (
+                            <span
+                              key={itIdx}
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-white dark:bg-zinc-900 border border-emerald-300 dark:border-emerald-700 font-mono text-[11px] text-foreground shadow-xs"
+                            >
+                              <span className="font-sans font-medium text-emerald-800 dark:text-emerald-200">{it.name}:</span>
+                              <span className="font-bold text-primary">HSN {hsn}</span>
+                              <span className="text-muted-foreground font-sans">({it.quantity} qty)</span>
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

@@ -27,6 +27,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { toast } from 'react-toastify';
 import { DatePickerInput } from '@/components/ui/date-picker-input';
+import { useInventory } from '@/context/inventory-context';
 
 interface TaxInvoiceFormProps {
   data: TaxInvoiceData;
@@ -41,6 +42,7 @@ export function TaxInvoiceForm({
   onReset,
   onLoadSample,
 }: TaxInvoiceFormProps) {
+  const { products } = useInventory();
   // Collapsible section states
   const [openSections, setOpenSections] = useState({
     recipient: true,
@@ -114,11 +116,25 @@ export function TaxInvoiceForm({
     const item = next.items[index];
     (item as any)[field] = value;
 
+    // Auto-match product from catalog to populate HSN code and rate
+    if (field === 'description') {
+      const trimmedVal = String(value || '').trim().toLowerCase();
+      const matched = products.find(
+        (p) => p.name.trim().toLowerCase() === trimmedVal
+      );
+      if (matched) {
+        item.sacHsn = matched.hsnCode || '';
+        if ((!item.rate || Number(item.rate) === 0) && matched.price) {
+          item.rate = matched.price;
+        }
+      }
+    }
+
     const chWeight = parseFloat(next.logistics.chargeableWeight) || 0;
     const basis = item.calculationBasis || 'weight';
 
     // Auto-calculate amount by multiplying chargeable weight and rate
-    if (field === 'rate' || field === 'calculationBasis') {
+    if (field === 'rate' || field === 'calculationBasis' || field === 'description') {
       const multiplier = basis === 'flat' ? 1 : chWeight;
       item.amount = Number(((Number(item.rate) || 0) * multiplier).toFixed(2));
     }
@@ -986,28 +1002,60 @@ export function TaxInvoiceForm({
                   {/* Grid Row 1: Description (6 cols), SAC/HSN (3 cols), Basis (3 cols) = 12 cols */}
                   <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
                     <div className="md:col-span-6 space-y-1.5">
-                      <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-                        Description / Charge Name <span className="text-destructive">*</span>
-                      </label>
+                      <div className="flex items-center justify-between">
+                        <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                          Description / Charge Name <span className="text-destructive">*</span>
+                        </label>
+                        {products && products.length > 0 && (
+                          <select
+                            className="text-[10px] bg-muted/60 border border-border/80 rounded px-1.5 py-0.5 text-primary font-semibold hover:border-primary cursor-pointer outline-none max-w-[190px] truncate"
+                            onChange={(e) => {
+                              if (e.target.value) {
+                                handleItemChange(idx, 'description', e.target.value);
+                              }
+                            }}
+                            value=""
+                          >
+                            <option value="">+ Pick from Catalog...</option>
+                            {products.map((p) => (
+                              <option key={p.id} value={p.name}>
+                                {p.name} {p.hsnCode ? `(HSN: ${p.hsnCode})` : ''}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                      </div>
                       <input
                         type="text"
+                        list={`tax-inv-prods-${idx}`}
                         value={item.description}
                         onChange={(e) => handleItemChange(idx, 'description', e.target.value)}
-                        placeholder="e.g. AIR FREIGHT"
+                        placeholder="e.g. AIR FREIGHT or select product"
                         className="h-10 w-full rounded-xl border-2 border-border/80 bg-background px-3.5 text-sm font-bold uppercase focus:border-primary focus:outline-none"
                       />
+                      <datalist id={`tax-inv-prods-${idx}`}>
+                        {(products || []).map((p) => (
+                          <option key={p.id} value={p.name}>
+                            {p.hsnCode ? `HSN: ${p.hsnCode}` : p.category}
+                          </option>
+                        ))}
+                      </datalist>
                     </div>
 
                     <div className="md:col-span-3 space-y-1.5">
-                      <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-                        SAC / HSN Code
+                      <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center justify-between">
+                        <span>SAC / HSN Code</span>
+                        <span className="text-[9px] text-muted-foreground font-normal">(Read-only)</span>
                       </label>
                       <input
                         type="text"
                         value={item.sacHsn}
-                        onChange={(e) => handleItemChange(idx, 'sacHsn', e.target.value)}
-                        placeholder="e.g. 52115120"
-                        className="h-10 w-full rounded-xl border-2 border-border/80 bg-background px-3.5 text-sm font-mono focus:border-primary focus:outline-none"
+                        readOnly
+                        disabled
+                        tabIndex={-1}
+                        placeholder="From Product"
+                        className="h-10 w-full rounded-xl border-2 border-border/60 bg-muted/50 px-3.5 text-sm font-mono text-foreground cursor-not-allowed select-none"
+                        title="HSN code is defined in Product catalog and cannot be edited from here"
                       />
                     </div>
 

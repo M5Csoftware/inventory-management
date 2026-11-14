@@ -28,6 +28,7 @@ export interface Product {
   supplier: string;
   suppliersList?: ProductSupplierEntry[];
   sku?: string;
+  hsnCode?: string;
   description?: string;
   status?: string;
   uomValue?: number;
@@ -88,6 +89,7 @@ export interface OrderItem {
   quantity: number;
   price: number;
   receivedQuantity?: number;
+  hsnCode?: string;
 }
 
 export interface Order {

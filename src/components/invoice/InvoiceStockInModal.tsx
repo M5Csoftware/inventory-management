@@ -445,7 +445,20 @@ export const InvoiceStockInModal: React.FC<InvoiceStockInModalProps> = ({
                               PO: {invoiceSummary.poNumber}
                             </span>
                           </div>
-                          <div className="grid grid-cols-3 gap-2 text-center pt-1">
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center pt-1">
+                            <div className="p-1.5 rounded bg-background border border-border/40">
+                              <span className="text-[10px] text-muted-foreground block">HSN / SAC Code</span>
+                              <span className="font-mono font-bold text-primary text-xs">
+                                {(() => {
+                                  const matched = products.find(
+                                    (p) =>
+                                      p.id === item.productId ||
+                                      p.name.trim().toLowerCase() === item.productName.trim().toLowerCase()
+                                  );
+                                  return matched?.hsnCode || "-";
+                                })()}
+                              </span>
+                            </div>
                             <div className="p-1.5 rounded bg-background border border-border/40">
                               <span className="text-[10px] text-muted-foreground block">PO Ordered Qty</span>
                               <span className="font-mono font-bold text-foreground text-xs">{poOrdered} units</span>

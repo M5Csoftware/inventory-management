@@ -65,7 +65,7 @@ export function InvoiceDetailModal({
 }: InvoiceDetailModalProps) {
   const { user } = useAuth();
   const { updateInvoiceBranch } = useInvoice();
-  const { physicalVerifications } = useInventory();
+  const { physicalVerifications, orders, products } = useInventory();
   const [mounted, setMounted] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
   const [showRejectForm, setShowRejectForm] = useState(false);
@@ -100,6 +100,13 @@ export function InvoiceDetailModal({
       (pv.poNumber &&
         activeInvoice.poNumber &&
         pv.poNumber.trim().toLowerCase() === activeInvoice.poNumber.trim().toLowerCase())
+  );
+
+  const linkedOrder = (orders || []).find(
+    (o) =>
+      o.id &&
+      activeInvoice.poNumber &&
+      o.id.trim().toLowerCase() === activeInvoice.poNumber.trim().toLowerCase()
   );
 
   const attachedImages: string[] = activeInvoice.invoiceImages && activeInvoice.invoiceImages.length > 0
@@ -344,6 +351,53 @@ export function InvoiceDetailModal({
                   </p>
                 )}
               </div>
+
+              {/* Linked Purchase Order Items (with HSN Code) */}
+              {linkedOrder && linkedOrder.items && linkedOrder.items.length > 0 && (
+                <div className="p-4 rounded-2xl bg-card border border-border/60 space-y-2.5 shadow-xs">
+                  <div className="flex items-center justify-between border-b border-border/40 pb-1.5">
+                    <span className="text-xs font-bold flex items-center gap-1.5">
+                      <FileSpreadsheet className="h-4 w-4 text-primary" /> PO Line Items &amp; HSN Codes
+                    </span>
+                    <span className="text-[10px] text-muted-foreground font-mono bg-muted/60 px-2 py-0.5 rounded">
+                      PO: {linkedOrder.id}
+                    </span>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead>
+                        <tr className="border-b border-border/40 text-[10px] uppercase font-semibold text-muted-foreground">
+                          <th className="pb-1.5">Item</th>
+                          <th className="pb-1.5 font-mono">HSN / SAC</th>
+                          <th className="pb-1.5 text-center">Qty</th>
+                          <th className="pb-1.5 text-right">Rate</th>
+                          <th className="pb-1.5 text-right">Total</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border/20">
+                        {linkedOrder.items.map((it, itIdx) => {
+                          const matched = (products || []).find(
+                            (p) =>
+                              p.id === it.productId ||
+                              p.name.trim().toLowerCase() === it.name.trim().toLowerCase()
+                          );
+                          const hsn = it.hsnCode || matched?.hsnCode || "—";
+                          return (
+                            <tr key={itIdx} className="hover:bg-muted/20">
+                              <td className="py-1.5 pr-2 font-medium text-foreground">{it.name}</td>
+                              <td className="py-1.5 px-2 font-mono text-primary font-bold">{hsn}</td>
+                              <td className="py-1.5 px-2 text-center">{it.quantity}</td>
+                              <td className="py-1.5 px-2 text-right">₹{Number(it.price || 0).toLocaleString('en-IN')}</td>
+                              <td className="py-1.5 pl-2 text-right font-semibold">₹{(it.quantity * it.price).toLocaleString('en-IN')}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Column 2: Document Preview */}
