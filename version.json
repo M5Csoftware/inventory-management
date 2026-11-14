@@ -1,11 +1,11 @@
 {
-  "version": "0.1.4",
-  "notes": "update",
-  "pub_date": "2026-10-29T11:23:09Z",
+  "version": "0.1.5",
+  "notes": "Merge pull request #136 from M5Csoftware/altaf",
+  "pub_date": "2026-11-14T13:30:56Z",
   "platforms": {
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUbzZ0dVltcXBYZ0JrSFBrMHlmNVEvbDNXazdFdFJ3a25BZldXczNISHMwNXJUS012NUJ3TUZZd1VYMjZ0bi92K00xdnVsOTRiM1dycWxwdFlsY3dIRVVxSTJZQWFxT1FRPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMjcyOTg5CWZpbGU6aW52ZW50b3J5LW1hbmFnZW1lbnRfMC4xLjRfeDY0X2VuLVVTLm1zaQl2ZXJzaW9uOjAuMS40ClNHNFN4bjExajRlam4zbStQSkd4OWhUeVJBRWVkTDNOQktBdVJTeUhsN3ZZVVNvbDFzRnZDWlFTZ2cweTRmS1JnNlFrRTZRaVVMUHFZRGNzdWVJUUF3PT0K",
-      "url": "https://github.com/M5Csoftware/inventory-management/releases/download/v0.1.4/inventory-management_0.1.4_x64_en-US.msi"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVUbzZ0dVltcXBYZ0thRmNMTjNETGNhSEo5Wi84eXIzNkx2NDJ5TUJTSGIxdnpLZld5cTBkSExxVkw2SVp4Y3h3Uzk1N2MzblBGQ1lRYjA2Vk1FMSt4SndHck4rQStKS1FvPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0NjYzMDU1CWZpbGU6aW52ZW50b3J5LW1hbmFnZW1lbnRfMC4xLjVfeDY0X2VuLVVTLm1zaQl2ZXJzaW9uOjAuMS41CmFDRlVKMG1obHl2Qi9nZ1lJcXljak05dUZzVUVyZkJDU3BucjJaWGdyQUh5TDFqK0ttaDlLazVkc3hSZ3JDRkFPT1pYV3hZKzVPa0p5TzUxQi9RVkJ3PT0K",
+      "url": "https://github.com/M5Csoftware/inventory-management/releases/download/v0.1.5/inventory-management_0.1.5_x64_en-US.msi"
     }
   }
 }
