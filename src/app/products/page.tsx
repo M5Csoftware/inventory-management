@@ -107,7 +107,23 @@ export default function ProductsPage() {
                       return (
                       <tr key={`${product.id}-${index}`} className="border-b transition-colors hover:bg-muted/50">
                         <td className="p-4 align-middle font-medium font-mono text-xs">{product.id}</td>
-                        <td className="p-4 align-middle font-medium">{product.name}</td>
+                        <td className="p-4 align-middle">
+                          <div className="font-medium">{product.name}</div>
+                          {(product.sku || product.hsnCode) && (
+                            <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                              {product.sku && (
+                                <span className="text-[10px] font-mono text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                                  SKU: {product.sku}
+                                </span>
+                              )}
+                              {product.hsnCode && (
+                                <span className="text-[10px] font-mono font-medium text-primary bg-primary/10 px-1.5 py-0.5 rounded border border-primary/20">
+                                  HSN: {product.hsnCode}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </td>
                         <td className="p-4 align-middle text-muted-foreground">{product.category}</td>
                         <td className="p-4 align-middle text-muted-foreground text-sm">
                           {product.uomValue && product.uom

@@ -18,6 +18,7 @@ import {
   Building2,
   Trash2,
   Laptop,
+  Receipt,
 } from "lucide-react";
 import {
   Card,
@@ -49,6 +50,7 @@ function EditProductContent() {
   // Form states
   const [name, setName] = useState('');
   const [sku, setSku] = useState('');
+  const [hsnCode, setHsnCode] = useState('');
   const [category, setCategory] = useState('');
   const [description, setDescription] = useState('');
   const [stock, setStock] = useState('');
@@ -84,6 +86,7 @@ function EditProductContent() {
     if (product) {
       setName(product.name);
       setSku(product.sku || '');
+      setHsnCode(product.hsnCode || '');
       setCategory(product.category);
       setDescription(product.description || '');
 
@@ -224,6 +227,7 @@ function EditProductContent() {
         supplier: primarySupplierName,
         suppliersList: validSuppliers,
         sku: sku || undefined,
+        hsnCode: hsnCode.trim() || undefined,
         description: description || undefined,
         uomValue: parseFloat(uomValue) || 1,
         uom,
@@ -344,8 +348,8 @@ function EditProductContent() {
                 </div>
               </div>
 
-              {/* Category & Minimum Stock Alert (Placed above where primary supplier was) */}
-              <div className="grid gap-4 md:grid-cols-2">
+              {/* Category, HSN Code & Minimum Stock Alert */}
+              <div className="grid gap-4 md:grid-cols-3">
                 <div className="space-y-1.5">
                   <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                     Category <span className="text-destructive">*</span>
@@ -409,6 +413,21 @@ function EditProductContent() {
                     })()}
                   </select>
                 </div>
+
+                <div className="space-y-1.5">
+                  <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    <Receipt className="h-3 w-3 text-primary" />
+                    HSN / SAC Code <span className="text-muted-foreground font-normal">(Optional)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={hsnCode}
+                    onChange={(e) => setHsnCode(e.target.value)}
+                    placeholder="e.g. 84439950 or 3926"
+                    className="h-9 w-full rounded-lg border-2 border-gray-300 bg-white/90 px-3 font-mono text-sm shadow-sm transition-all placeholder:text-muted-foreground/50 hover:border-gray-400 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 focus:ring-offset-1 dark:border-gray-600 dark:bg-gray-900/90 dark:hover:border-gray-500"
+                  />
+                </div>
+
                 <div className="space-y-1.5">
                   <label className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                     <AlertCircle className="h-3 w-3 text-amber-500" />

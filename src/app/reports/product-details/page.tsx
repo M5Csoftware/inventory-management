@@ -39,6 +39,7 @@ interface Product {
   name: string;
   category: string;
   sku?: string;
+  hsnCode?: string;
   unit: string;
   price: number;
   minStock: number;
@@ -722,13 +723,18 @@ export default function ProductDetailsReportPage() {
                         </td>
                         <td className="py-3 px-4">
                           <div className="font-semibold text-foreground">{prod.name}</div>
-                          <div className="flex items-center gap-2 mt-0.5">
+                          <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
                             <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-muted text-muted-foreground">
                               {prod.category}
                             </span>
                             <span className="text-[11px] text-muted-foreground">
                               ({prod.unit || "Pcs"})
                             </span>
+                            {prod.hsnCode && (
+                              <span className="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-mono font-medium bg-primary/10 text-primary border border-primary/20">
+                                HSN: {prod.hsnCode}
+                              </span>
+                            )}
                           </div>
                         </td>
                         <td className="py-3 px-4 text-right font-medium">
@@ -1005,7 +1011,11 @@ export default function ProductDetailsReportPage() {
                     <span className="text-xs text-muted-foreground block">Min Stock Threshold</span>
                     <span className="font-semibold">{selectedProduct.minStock || 0}</span>
                   </div>
-                  <div className="bg-muted/40 p-3 rounded-lg border border-border/50 col-span-2">
+                  <div className="bg-muted/40 p-3 rounded-lg border border-border/50">
+                    <span className="text-xs text-muted-foreground block">HSN / SAC Code</span>
+                    <span className="font-mono font-medium">{selectedProduct.hsnCode || "N/A"}</span>
+                  </div>
+                  <div className="bg-muted/40 p-3 rounded-lg border border-border/50">
                     <span className="text-xs text-muted-foreground block">Dimension (LxBxH)</span>
                     <span className="font-medium">{selectedProduct.dimensions || "N/A"}</span>
                   </div>

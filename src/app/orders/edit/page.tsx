@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { PageLoading } from '@/components/ui/loading';
-import { useInventory } from '@/context/inventory-context';
+import { useInventory, OrderItem } from '@/context/inventory-context';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,7 +25,7 @@ function EditOrderContent() {
   const [status, setStatus] = useState<'Pending' | 'Processing' | 'Completed' | 'Cancelled' | 'Partial'>('Pending');
   const [taxSlab, setTaxSlab] = useState<string>('18');
   const [taxOption, setTaxOption] = useState<'IGST' | 'CGST_SGST' | 'NO_TAX'>('IGST');
-  const [items, setItems] = useState([{ productId: '', name: '', quantity: 1, price: 0 }]);
+  const [items, setItems] = useState<OrderItem[]>([{ productId: '', name: '', quantity: 1, price: 0, hsnCode: '' }]);
   const [termsAndConditions, setTermsAndConditions] = useState(
     "1. Payment will be released after goods are received in fine condition.\n2. Payment terms: 15 days from invoice date.\n3. Delivery within 7 working days.\n4. All disputes subject to Delhi jurisdiction."
   );
@@ -72,6 +72,7 @@ function EditOrderContent() {
         productId: value,
         name: product ? product.name : '',
         price: product ? product.price : 0,
+        hsnCode: product?.hsnCode || '',
       };
     } else {
       newItems[index] = { ...newItems[index], [field]: value };
@@ -80,7 +81,7 @@ function EditOrderContent() {
   };
 
   const addItem = () => {
-    setItems([...items, { productId: '', name: '', quantity: 1, price: 0 }]);
+    setItems([...items, { productId: '', name: '', quantity: 1, price: 0, hsnCode: '' }]);
   };
 
   const removeItem = (index: number) => {
@@ -289,6 +290,25 @@ function EditOrderContent() {
                           <option key={p.id} value={p.id}>{p.name}</option>
                         ))}
                       </select>
+                    </div>
+
+                    {/* HSN Code (Read-only) */}
+                    <div className="w-full sm:w-28 space-y-1">
+                      <Label className="text-xs text-muted-foreground flex items-center justify-between">
+                        <span>HSN Code</span>
+                        <span className="text-[9px] text-muted-foreground font-normal">(Auto)</span>
+                      </Label>
+                      {(() => {
+                        const matched = products.find(p => p.id === item.productId);
+                        return (
+                          <div
+                            className="h-9 px-3 flex items-center text-xs font-mono font-semibold text-foreground bg-muted/40 border border-border rounded-md select-none"
+                            title="Product HSN/SAC Code (Read-only, managed from Product Catalog)"
+                          >
+                            {matched?.hsnCode || item.hsnCode || "—"}
+                          </div>
+                        );
+                      })()}
                     </div>
 
                     <div className="w-full sm:w-28 space-y-1">
