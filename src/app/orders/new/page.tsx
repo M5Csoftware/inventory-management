@@ -2,7 +2,7 @@
 
 import { useState, useRef, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useInventory, generateOrderId, getBranchCode } from "@/context/inventory-context";
+import { useInventory, generateOrderId, getBranchCode, OrderItem } from "@/context/inventory-context";
 import {
   Card,
   CardContent,
@@ -48,8 +48,8 @@ export default function NewOrderPage() {
     const autoId = generateOrderId(branch, orders);
     setOrderId(autoId);
   }, [branch, orders]);
-  const [items, setItems] = useState([
-    { productId: "", name: "", quantity: 1, price: 0 },
+  const [items, setItems] = useState<OrderItem[]>([
+    { productId: "", name: "", quantity: 1, price: 0, hsnCode: "" },
   ]);
   const [termsAndConditions, setTermsAndConditions] = useState(
     "1. Payment will be released after goods are received in fine condition.\n2. Payment terms: 15 days from invoice date.\n3. Delivery within 7 working days.\n4. All disputes subject to Delhi jurisdiction.",
@@ -193,6 +193,7 @@ export default function NewOrderPage() {
         productId: value,
         name: product ? product.name : "",
         price: unitPrice,
+        hsnCode: product?.hsnCode || "",
       };
     } else {
       newItems[index] = { ...newItems[index], [field]: value };
@@ -201,7 +202,7 @@ export default function NewOrderPage() {
   };
 
   const addItem = () => {
-    setItems([...items, { productId: "", name: "", quantity: 1, price: 0 }]);
+    setItems([...items, { productId: "", name: "", quantity: 1, price: 0, hsnCode: "" }]);
   };
 
   const removeItem = (index: number) => {
@@ -570,6 +571,20 @@ export default function NewOrderPage() {
                             );
                           })}
                         </select>
+                      </div>
+
+                      {/* HSN Code (Read-only) */}
+                      <div className="w-full sm:w-28 space-y-1">
+                        <Label className="text-xs text-muted-foreground flex items-center justify-between">
+                          <span>HSN Code</span>
+                          <span className="text-[9px] text-muted-foreground font-normal">(Auto)</span>
+                        </Label>
+                        <div
+                          className="h-10 px-3 flex items-center text-xs font-mono font-semibold text-foreground bg-muted/40 border border-input/40 rounded-lg select-none"
+                          title="Product HSN/SAC Code (Read-only, managed from Product Catalog)"
+                        >
+                          {selectedProd?.hsnCode || item.hsnCode || "—"}
+                        </div>
                       </div>
 
                       {/* Quantity */}

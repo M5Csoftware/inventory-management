@@ -95,6 +95,7 @@ export default function OrdersPage() {
   const [animationParent] = useAutoAnimate();
   const {
     orders,
+    products,
     suppliers,
     updateOrder,
     deleteOrder,
@@ -480,10 +481,17 @@ export default function OrdersPage() {
       const taxableAmount = item.quantity * item.price;
       const gst = (taxableAmount * orderTaxSlab) / 100;
       const total = taxableAmount + gst;
+      const matchedProd = products.find(
+        (p) =>
+          p.id === item.productId ||
+          p.name.trim().toLowerCase() === item.name.trim().toLowerCase(),
+      );
+      const hsnCode = item.hsnCode || matchedProd?.hsnCode || "-";
+
       tableRows.push([
         index + 1,
         item.name,
-        "3926",
+        hsnCode,
         item.quantity,
         `Rs. ${item.price.toFixed(2)}`,
         `Rs. ${taxableAmount.toFixed(2)}`,
